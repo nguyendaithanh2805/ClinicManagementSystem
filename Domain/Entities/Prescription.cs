@@ -9,6 +9,7 @@ namespace Domain.Entities
 {
     public class Prescription
     {
+        [Key]
         public int Id { get; set; }
         public int PatientMedicalRecordId { get; set; }
         public DateTime PrescriptionDate { get; set; }

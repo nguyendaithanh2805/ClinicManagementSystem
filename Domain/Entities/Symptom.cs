@@ -9,6 +9,7 @@ namespace Domain.Entities
 {
     public class Symptom
     {
+        [Key]
         public int Id { get; set; }
         public int PatientMedicalRecordId { get; set; }
         public string Name { get; set; } = null!;

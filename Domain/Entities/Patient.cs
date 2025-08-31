@@ -9,6 +9,7 @@ namespace Domain.Entities
 {
     public class Patient
     {
+        [Key]
         public int Id { get; set; }
         public string FullName { get; set; } = null!;
         public DateOnly? DateOfBirth { get; set; }

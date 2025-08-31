@@ -9,6 +9,7 @@ namespace Domain.Entities
 {
     public class Staff
     {
+        [Key]
         public int Id { get; set; }
         public int SpecialtyId { get; set; }
         public int AccountId { get; set; }

@@ -9,6 +9,7 @@ namespace Domain.Entities
 {
     public class ChangeLog
     {
+        [Key]
         public int Id { get; set; }
         public int StaffId { get; set; }
         public int PatientId { get; set; }

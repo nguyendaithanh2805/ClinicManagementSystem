@@ -9,6 +9,7 @@ namespace Domain.Entities
 {
     public class Invoice
     {
+        [Key]
         public int Id { get; set; }
         public DateTime PaymentDate { get; set; }
         public decimal TotalAmount { get; set; }
