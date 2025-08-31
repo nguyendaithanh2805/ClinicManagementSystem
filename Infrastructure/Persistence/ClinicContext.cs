@@ -32,60 +32,46 @@ namespace Infrastructure.Persistence
         {
             // 1. Map tên bảng = tên class
             modelBuilder.Entity<Account>()
-            .ToTable("Account")
-            .HasKey(a => a.Id);
+            .ToTable("Account");
 
             modelBuilder.Entity<Appointment>()
-                .ToTable("Appointment")
-                .HasKey(a => a.Id);
+                .ToTable("Appointment");
 
             modelBuilder.Entity<ChangeLog>()
-                .ToTable("ChangeLog")
-                .HasKey(c => c.Id);
+                .ToTable("ChangeLog");
 
             modelBuilder.Entity<Invoice>()
-                .ToTable("Invoice")
-                .HasKey(i => i.Id);
+                .ToTable("Invoice");
 
             modelBuilder.Entity<MedicalService>()
-                .ToTable("MedicalService")
-                .HasKey(ms => ms.Id);
+                .ToTable("MedicalService");
 
             modelBuilder.Entity<Medicine>()
-                .ToTable("Medicine")
-                .HasKey(m => m.Id);
+                .ToTable("Medicine");
 
             modelBuilder.Entity<Patient>()
-                .ToTable("Patient")
-                .HasKey(p => p.Id);
+                .ToTable("Patient");
 
             modelBuilder.Entity<PatientMedicalRecord>()
-                .ToTable("PatientMedicalRecord")
-                .HasKey(pmr => pmr.Id);
+                .ToTable("PatientMedicalRecord");
 
             modelBuilder.Entity<Prescription>()
-                .ToTable("Prescription")
-                .HasKey(p => p.Id);
+                .ToTable("Prescription");
 
             modelBuilder.Entity<Role>()
-                .ToTable("Role")
-                .HasKey(r => r.Id);
+                .ToTable("Role");
 
             modelBuilder.Entity<Specialty>()
-                .ToTable("Specialty")
-                .HasKey(s => s.Id);
+                .ToTable("Specialty");
 
             modelBuilder.Entity<Staff>()
-                .ToTable("Staff")
-                .HasKey(s => s.Id);
+                .ToTable("Staff");
 
             modelBuilder.Entity<Symptom>()
-                .ToTable("Symptom")
-                .HasKey(s => s.Id);
+                .ToTable("Symptom");
 
             modelBuilder.Entity<TestResult>()
-                .ToTable("TestResult")
-                .HasKey(tr => tr.Id);
+                .ToTable("TestResult");
 
 
             // 2. Relationships
