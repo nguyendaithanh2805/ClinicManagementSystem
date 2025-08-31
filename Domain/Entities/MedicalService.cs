@@ -9,7 +9,6 @@ namespace Domain.Entities
 {
     public class MedicalService
     {
-        [Key]
         public int Id { get; set; }
         public int SpecialtyId { get; set; }
         public string Name { get; set; } = null!;

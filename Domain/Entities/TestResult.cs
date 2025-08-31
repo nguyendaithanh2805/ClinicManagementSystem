@@ -9,7 +9,6 @@ namespace Domain.Entities
 {
     public class TestResult
     {
-        [Key]
         public int Id { get; set; }
         public int PatientMedicalRecordId { get; set; }
         public int StaffId { get; set; }
