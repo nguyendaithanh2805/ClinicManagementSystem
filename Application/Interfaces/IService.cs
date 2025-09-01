@@ -11,7 +11,7 @@ namespace Application.Interfaces
     {
         Task<IEnumerable<TDto>> GetAllAsync();
         Task<TDto> GetByIdAsync(int id);
-        Task AddAsync(TDto dto);
+        Task<TDto> AddAsync(TDto dto);
         void Update(TDto dto);
         void Delete(int id);
     }

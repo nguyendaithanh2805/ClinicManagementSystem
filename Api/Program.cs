@@ -12,8 +12,14 @@ using Microsoft.IdentityModel.Tokens;
 using Application.Services;
 using Infrastructure.Authentication;
 using System.Reflection;
+using Microsoft.AspNetCore.Identity;
+using Application.DTOs;
+using Microsoft.Extensions.Options;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.AddDbContext<ClinicContext>(options =>
+    options.UseSqlServer(builder.Configuration.GetConnectionString("DbConnection")));
 
 // Load Jwt settings
 builder.Services.Configure<JwtSettings>(
@@ -30,7 +36,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
-            ValidIssuer = jwtSettings.Issuer,
+            ValidIssuer = jwtSettings!.Issuer,
             ValidAudience = jwtSettings.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
         };
@@ -48,7 +54,7 @@ builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
 // Register AutoMapper
-builder.Services.AddAutoMapper(cfg => { }, typeof(AccountProfile).Assembly);
+builder.Services.AddAutoMapper(cfg => { }, typeof(MapperProfile).Assembly);
 
 // Unit Of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
@@ -61,7 +67,8 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Service
 builder.Services.AddScoped<IAuthService, AuthService>();
-
+builder.Services.AddScoped<IPasswordHasher<AccountDto>, PasswordHasher<AccountDto>>();
+builder.Services.AddScoped<IService<PatientDto>, PatientService>();
 
 var app = builder.Build();
 
@@ -73,6 +80,7 @@ if (app.Environment.IsDevelopment())
 
 app.UseHttpsRedirection();
 
+app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();

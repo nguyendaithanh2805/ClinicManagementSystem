@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ClinicContext))]
-    [Migration("20250831201915_InitialCreate")]
-    partial class InitialCreate
+    [Migration("20250901223722_Initial")]
+    partial class Initial
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -59,6 +59,8 @@ namespace Infrastructure.Migrations
                     b.HasIndex("RoleId");
 
                     b.ToTable("Account", (string)null);
+
+                    b.UseTptMappingStrategy();
                 });
 
             modelBuilder.Entity("Domain.Entities.Appointment", b =>
@@ -212,26 +214,6 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Medicine", (string)null);
-                });
-
-            modelBuilder.Entity("Domain.Entities.Patient", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateOnly?>("DateOfBirth")
-                        .HasColumnType("date");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Patient", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.PatientMedicalRecord", b =>
@@ -443,6 +425,23 @@ namespace Infrastructure.Migrations
                     b.ToTable("TestResult", (string)null);
                 });
 
+            modelBuilder.Entity("Domain.Entities.Patient", b =>
+                {
+                    b.HasBaseType("Domain.Entities.Account");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.ToTable("Patient", (string)null);
+                });
+
             modelBuilder.Entity("Domain.Entities.Account", b =>
                 {
                     b.HasOne("Domain.Entities.Role", "Role")
@@ -520,17 +519,6 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Specialty");
-                });
-
-            modelBuilder.Entity("Domain.Entities.Patient", b =>
-                {
-                    b.HasOne("Domain.Entities.Account", "Account")
-                        .WithOne("Patient")
-                        .HasForeignKey("Domain.Entities.Patient", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Account");
                 });
 
             modelBuilder.Entity("Domain.Entities.PatientMedicalRecord", b =>
@@ -631,6 +619,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("Staff");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Patient", b =>
+                {
+                    b.HasOne("Domain.Entities.Account", "Account")
+                        .WithOne("Patient")
+                        .HasForeignKey("Domain.Entities.Patient", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
             modelBuilder.Entity("Domain.Entities.Account", b =>
                 {
                     b.Navigation("Patient")
@@ -654,13 +653,6 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Medicine", b =>
                 {
                     b.Navigation("PrescriptionDetails");
-                });
-
-            modelBuilder.Entity("Domain.Entities.Patient", b =>
-                {
-                    b.Navigation("Appointments");
-
-                    b.Navigation("PatientMedicalRecords");
                 });
 
             modelBuilder.Entity("Domain.Entities.PatientMedicalRecord", b =>
@@ -701,6 +693,13 @@ namespace Infrastructure.Migrations
                     b.Navigation("PatientMedicalRecords");
 
                     b.Navigation("TestResults");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Patient", b =>
+                {
+                    b.Navigation("Appointments");
+
+                    b.Navigation("PatientMedicalRecords");
                 });
 #pragma warning restore 612, 618
         }

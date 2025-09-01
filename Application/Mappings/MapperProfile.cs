@@ -9,11 +9,13 @@ using Domain.Entities;
 
 namespace Application.Mappings
 {
-    public class AccountProfile : Profile
+    public class MapperProfile : Profile
     {
-        public AccountProfile()
+        public MapperProfile()
         {
             CreateMap<Account, AccountDto>().ReverseMap();
+            CreateMap<Patient, PatientDto>().ReverseMap();
+            CreateMap<PatientDto, AccountDto>().ReverseMap();
         }
     }
 }

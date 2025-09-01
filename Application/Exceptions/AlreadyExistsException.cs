@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Application.Exceptions
 {
-    internal class AlreadyExistsException : Exception
+    public class AlreadyExistsException : Exception
     {
         public AlreadyExistsException(string? message) : base(message)
         {

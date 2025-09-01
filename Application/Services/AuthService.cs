@@ -9,6 +9,7 @@ using Application.Interfaces;
 using Application.Mappings;
 using AutoMapper;
 using Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 
 namespace Application.Services
 {
@@ -18,23 +19,46 @@ namespace Application.Services
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
+        private readonly IPasswordHasher<AccountDto> _passwordHasher;
+        private readonly IService<PatientDto> _patientService;
 
-        public AuthService(IRepository<Account> accountRepository, IMapper mapper, IUnitOfWork unitOfWork, IJwtTokenGenerator jwtTokenGenerator)
+        public AuthService(IRepository<Account> accountRepository, IMapper mapper, IUnitOfWork unitOfWork, IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher<AccountDto> passwordHasher, IService<PatientDto> patientService)
         {
             _accountRepository = accountRepository;
             _mapper = mapper;
             _unitOfWork = unitOfWork;
             _jwtTokenGenerator = jwtTokenGenerator;
+            _passwordHasher = passwordHasher;
+            _patientService = patientService;
         }
 
-        public async Task AddAsync(AccountDto dto)
+        public async Task<AccountDto> AddAsync(AccountDto dto)
         {
             var account = await _accountRepository.GetAsync(x => x.Username == dto.Username);
             if (account is not null)
                 throw new AlreadyExistsException("Tên đăng nhập đã tồn tại.");
+            if (dto.RoleId == 0)
+                dto.RoleId = 3; // patient
+            dto.Password = _passwordHasher.HashPassword(dto, dto.Password);
+            
+            try
+            {
+                //await _unitOfWork.BeginTransactionAsync();
 
-            await _accountRepository.AddAsync(
-                _mapper.Map<Account>(dto));
+                //await _accountRepository.AddAsync(
+                //    _mapper.Map<Account>(dto));
+            
+                await _patientService.AddAsync(
+                    _mapper.Map<PatientDto>(dto));
+                await _unitOfWork.SaveChangeAsync();
+                //await _unitOfWork.CommitAsync();
+                return dto;
+            }
+            catch
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            } 
         }
 
         public async void Delete(int id)
@@ -78,8 +102,8 @@ namespace Application.Services
         {
             var account = await _accountRepository.GetAsync(a => a.Username == accountReq.Username);
             if (account is null)
-                throw new NotFoundException($"Không tìm thấy tài khoản với tên đăng nhập [{accountReq.Username}].");
-            var token = _jwtTokenGenerator.GenerateToken(account.Id, account.Username, "Patient");
+                throw new NotFoundException($"Tài khoản không tồn tại.");
+            var token = _jwtTokenGenerator.GenerateToken(account.Id, account.Username, account.Role.Name);
 
             return new LoginResponse
             {
