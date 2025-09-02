@@ -14,7 +14,7 @@ namespace Domain.Entities
         public int RoleId { get; set; }
         public string Username { get; set; } = null!;
         public string Password { get; set; } = null!;
-        public string PhoneNumber { get; set; } = null!;
+        public string? PhoneNumber { get; set; }
         public string? Email { get; set; }
 
         public Role Role { get; set; } = null!;

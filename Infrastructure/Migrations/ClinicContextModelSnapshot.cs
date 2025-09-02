@@ -31,28 +31,33 @@ namespace Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Email")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Password")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("PhoneNumber")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(15)
+                        .HasColumnType("nvarchar(15)");
 
                     b.Property<int>("RoleId")
                         .HasColumnType("int");
 
                     b.Property<string>("Username")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.HasKey("Id");
 
                     b.HasIndex("RoleId");
 
                     b.ToTable("Account", (string)null);
+
+                    b.UseTptMappingStrategy();
                 });
 
             modelBuilder.Entity("Domain.Entities.Appointment", b =>
@@ -102,14 +107,16 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("Action")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
 
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
 
                     b.Property<string>("RelatedTable")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("StaffId")
                         .HasColumnType("int");
@@ -152,11 +159,12 @@ namespace Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<decimal>("Cost")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(15,0)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("SpecialtyId")
                         .HasColumnType("int");
@@ -205,26 +213,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("Medicine", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.Patient", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Address")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<DateOnly?>("DateOfBirth")
-                        .HasColumnType("date");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("Patient", (string)null);
-                });
-
             modelBuilder.Entity("Domain.Entities.PatientMedicalRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -234,7 +222,8 @@ namespace Infrastructure.Migrations
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<string>("Diagnosis")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
@@ -246,7 +235,8 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("TreatmentMethod")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.HasKey("Id");
 
@@ -260,7 +250,10 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Prescription", b =>
                 {
                     b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
                         .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
                     b.Property<int>("PatientMedicalRecordId")
                         .HasColumnType("int");
@@ -284,13 +277,15 @@ namespace Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("Amount")
-                        .HasColumnType("decimal(18,2)");
+                        .HasColumnType("decimal(15,0)");
 
                     b.Property<string>("Dosage")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<string>("Frequency")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("Quantity")
                         .HasColumnType("int");
@@ -299,7 +294,7 @@ namespace Infrastructure.Migrations
 
                     b.HasIndex("MedicineId");
 
-                    b.ToTable("PrescriptionDetail", (string)null);
+                    b.ToTable("PrescriptionDetails");
                 });
 
             modelBuilder.Entity("Domain.Entities.Role", b =>
@@ -346,11 +341,13 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("Expertise")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("FullName")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
 
                     b.Property<int>("SpecialtyId")
                         .HasColumnType("int");
@@ -372,7 +369,8 @@ namespace Infrastructure.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("PatientMedicalRecordId")
                         .HasColumnType("int");
@@ -396,15 +394,18 @@ namespace Infrastructure.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
 
                     b.Property<string>("Image")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasColumnType("nvarchar(max)");
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<int>("PatientMedicalRecordId")
                         .HasColumnType("int");
@@ -419,6 +420,23 @@ namespace Infrastructure.Migrations
                     b.HasIndex("StaffId");
 
                     b.ToTable("TestResult", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.Patient", b =>
+                {
+                    b.HasBaseType("Domain.Entities.Account");
+
+                    b.Property<string>("Address")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateOnly?>("DateOfBirth")
+                        .HasColumnType("date");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.ToTable("Patient", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Account", b =>
@@ -478,7 +496,15 @@ namespace Infrastructure.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Domain.Entities.Prescription", "Prescription")
+                        .WithOne("Invoice")
+                        .HasForeignKey("Domain.Entities.Invoice", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.Navigation("Appointment");
+
+                    b.Navigation("Prescription");
                 });
 
             modelBuilder.Entity("Domain.Entities.MedicalService", b =>
@@ -490,17 +516,6 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Specialty");
-                });
-
-            modelBuilder.Entity("Domain.Entities.Patient", b =>
-                {
-                    b.HasOne("Domain.Entities.Account", "Account")
-                        .WithOne("Patient")
-                        .HasForeignKey("Domain.Entities.Patient", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Account");
                 });
 
             modelBuilder.Entity("Domain.Entities.PatientMedicalRecord", b =>
@@ -524,19 +539,11 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.Prescription", b =>
                 {
-                    b.HasOne("Domain.Entities.Invoice", "Invoice")
-                        .WithOne("Prescription")
-                        .HasForeignKey("Domain.Entities.Prescription", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
                     b.HasOne("Domain.Entities.PatientMedicalRecord", "PatientMedicalRecord")
                         .WithMany("Prescriptions")
                         .HasForeignKey("PatientMedicalRecordId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
-
-                    b.Navigation("Invoice");
 
                     b.Navigation("PatientMedicalRecord");
                 });
@@ -609,6 +616,17 @@ namespace Infrastructure.Migrations
                     b.Navigation("Staff");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Patient", b =>
+                {
+                    b.HasOne("Domain.Entities.Account", "Account")
+                        .WithOne("Patient")
+                        .HasForeignKey("Domain.Entities.Patient", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+                });
+
             modelBuilder.Entity("Domain.Entities.Account", b =>
                 {
                     b.Navigation("Patient")
@@ -624,12 +642,6 @@ namespace Infrastructure.Migrations
                         .IsRequired();
                 });
 
-            modelBuilder.Entity("Domain.Entities.Invoice", b =>
-                {
-                    b.Navigation("Prescription")
-                        .IsRequired();
-                });
-
             modelBuilder.Entity("Domain.Entities.MedicalService", b =>
                 {
                     b.Navigation("Appointments");
@@ -638,13 +650,6 @@ namespace Infrastructure.Migrations
             modelBuilder.Entity("Domain.Entities.Medicine", b =>
                 {
                     b.Navigation("PrescriptionDetails");
-                });
-
-            modelBuilder.Entity("Domain.Entities.Patient", b =>
-                {
-                    b.Navigation("Appointments");
-
-                    b.Navigation("PatientMedicalRecords");
                 });
 
             modelBuilder.Entity("Domain.Entities.PatientMedicalRecord", b =>
@@ -658,6 +663,9 @@ namespace Infrastructure.Migrations
 
             modelBuilder.Entity("Domain.Entities.Prescription", b =>
                 {
+                    b.Navigation("Invoice")
+                        .IsRequired();
+
                     b.Navigation("PrescriptionDetails");
                 });
 
@@ -682,6 +690,13 @@ namespace Infrastructure.Migrations
                     b.Navigation("PatientMedicalRecords");
 
                     b.Navigation("TestResults");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Patient", b =>
+                {
+                    b.Navigation("Appointments");
+
+                    b.Navigation("PatientMedicalRecords");
                 });
 #pragma warning restore 612, 618
         }

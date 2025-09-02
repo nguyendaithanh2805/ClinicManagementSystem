@@ -7,10 +7,8 @@ using System.Threading.Tasks;
 
 namespace Domain.Entities
 {
-    public class Patient
+    public class Patient : Account
     {
-        [Key]
-        public int Id { get; set; }
         public string FullName { get; set; } = null!;
         public DateOnly? DateOfBirth { get; set; }
         public string? Address { get; set; }
