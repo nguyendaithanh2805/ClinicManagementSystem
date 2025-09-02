@@ -15,15 +15,17 @@ using System.Reflection;
 using Microsoft.AspNetCore.Identity;
 using Application.DTOs;
 using Microsoft.Extensions.Options;
+using Application.Common;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddDbContext<ClinicContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DbConnection")));
 
+// Add Infrastureture
+builder.Services.AddInfrastructure(builder.Configuration);
+
 // Load Jwt settings
-builder.Services.Configure<JwtSettings>(
-    builder.Configuration.GetSection("Jwt"));
 
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
 
@@ -59,9 +61,6 @@ builder.Services.AddAutoMapper(cfg => { }, typeof(MapperProfile).Assembly);
 // Unit Of Work
 builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-// Add Infrastureture
-builder.Services.AddInfrastructure(builder.Configuration);
-
 // Repository
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
@@ -69,6 +68,9 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPasswordHasher<AccountDto>, PasswordHasher<AccountDto>>();
 builder.Services.AddScoped<IService<PatientDto>, PatientService>();
+builder.Services.AddScoped<IAccountHelper, AccountHelper>();
+builder.Services.AddScoped<IService<AppointmentDto>, AppointmentService>();
+builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 

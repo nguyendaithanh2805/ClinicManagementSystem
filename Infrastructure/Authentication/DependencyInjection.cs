@@ -15,9 +15,10 @@ namespace Infrastructure.Authentication
         public static IServiceCollection AddInfrastructure(
         this IServiceCollection services, IConfiguration configuration)
         {
-            // 1. Đăng ký JwtSettings vào hệ thống Options Pattern
+            // 1. Đăng ký trực tiếp JwtSettings singleton
             // dotnet add package Microsoft.Extensions.Options.ConfigurationExtensions
-            services.Configure<JwtSettings>(configuration.GetSection("Jwt"));
+            // Đăng ký trực tiếp JwtSettings singleton
+            services.AddSingleton(configuration.GetSection("Jwt").Get<JwtSettings>());
 
             // 2. Đăng ký service tạo JWT
             services.AddSingleton<IJwtTokenGenerator, JwtTokenGenerator>();

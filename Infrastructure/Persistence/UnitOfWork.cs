@@ -36,6 +36,7 @@ namespace Infrastructure.Persistence
             catch
             {
                 await RollbackAsync();
+                throw;
             } 
             finally
             {

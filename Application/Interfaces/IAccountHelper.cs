@@ -6,8 +6,9 @@ using System.Threading.Tasks;
 
 namespace Application.Interfaces
 {
-    public interface IJwtTokenGenerator
+    public interface IAccountHelper
     {
-        string GenerateToken(int accountId, string username, int roleId);
+        int GetAccountId();
+        int GetRoleId();
     }
 }

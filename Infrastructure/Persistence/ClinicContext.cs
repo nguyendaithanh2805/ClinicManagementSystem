@@ -274,6 +274,16 @@ namespace Infrastructure.Persistence
             {
                 relationship.DeleteBehavior = DeleteBehavior.Restrict; // hoặc DeleteBehavior.NoAction
             }
+
+            // 4. Insert Data
+            modelBuilder.Entity<Role>().HasData(
+               new Role { Id = 1, Name = "Admin" },
+               new Role { Id = 2, Name = "Nurse" },
+               new Role { Id = 3, Name = "Patient" },
+               new Role { Id = 4, Name = "Doctor" },
+               new Role { Id = 5, Name = "Receptionist" },
+               new Role { Id = 6, Name = "LabTechnician" }
+             );
         }
     }
 }

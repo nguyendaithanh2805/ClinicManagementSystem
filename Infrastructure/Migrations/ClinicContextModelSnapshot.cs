@@ -80,11 +80,11 @@ namespace Infrastructure.Migrations
                     b.Property<int>("PatientId")
                         .HasColumnType("int");
 
-                    b.Property<int>("StaffId")
+                    b.Property<int?>("StaffId")
                         .HasColumnType("int");
 
-                    b.Property<bool>("Status")
-                        .HasColumnType("bit");
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
 
                     b.HasKey("Id");
 
@@ -312,6 +312,38 @@ namespace Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Role", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = 1,
+                            Name = "Admin"
+                        },
+                        new
+                        {
+                            Id = 2,
+                            Name = "Nurse"
+                        },
+                        new
+                        {
+                            Id = 3,
+                            Name = "Patient"
+                        },
+                        new
+                        {
+                            Id = 4,
+                            Name = "Doctor"
+                        },
+                        new
+                        {
+                            Id = 5,
+                            Name = "Receptionist"
+                        },
+                        new
+                        {
+                            Id = 6,
+                            Name = "LabTechnician"
+                        });
                 });
 
             modelBuilder.Entity("Domain.Entities.Specialty", b =>
@@ -467,8 +499,7 @@ namespace Infrastructure.Migrations
                     b.HasOne("Domain.Entities.Staff", "Staff")
                         .WithMany("Appointments")
                         .HasForeignKey("StaffId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("MedicalService");
 

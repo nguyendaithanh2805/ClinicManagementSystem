@@ -16,6 +16,7 @@ namespace Application.Mappings
             CreateMap<Account, AccountDto>().ReverseMap();
             CreateMap<Patient, PatientDto>().ReverseMap();
             CreateMap<PatientDto, AccountDto>().ReverseMap();
+            CreateMap<Appointment, AppointmentDto>().ReverseMap();
         }
     }
 }

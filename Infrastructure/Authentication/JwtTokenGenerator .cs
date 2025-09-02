@@ -7,6 +7,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Application.Common.Settings;
 using Application.Interfaces;
+using Domain.Entities;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
@@ -16,18 +17,18 @@ namespace Infrastructure.Authentication
     {
         private readonly JwtSettings _jwtSetting;
 
-        public JwtTokenGenerator(IOptions<JwtSettings> jwtSetting)
+        public JwtTokenGenerator(JwtSettings jwtSetting)
         {
-            _jwtSetting = jwtSetting.Value;
+            _jwtSetting = jwtSetting;
         }
 
-        public string GenerateToken(int accountId, string username, string role)
+        public string GenerateToken(int accountId, string username, int roleId)
         {
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, accountId.ToString()),
-                new Claim(JwtRegisteredClaimNames.UniqueName, username),
-                new Claim(ClaimTypes.Role, role)
+                new Claim(ClaimTypes.NameIdentifier, accountId.ToString()),
+                new Claim(ClaimTypes.Name, username),
+                new Claim(ClaimTypes.Role, roleId.ToString())
             };
             
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSetting.Key));
@@ -40,7 +41,7 @@ namespace Infrastructure.Authentication
                 expires: DateTime.UtcNow.AddMinutes(_jwtSetting.ExpireMinutes),
                 signingCredentials: creds
             );
-            
+
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }

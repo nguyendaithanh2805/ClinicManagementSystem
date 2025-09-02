@@ -43,15 +43,15 @@ namespace Application.Services
             
             try
             {
-                //await _unitOfWork.BeginTransactionAsync();
+                await _unitOfWork.BeginTransactionAsync();
 
                 //await _accountRepository.AddAsync(
                 //    _mapper.Map<Account>(dto));
             
                 await _patientService.AddAsync(
                     _mapper.Map<PatientDto>(dto));
-                await _unitOfWork.SaveChangeAsync();
-                //await _unitOfWork.CommitAsync();
+
+                await _unitOfWork.CommitAsync();
                 return dto;
             }
             catch
@@ -103,7 +103,7 @@ namespace Application.Services
             var account = await _accountRepository.GetAsync(a => a.Username == accountReq.Username);
             if (account is null)
                 throw new NotFoundException($"Tài khoản không tồn tại.");
-            var token = _jwtTokenGenerator.GenerateToken(account.Id, account.Username, account.Role.Name);
+            var token = _jwtTokenGenerator.GenerateToken(account.Id, account.Username, account.RoleId);
 
             return new LoginResponse
             {
