@@ -16,8 +16,22 @@ using Microsoft.AspNetCore.Identity;
 using Application.DTOs;
 using Microsoft.Extensions.Options;
 using Application.Common;
+using Microsoft.AspNetCore.Mvc;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// https://learn.microsoft.com/en-us/aspnet/core/security/cors?view=aspnetcore-9.0
+const string MyAllowSpecificOrigins = "MyAllowSpecificOrigins";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("MyAllowSpecificOrigins", policy =>
+    {
+        policy.WithOrigins("http://localhost:5173")
+              .AllowAnyHeader()
+              .AllowAnyMethod();
+    });
+});
+
 
 builder.Services.AddDbContext<ClinicContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DbConnection")));
@@ -71,6 +85,29 @@ builder.Services.AddScoped<IService<PatientDto>, PatientService>();
 builder.Services.AddScoped<IAccountHelper, AccountHelper>();
 builder.Services.AddScoped<IService<AppointmentDto>, AppointmentService>();
 builder.Services.AddHttpContextAccessor();
+builder.Services.AddScoped<IService<SpecialtyDto>, SpecialtyService>();
+builder.Services.AddScoped<IService<RoleDto>, RoleService>();
+builder.Services.AddScoped<IService<MedicalServiceDto>, MedicalServiceImpl>();
+
+// Handle when validation returns an invalid format
+builder.Services.Configure<ApiBehaviorOptions>(options =>
+{
+    options.InvalidModelStateResponseFactory = context =>
+    {
+        var firstError = context.ModelState
+            .Values
+            .SelectMany(v => v.Errors)
+            .Select(e => e.ErrorMessage)
+            .FirstOrDefault() ?? "Invalid data";
+
+        var response = new
+        {
+            message = firstError
+        };
+
+        return new BadRequestObjectResult(response);
+    };
+});
 
 var app = builder.Build();
 
@@ -79,9 +116,9 @@ if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 }
-
 app.UseHttpsRedirection();
 
+app.UseCors(MyAllowSpecificOrigins);
 app.UseAuthentication();
 app.UseAuthorization();
 

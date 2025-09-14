@@ -1,63 +1,46 @@
-import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
-import { useAuth } from '../contexts/AuthContext';
-import { Heart, User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
-import { useLocation, useNavigate, Link } from 'react-router-dom';
+import React, { useState } from "react";
+import { useNavigate, Link } from "react-router-dom";
+import { Mail, Lock, User, Eye, EyeOff, Heart, AlertCircle } from "lucide-react";
+import { toast } from "react-toastify";
 
-const LoginPage = () => {
-  const { user, login, loading } = useAuth();
+const RegisterPage = () => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    username: '',
-    password: ''
+    username: "",
+    password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
-  const navigate = useNavigate();
-  const location = useLocation();
-
-  // Trang muốn redirect sau khi login thành công
-  const from = location.state?.from?.pathname || "/";
-
-  // Hàm chọn route theo role
-  const getRedirectPath = (role) => {
-    switch (role) {
-      case "patient":
-        return from; // quay về trang trước khi bị chặn
-
-      // DashboardPage sẽ chỉ được gọi khi URL = /dashboard.
-      case "doctor":
-      case "nurse":
-      case "receptionist":
-      case "lab_technician":
-      case "admin":
-        return "/dashboard";
-      default:
-        return "/";
-    }
+  const handleChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
+    setSuccess("");
+
     try {
-      const result = await login(formData);
-      navigate(getRedirectPath(result.user.role), { replace: true });
+      const API_BASE_URL = import.meta.env.VITE_API_URL;
+      const res = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.message);
+      }
+
+      toast.success("Đăng ký thành công! Hãy đăng nhập.");
+      setTimeout(() => navigate("/login"), 1500);
     } catch (err) {
-      setError(err.message || 'Đăng nhập thất bại');
+      toast.error(err.message);
     }
-  };
-
-   // Nếu user đã tồn tại trong localStorage
-  if (user) {
-    return <Navigate to={getRedirectPath(user.role)} replace />;
-  }
-
-  const handleChange = (e) => {
-    setFormData(prev => ({
-      ...prev,
-      [e.target.name]: e.target.value
-    }));
   };
 
   return (
@@ -71,8 +54,7 @@ const LoginPage = () => {
               <h2 className="text-2xl font-bold">Phòng khám Đa khoa</h2>
             </div>
             <p className="text-lg leading-relaxed">
-              Hệ thống quản lý khám chữa bệnh hiện đại.  
-              Đặt lịch dễ dàng, quản lý hồ sơ y tế, kết nối nhanh với bác sĩ.
+              Hãy tạo tài khoản để trải nghiệm dịch vụ đặt lịch và quản lý hồ sơ y tế trực tuyến.
             </p>
           </div>
         </div>
@@ -83,10 +65,10 @@ const LoginPage = () => {
             {/* Header */}
             <div className="text-center">
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                Đăng nhập
+                Đăng ký
               </h1>
               <p className="text-gray-600">
-                Vui lòng nhập thông tin để truy cập hệ thống
+                Vui lòng nhập thông tin để tạo tài khoản
               </p>
             </div>
 
@@ -139,11 +121,7 @@ const LoginPage = () => {
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
                   >
-                    {showPassword ? (
-                      <EyeOff className="w-5 h-5" />
-                    ) : (
-                      <Eye className="w-5 h-5" />
-                    )}
+                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                   </button>
                 </div>
               </div>
@@ -154,19 +132,19 @@ const LoginPage = () => {
                 disabled={loading}
                 className="w-full py-3 rounded-xl font-medium text-white bg-gradient-to-r from-blue-600 to-cyan-600 hover:opacity-90 transition disabled:opacity-50"
               >
-                {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+                {loading ? "Đang đăng ký..." : "Đăng ký"}
               </button>
             </form>
 
             {/* Footer */}
             <div className="mt-6 text-center">
               <p className="text-sm text-gray-500">
-                Chưa có tài khoản?{" "}
+                Đã có tài khoản?{" "}
                 <Link
-                  to="/register"
+                  to="/login"
                   className="text-blue-600 hover:underline font-medium"
                 >
-                  Đăng ký ngay
+                  Đăng nhập
                 </Link>
               </p>
             </div>
@@ -181,4 +159,4 @@ const LoginPage = () => {
   );
 };
 
-export default LoginPage;
+export default RegisterPage;

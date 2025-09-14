@@ -21,8 +21,9 @@ namespace Application.Services
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
         private readonly IPasswordHasher<AccountDto> _passwordHasher;
         private readonly IService<PatientDto> _patientService;
+        private readonly IService<RoleDto> _roleService;
 
-        public AuthService(IRepository<Account> accountRepository, IMapper mapper, IUnitOfWork unitOfWork, IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher<AccountDto> passwordHasher, IService<PatientDto> patientService)
+        public AuthService(IRepository<Account> accountRepository, IMapper mapper, IUnitOfWork unitOfWork, IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher<AccountDto> passwordHasher, IService<PatientDto> patientService, IService<RoleDto> roleService)
         {
             _accountRepository = accountRepository;
             _mapper = mapper;
@@ -30,6 +31,7 @@ namespace Application.Services
             _jwtTokenGenerator = jwtTokenGenerator;
             _passwordHasher = passwordHasher;
             _patientService = patientService;
+            _roleService = roleService;
         }
 
         public async Task<AccountDto> AddAsync(AccountDto dto)
@@ -61,7 +63,7 @@ namespace Application.Services
             } 
         }
 
-        public async void Delete(int id)
+        public async Task Delete(int id)
         {
             var account = await _accountRepository.GetByIdAsync(id);
             if (account is null)
@@ -85,7 +87,7 @@ namespace Application.Services
             return _mapper.Map<AccountDto>(account);
         }
 
-        public async void Update(AccountDto dto)
+        public async Task<AccountDto> Update(AccountDto dto)
         {
             var account = await _accountRepository.GetByIdAsync(dto.Id);
             if (account is null)
@@ -96,6 +98,8 @@ namespace Application.Services
 
             _accountRepository.Update(updatedAccount);
             await _unitOfWork.SaveChangeAsync();
+
+            return _mapper.Map<AccountDto>(await _accountRepository.GetByIdAsync(dto.Id));
         }
 
         public async Task<LoginResponse> Login(LoginRequest accountReq)
@@ -103,7 +107,14 @@ namespace Application.Services
             var account = await _accountRepository.GetAsync(a => a.Username == accountReq.Username);
             if (account is null)
                 throw new NotFoundException($"Tài khoản không tồn tại.");
-            var token = _jwtTokenGenerator.GenerateToken(account.Id, account.Username, account.RoleId);
+
+            // So sánh mật khẩu nhập với mật khẩu đã hash trong DB
+            var result = _passwordHasher.VerifyHashedPassword(_mapper.Map<AccountDto>(account), account.Password, accountReq.Password);
+            if (result == PasswordVerificationResult.Failed)
+                throw new UnauthorizedAccessException("Mật khẩu không đúng.");
+
+            var role = await _roleService.GetByIdAsync(account.RoleId);
+            var token = _jwtTokenGenerator.GenerateToken(account.Id, account.Username, role.Name);
 
             return new LoginResponse
             {

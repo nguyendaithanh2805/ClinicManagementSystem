@@ -42,7 +42,7 @@ namespace Application.Services
             return dto;
         }
 
-        public void Delete(int id)
+        public Task Delete(int id)
         {
             throw new NotImplementedException();
         }
@@ -57,7 +57,7 @@ namespace Application.Services
             throw new NotImplementedException();
         }
 
-        public void Update(AppointmentDto dto)
+        public Task<AppointmentDto> Update(AppointmentDto dto)
         {
             throw new NotImplementedException();
         }

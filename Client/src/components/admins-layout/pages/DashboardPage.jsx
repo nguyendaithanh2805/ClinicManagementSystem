@@ -4,7 +4,7 @@ import PatientDashboardContent from '../dashboard/PatientDashboardContent';
 import StaffDashboardContent from '../dashboard/StaffDashboardContent';
 import LabDashboardContent from '../dashboard/LabDashboardContent';
 import AdminDashboardContent from '../dashboard/AdminDashboardContent';
-
+// DashboardPage sẽ chỉ được gọi khi URL = /dashboard
 const DashboardPage = () => {
   const { user } = useAuth();
 

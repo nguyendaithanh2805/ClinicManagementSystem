@@ -7,12 +7,10 @@ import AppointmentCTA from '../home/AppointmentCTA';
 import NewsAndUpdates from '../home/NewsAndUpdates';
 import ContactInfo from '../home/ContactInfo';
 import Footer from '../layout/Footer';
-import LanguageSelector from '../common/LanguageSelector';
 import SearchModal from '../common/SearchModal';
 
 const HomePage = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [currentLanguage, setCurrentLanguage] = useState('vi');
   const [clinicStatus, setClinicStatus] = useState('open');
 
   useEffect(() => {
@@ -43,7 +41,6 @@ const HomePage = () => {
       <Header 
         onSearchOpen={() => setIsSearchOpen(true)}
         clinicStatus={clinicStatus}
-        currentLanguage={currentLanguage}
       />
       
       <main className="relative">
@@ -56,11 +53,6 @@ const HomePage = () => {
       </main>
 
       <Footer />
-
-      <LanguageSelector 
-        currentLanguage={currentLanguage}
-        onLanguageChange={setCurrentLanguage}
-      />
 
       <SearchModal 
         isOpen={isSearchOpen}

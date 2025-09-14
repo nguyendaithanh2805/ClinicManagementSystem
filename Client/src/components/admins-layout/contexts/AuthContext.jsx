@@ -46,16 +46,6 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   }, []);
 
-  // Map roleId -> tên role (roleId được chứa trong JWT)
-  const roleMap = {
-    1: "admin",
-    2: "nurse",
-    3: "patient",
-    4: "doctor",
-    5: "receptionist",
-    6: "lab_technician"
-  };
-
   /**
    * Hàm login: gọi API backend để đăng nhập
    * - Gửi username + password
@@ -85,8 +75,7 @@ export const AuthProvider = ({ children }) => {
 
       // Decode token để lấy role
       const decoded = jwtDecode(result.data.token);
-      const roleId = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
-      const roleName = roleMap[roleId];
+      const roleName = decoded["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
 
       const userData = {
         username: credentials.username,

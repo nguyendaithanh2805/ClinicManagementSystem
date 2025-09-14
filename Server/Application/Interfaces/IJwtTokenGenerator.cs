@@ -8,6 +8,6 @@ namespace Application.Interfaces
 {
     public interface IJwtTokenGenerator
     {
-        string GenerateToken(int accountId, string username, int roleId);
+        string GenerateToken(int accountId, string username, string role);
     }
 }

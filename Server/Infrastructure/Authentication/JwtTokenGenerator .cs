@@ -22,13 +22,13 @@ namespace Infrastructure.Authentication
             _jwtSetting = jwtSetting;
         }
 
-        public string GenerateToken(int accountId, string username, int roleId)
+        public string GenerateToken(int accountId, string username, string role)
         {
             var claims = new[]
             {
                 new Claim(ClaimTypes.NameIdentifier, accountId.ToString()),
                 new Claim(ClaimTypes.Name, username),
-                new Claim(ClaimTypes.Role, roleId.ToString())
+                new Claim(ClaimTypes.Role, role)
             };
             
             var key = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSetting.Key));

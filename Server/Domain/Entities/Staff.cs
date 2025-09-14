@@ -7,12 +7,9 @@ using System.Threading.Tasks;
 
 namespace Domain.Entities
 {
-    public class Staff
+    public class Staff : Account
     {
-        [Key]
-        public int Id { get; set; }
         public int SpecialtyId { get; set; }
-        public int AccountId { get; set; }
         public string FullName { get; set; } = null!;
         public string Expertise { get; set; } = null!;
 

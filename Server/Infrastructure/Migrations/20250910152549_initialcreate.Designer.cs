@@ -4,6 +4,7 @@ using Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -11,9 +12,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Infrastructure.Migrations
 {
     [DbContext(typeof(ClinicContext))]
-    partial class ClinicContextModelSnapshot : ModelSnapshot
+    [Migration("20250910152549_initialcreate")]
+    partial class initialcreate
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -363,34 +366,6 @@ namespace Infrastructure.Migrations
                     b.ToTable("Specialty", (string)null);
                 });
 
-            modelBuilder.Entity("Domain.Entities.Staff", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("int");
-
-                    b.Property<int>("AccountId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Expertise")
-                        .IsRequired()
-                        .HasMaxLength(200)
-                        .HasColumnType("nvarchar(200)");
-
-                    b.Property<string>("FullName")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<int>("SpecialtyId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("SpecialtyId");
-
-                    b.ToTable("Staff", (string)null);
-                });
-
             modelBuilder.Entity("Domain.Entities.Symptom", b =>
                 {
                     b.Property<int>("Id")
@@ -469,6 +444,28 @@ namespace Infrastructure.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.ToTable("Patient", (string)null);
+                });
+
+            modelBuilder.Entity("Domain.Entities.Staff", b =>
+                {
+                    b.HasBaseType("Domain.Entities.Account");
+
+                    b.Property<string>("Expertise")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FullName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int>("SpecialtyId")
+                        .HasColumnType("int");
+
+                    b.HasIndex("SpecialtyId");
+
+                    b.ToTable("Staff", (string)null);
                 });
 
             modelBuilder.Entity("Domain.Entities.Account", b =>
@@ -598,25 +595,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("Prescription");
                 });
 
-            modelBuilder.Entity("Domain.Entities.Staff", b =>
-                {
-                    b.HasOne("Domain.Entities.Account", "Account")
-                        .WithOne("Staff")
-                        .HasForeignKey("Domain.Entities.Staff", "Id")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.HasOne("Domain.Entities.Specialty", "Specialty")
-                        .WithMany("Staffs")
-                        .HasForeignKey("SpecialtyId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("Account");
-
-                    b.Navigation("Specialty");
-                });
-
             modelBuilder.Entity("Domain.Entities.Symptom", b =>
                 {
                     b.HasOne("Domain.Entities.PatientMedicalRecord", "PatientMedicalRecord")
@@ -656,6 +634,25 @@ namespace Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("Account");
+                });
+
+            modelBuilder.Entity("Domain.Entities.Staff", b =>
+                {
+                    b.HasOne("Domain.Entities.Account", "Account")
+                        .WithOne("Staff")
+                        .HasForeignKey("Domain.Entities.Staff", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Domain.Entities.Specialty", "Specialty")
+                        .WithMany("Staffs")
+                        .HasForeignKey("SpecialtyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Account");
+
+                    b.Navigation("Specialty");
                 });
 
             modelBuilder.Entity("Domain.Entities.Account", b =>
@@ -712,6 +709,13 @@ namespace Infrastructure.Migrations
                     b.Navigation("Staffs");
                 });
 
+            modelBuilder.Entity("Domain.Entities.Patient", b =>
+                {
+                    b.Navigation("Appointments");
+
+                    b.Navigation("PatientMedicalRecords");
+                });
+
             modelBuilder.Entity("Domain.Entities.Staff", b =>
                 {
                     b.Navigation("Appointments");
@@ -721,13 +725,6 @@ namespace Infrastructure.Migrations
                     b.Navigation("PatientMedicalRecords");
 
                     b.Navigation("TestResults");
-                });
-
-            modelBuilder.Entity("Domain.Entities.Patient", b =>
-                {
-                    b.Navigation("Appointments");
-
-                    b.Navigation("PatientMedicalRecords");
                 });
 #pragma warning restore 612, 618
         }

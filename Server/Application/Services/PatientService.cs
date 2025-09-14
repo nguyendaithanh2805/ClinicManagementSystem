@@ -23,12 +23,7 @@ namespace Application.Services
             _unitOfWork = unitOfWork;
         }
 
-        public void Delete(int id)
-        {
-            throw new NotImplementedException();
-        }
-
-        async Task<PatientDto> IService<PatientDto>.AddAsync(PatientDto dto)
+        public async Task<PatientDto> AddAsync(PatientDto dto)
         {
             dto.FullName = "Bệnh nhân chưa có tên";
 
@@ -37,17 +32,22 @@ namespace Application.Services
             return dto;
         }
 
-        Task<IEnumerable<PatientDto>> IService<PatientDto>.GetAllAsync()
+        public Task Delete(int id)
         {
             throw new NotImplementedException();
         }
 
-        Task<PatientDto> IService<PatientDto>.GetByIdAsync(int id)
+        public Task<IEnumerable<PatientDto>> GetAllAsync()
         {
             throw new NotImplementedException();
         }
 
-        void IService<PatientDto>.Update(PatientDto dto)
+        public Task<PatientDto> GetByIdAsync(int id)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<PatientDto> Update(PatientDto dto)
         {
             throw new NotImplementedException();
         }
