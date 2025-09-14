@@ -1,17 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Calendar } from 'lucide-react';
-import Header from '../layout/Header';
-import Footer from '../layout/Footer';
+import { decodeJwt } from '../../../utils/jwtHelper'
+import { toast } from 'react-toastify';
+import api from "../../admins-layout/contexts/Api";
 
 const AppointmentBooking = () => {
   // Nhận dữ liệu từ state của Service.jsx
   const location = useLocation();
   const { medicalServiceId } = location.state || {};
-
+  
   const [formData, setFormData] = useState({
     patientId: "",
-    staffId: "",
     medicalServiceId: medicalServiceId || "",
     appointmentDate: "",
     appointmentTime: "",
@@ -55,7 +55,6 @@ const AppointmentBooking = () => {
           if (serviceId) {
             const selected = result.data.find(s => s.id === serviceId);
             if (selected) {
-              setSelectedMedicalServiceName(selected.name);
               setSelectedSpecialtyId(selected.specialtyId);
             }
           }
@@ -102,18 +101,23 @@ const AppointmentBooking = () => {
     e.preventDefault();
     setLoading(true);
     setMessage("");
+
     try {
-      const response = await fetch(`${API_BASE_URL}/appointments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const result = await response.json();
-      if (!response.ok || !result.status) throw new Error(result.message || "Đặt lịch thất bại");
-      setMessage(result.message);
+      const token = JSON.parse(localStorage.getItem("clinic_user"))?.token;
+      const decoded = decodeJwt(token);
+      const payload = { ...formData, patientId: parseInt(decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'], 10) };
+
+      const response = await api.post("/appointments", payload);
+      if (!response.data.status) {
+        toast.error(response.data.message);
+        return;
+      }
+
+      // Nếu thành công
+      toast.success(response.data.message);
+
       setFormData({
         patientId: "",
-        staffId: "",
         medicalServiceId: "",
         appointmentDate: "",
         appointmentTime: "",
@@ -121,9 +125,8 @@ const AppointmentBooking = () => {
         phoneNumber: "",
       });
       setSelectedSpecialtyId(null);
-      setSelectedMedicalServiceName("");
-    } catch {
-      setMessage("Có lỗi xảy ra, vui lòng thử lại.");
+    } catch (error) {
+      toast.error(error.response?.data?.message);
     } finally {
       setLoading(false);
     }

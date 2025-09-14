@@ -1,10 +1,8 @@
 import axios from 'axios';
-import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-toastify';
+import { decodeJwt } from '../../../utils/jwtHelper'
 
-/**
- * Tạo instance axios
- */
+// axios interceptor
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 const api = axios.create({ baseURL: API_BASE_URL });
 
@@ -15,9 +13,9 @@ const api = axios.create({ baseURL: API_BASE_URL });
 export const setupAxiosInterceptors = (authContext) => {
   api.interceptors.request.use(
     (config) => {
-      const user = authContext.user; // lấy user từ AuthContext truyền vào
+      const user = authContext?.user;
       if (user?.token) {
-        const decoded = jwtDecode(user.token);
+        const decoded = decodeJwt(user.token);
         const now = Math.floor(Date.now() / 1000);
         if (decoded.exp < now) {
           // Token hết hạn → logout ngay

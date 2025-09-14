@@ -1,5 +1,6 @@
 import { jwtDecode } from 'jwt-decode';
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { decodeJwt } from '../../../utils/jwtHelper'
 
 // Tạo context để chia sẻ dữ liệu đăng nhập cho toàn ứng dụng
 const AuthContext = createContext();
@@ -27,6 +28,22 @@ export const AuthProvider = ({ children }) => {
   // State kiểm tra đang tải (dùng để hiển thị spinner hoặc loading UI)
   const [loading, setLoading] = useState(true);
 
+  useEffect(() => {
+    if (user?.token) {
+      try {
+        const decoded = decodeJwt(user.token);
+        const now = Math.floor(Date.now() / 1000);
+
+        if (decoded.exp < now) {
+          logout();
+          toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+        }
+      } catch {
+        logout();
+      }
+    }
+  }, []); // check ngay khi app load
+
     /**
    * useEffect: chạy 1 lần khi component mount
    * => Kiểm tra xem trong localStorage có lưu user từ lần đăng nhập trước không
@@ -45,7 +62,7 @@ export const AuthProvider = ({ children }) => {
     }
     setLoading(false);
   }, []);
-  
+
   /**
    * Hàm login: gọi API backend để đăng nhập
    * - Gửi username + password
@@ -93,7 +110,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-    /**
+  /**
    * Hàm logout: xoá user khỏi state và localStorage
    * => Quay lại trạng thái chưa đăng nhập
    */

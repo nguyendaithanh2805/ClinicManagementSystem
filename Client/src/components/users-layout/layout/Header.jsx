@@ -10,7 +10,8 @@ import {
     User,
     UserCheck,
     Calendar,
-    LogOut
+    LogOut,
+    FileText
 } from 'lucide-react';
 import { useAuth } from "../../admins-layout/contexts/AuthContext"; 
 
@@ -96,6 +97,17 @@ const Header = ({ onSearchOpen, clinicStatus, currentLanguage }) => {
                         </nav>
 
                         {/* Action Buttons */}
+
+                        {/* Patient Records Button - Visible on larger screens */}
+                        <button
+                            onClick={() => navigate('/dashboard')}
+                            className="hidden md:flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200"
+                        >
+                            <FileText className="w-5 h-5" />
+                            <span>Hồ sơ bệnh án</span>
+                        </button>
+
+
                         {/* Adjusted space-x and added hidden for specific buttons on mobile */}
                         <div className="flex items-center space-x-2 sm:space-x-4">
                             {/* Patient Portal (Login) - Hidden on extra small, shown from small up */}
@@ -153,17 +165,25 @@ const Header = ({ onSearchOpen, clinicStatus, currentLanguage }) => {
                                 </Link>
                             ))}
                             <div className="pt-4 border-t border-gray-200 space-y-3">
-                                {/* Added login/patient portal to mobile menu */}
+                                {/* Login/Logout for mobile menu */}
                                 <button
-                                    onClick={() => {
-                                        navigate('/login');
-                                        setIsMobileMenuOpen(false);
-                                    }}
+                                    onClick={handleClick}
                                     className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium w-full py-2"
                                 >
-                                    <User className="w-5 h-5" />
-                                    <span>Đăng nhập</span>
+                                    {user ? (
+                                        <>
+                                            <LogOut className="w-5 h-5" />
+                                            <span>Đăng xuất</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <User className="w-5 h-5" />
+                                            <span>Đăng nhập</span>
+                                        </>
+                                    )}
                                 </button>
+                                
+                                {/* Appointment for mobile menu */}
                                 <button
                                     onClick={() => {
                                         navigate('/appointment');
@@ -173,7 +193,15 @@ const Header = ({ onSearchOpen, clinicStatus, currentLanguage }) => {
                                 >
                                     <Calendar className="w-5 h-5" />
                                     <span>Đặt Lịch</span>
-                                </button>                  
+                                </button>        
+
+                                <button
+                                    onClick={() => navigate('/dashboard')}
+                                    className="flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium w-full py-2"
+                                >
+                                    <FileText className="w-5 h-5" />
+                                    <span>Hồ sơ bệnh án</span>
+                                </button>
                             </div>
                         </div>
                     </div>
