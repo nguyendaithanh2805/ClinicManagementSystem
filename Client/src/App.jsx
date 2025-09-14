@@ -8,16 +8,23 @@ import Doctors from './components/users-layout/pages/Doctors';
 import Contact from './components/users-layout/pages/Contact';
 import About from './components/users-layout/pages/About';
 import ProtectedRoute from './components/admins-layout/ProtectedRoute';
-import { AuthProvider } from './components/admins-layout/contexts/AuthContext';
+import { AuthProvider, useAuth } from './components/admins-layout/contexts/AuthContext';
 import LoginPage from './components/admins-layout/pages/LoginPage';
 import RegisterPage from './components/admins-layout/pages/RegisterPage';
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
+import React, { useEffect } from 'react';
+import { setupAxiosInterceptors } from "./components/admins-layout/contexts/Api"
 
-function App() {
+function AppContent() {
+  const auth = useAuth();
+
+  useEffect(() => {
+    setupAxiosInterceptors(auth);
+  }, [auth]);
+
   return (
-    <AuthProvider>
-      <BrowserRouter>
+    <BrowserRouter>
         <div className="min-h-screen bg-gray-50">
           <Routes>
             <Route path="/login" element={<LoginPage />} />
@@ -41,6 +48,13 @@ function App() {
           <ToastContainer position="top-right" autoClose={3000} />
         </div>
       </BrowserRouter>
+  );
+
+}
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent></AppContent>
     </AuthProvider>
   );
 }

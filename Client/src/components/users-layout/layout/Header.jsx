@@ -51,12 +51,6 @@ const Header = ({ onSearchOpen, clinicStatus, currentLanguage }) => {
                             <Clock className="w-4 h-4" />
                             <span>Thứ 2-6: 7:00-19:00 | Thứ 7: 7:00-17:00 | CN: 8:00-17:00</span>
                         </div>
-                        <div className="flex items-center space-x-2">
-                            <div className={`w-2 h-2 rounded-full ${clinicStatus === 'open' ? 'bg-green-400' : 'bg-red-400'}`}></div>
-                            <span className="font-medium">
-                                {clinicStatus === 'open' ? 'Đang Mở Cửa' : 'Đã Đóng Cửa'}
-                            </span>
-                        </div>
                     </div>
                     <div className="flex items-center space-x-4">
                         <button

@@ -15,7 +15,3 @@ export function decodeJwt(token) {
     return null;
   }
 }
-
-export function isTokenExpired(token) {
-  
-}
