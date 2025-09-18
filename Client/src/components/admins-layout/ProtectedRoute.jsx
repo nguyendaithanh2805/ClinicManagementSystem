@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { useAuth } from '../admins-layout/contexts/AuthContext';
 import LoadingSpinner from './LoadingSpinner';
 import { useLocation } from 'react-router-dom';
+import Forbidden from './Forbidden';
 
 // ..\ClinicManagementSystem\Client\src\AdminApp.jsx
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
@@ -13,9 +14,14 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
     return <LoadingSpinner />;
   }
 
-  // Chưa login hoặc role không hợp lệ
-  if (!user || !allowedRoles.includes(user.role)) {
-    return <Navigate to="/login" state={{ from: location }} replace />; // state.from sẽ lưu lại trang hiện tại mà user muốn truy cập.
+   if (!user) {
+    // Chưa login → redirect về login
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
+
+  if (!allowedRoles.includes(user.role)) {
+    // Đăng nhập rồi nhưng không có quyền → hiển thị Forbidden
+    return <Navigate to= "/forbidden" />;
   }
 
   return children;

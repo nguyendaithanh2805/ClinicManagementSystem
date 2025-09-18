@@ -1,6 +1,7 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Calendar, MapPin, Phone, User } from 'lucide-react';
+import { FaRegUserCircle } from 'react-icons/fa';
 
 const PatientHeader = () => {
   const { user } = useAuth();

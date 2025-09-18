@@ -14,10 +14,11 @@ const Navbar = () => {
   const handleLogout = () => {
     logout();
     setShowUserMenu(false);
+    setShowMobileMenu(false);
   };
 
   return (
-    <nav className="glass-effect border-b border-white/20 sticky top-0 z-50">
+    <nav className="bg-[#ecfeff]/90 glass-effect border-b border-white/20 sticky top-0 z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}

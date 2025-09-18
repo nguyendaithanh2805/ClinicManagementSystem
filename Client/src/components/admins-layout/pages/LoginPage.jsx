@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { Heart, User, Lock, Eye, EyeOff, AlertCircle } from 'lucide-react';
@@ -18,20 +18,22 @@ const LoginPage = () => {
 
   // Trang muốn redirect sau khi login thành công
   const from = location.state?.from?.pathname || "/";
-
+  
   // Hàm chọn route theo role
   const getRedirectPath = (role) => {
     switch (role) {
-      case "patient":
+      case "Patient":
         return from; // quay về trang trước khi bị chặn
 
       // DashboardPage sẽ chỉ được gọi khi URL = /dashboard.
-      case "doctor":
-      case "nurse":
-      case "receptionist":
-      case "lab_technician":
-      case "admin":
-        return "/dashboard";
+      case "Doctor":
+      case "Nurse":
+      case "Receptionist":
+        return "/staff/dashboard"
+      case "Lab_technician":
+        return "/staff/lab-dashboard"
+      case "Admin":
+        return "/admin/dashboard";
       default:
         return "/";
     }
@@ -41,17 +43,19 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
     try {
-      const result = await login(formData);
-      navigate(getRedirectPath(result.user.role), { replace: true });
+      await login(formData);
     } catch (err) {
       setError(err.message || 'Đăng nhập thất bại');
     }
   };
+  // https://chatgpt.com/share/68c92bfc-1514-8006-96b9-f8fa4adfdf79 - Giữ 2 root riêng, nhưng sửa luồng redirect là không bị lỗi BlankPage
+  useEffect(() => {
+    if (!loading && user) {
+      window.location.href = getRedirectPath(user.role);
+    }
+  }, [user, loading]);
 
-   // Nếu user đã tồn tại trong localStorage
-  if (user) {
-    return <Navigate to={getRedirectPath(user.role)} replace />;
-  }
+
 
   const handleChange = (e) => {
     setFormData(prev => ({

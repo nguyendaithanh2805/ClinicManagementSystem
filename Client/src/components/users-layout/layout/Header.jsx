@@ -100,7 +100,7 @@ const Header = ({ onSearchOpen, clinicStatus, currentLanguage }) => {
 
                         {/* Patient Records Button - Visible on larger screens */}
                         <button
-                            onClick={() => navigate('/dashboard')}
+                            onClick={() => window.location.href = '/patient/medical-records'}
                             className="hidden md:flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200"
                         >
                             <FileText className="w-5 h-5" />

@@ -25,88 +25,81 @@ const Sidebar = () => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   const getMenuItems = () => {
-    const commonItems = [
-      { icon: Home, label: 'Trang chủ', path: '/dashboard' },
-    ];
-
     switch (user?.role) {
-      case 'patient':
+      case 'Patient':
         return [
-          ...commonItems,
-          { icon: Calendar, label: 'Lịch khám', path: '/appointments' },
-          { icon: FileText, label: 'Hồ sơ y tế', path: '/medical-records' },
-          { icon: TestTube, label: 'Kết quả XN', path: '/test-results' },
-          { icon: Activity, label: 'Sức khỏe', path: '/health-tracking' },
-          { icon: Settings, label: 'Cài đặt', path: '/settings' },
+          { icon: Home, label: 'Trang chủ', path: '/patient/dashboard' },
+          { icon: Calendar, label: 'Lịch khám', path: '/patient/appointments' },
+          { icon: FileText, label: 'Hồ sơ y tế', path: '/patient/medical-records' },
+          { icon: TestTube, label: 'Kết quả XN', path: '/patient/test-results' },
+          { icon: Activity, label: 'Sức khỏe', path: '/patient/health-tracking' },
         ];
       
-      case 'doctor':
+      case 'Doctor':
         return [
-          ...commonItems,
-          { icon: Users, label: 'Bệnh nhân', path: '/patients' },
-          { icon: Calendar, label: 'Lịch làm việc', path: '/schedule' },
-          { icon: Stethoscope, label: 'Khám bệnh', path: '/examination' },
-          { icon: FileText, label: 'Hồ sơ bệnh án', path: '/medical-records' },
-          { icon: TestTube, label: 'Xét nghiệm', path: '/lab-tests' },
+          { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
+          { icon: Users, label: 'Bệnh nhân', path: '/staff/patients' },
+          { icon: Calendar, label: 'Lịch làm việc', path: '/staff/schedule' },
+          { icon: Stethoscope, label: 'Khám bệnh', path: '/staff/examination' },
+          { icon: FileText, label: 'Hồ sơ bệnh án', path: '/staff/medical-records' },
+          { icon: TestTube, label: 'Xét nghiệm', path: '/staff/lab-tests' },
           { icon: ClipboardList, label: 'Đơn thuốc', path: '/prescriptions' },
-          { icon: BarChart3, label: 'Báo cáo', path: '/reports' },
+          { icon: BarChart3, label: 'Báo cáo', path: '/staff/reports' },
         ];
       
-      case 'nurse':
+      case 'Nurse':
         return [
-          ...commonItems,
-          { icon: Users, label: 'Bệnh nhân', path: '/patients' },
-          { icon: Calendar, label: 'Lịch làm việc', path: '/schedule' },
-          { icon: UserCheck, label: 'Chăm sóc BN', path: '/patient-care' },
-          { icon: TestTube, label: 'Hỗ trợ XN', path: '/lab-support' },
-          { icon: FileText, label: 'Ghi chép y tế', path: '/nursing-notes' },
-          { icon: Activity, label: 'Theo dõi', path: '/monitoring' },
+          { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
+          { icon: Users, label: 'Bệnh nhân', path: '/staff/patients' },
+          { icon: Calendar, label: 'Lịch làm việc', path: '/staff/schedule' },
+          { icon: UserCheck, label: 'Chăm sóc BN', path: '/staff/patient-care' },
+          { icon: TestTube, label: 'Hỗ trợ XN', path: '/staff/lab-support' },
+          { icon: FileText, label: 'Ghi chép y tế', path: '/staff/nursing-notes' },
+          { icon: Activity, label: 'Theo dõi', path: '/staff/monitoring' },
         ];
       
-      case 'receptionist':
+      case 'Receptionist':
         return [
-          ...commonItems,
-          { icon: Calendar, label: 'Đặt lịch hẹn', path: '/appointments' },
-          { icon: Users, label: 'Tiếp đón BN', path: '/patient-reception' },
-          { icon: FileText, label: 'Hồ sơ BN', path: '/patient-records' },
-          { icon: Activity, label: 'Hàng đợi', path: '/queue-management' },
-          { icon: BarChart3, label: 'Báo cáo', path: '/reports' },
+          { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
+          { icon: Calendar, label: 'Đặt lịch hẹn', path: '/staff/appointments' },
+          { icon: Users, label: 'Tiếp đón BN', path: '/staff/patient-reception' },
+          { icon: FileText, label: 'Hồ sơ BN', path: '/staff/patient-records' },
+          { icon: Activity, label: 'Hàng đợi', path: '/staff/queue-management' },
+          { icon: BarChart3, label: 'Báo cáo', path: '/staff/reports' },
         ];
       
-      case 'lab_technician':
+      case 'Lab_technician':
         return [
-          ...commonItems,
-          { icon: TestTube, label: 'Hàng đợi XN', path: '/test-queue' },
-          { icon: Activity, label: 'Theo dõi mẫu', path: '/sample-tracking' },
-          { icon: Shield, label: 'Kiểm soát CL', path: '/quality-control' },
-          { icon: Settings, label: 'Thiết bị', path: '/equipment' },
-          { icon: FileText, label: 'Kết quả', path: '/test-results' },
-          { icon: BarChart3, label: 'Báo cáo', path: '/lab-reports' },
+          { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
+          { icon: TestTube, label: 'Hàng đợi XN', path: '/staff/test-queue' },
+          { icon: Activity, label: 'Theo dõi mẫu', path: '/staff/sample-tracking' },
+          { icon: Shield, label: 'Kiểm soát CL', path: '/staff/quality-control' },
+          { icon: Settings, label: 'Thiết bị', path: '/staff/equipment' },
+          { icon: FileText, label: 'Kết quả', path: '/staff/test-results' },
+          { icon: BarChart3, label: 'Báo cáo', path: '/staff/lab-reports' },
         ];
       
-      case 'admin':
+      case 'Admin':
         return [
-          ...commonItems,
-          { icon: Users, label: 'Quản lý người dùng', path: '/user-management' },
-          { icon: Shield, label: 'Hệ thống', path: '/system-management' },
-          { icon: Activity, label: 'Hoạt động', path: '/activity-logs' },
-          { icon: BarChart3, label: 'Thống kê', path: '/analytics' },
-          { icon: Settings, label: 'Cấu hình', path: '/system-settings' },
+          { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
+          { icon: Users, label: 'Quản lý người dùng', path: '/admin/user-management' },
+          { icon: Shield, label: 'Hệ thống', path: '/admin/system-management' },
+          { icon: Activity, label: 'Hoạt động', path: '/admin/activity-logs' },
+          { icon: BarChart3, label: 'Thống kê', path: '/admin/analytics' },
         ];
-      
-      default:
-        return commonItems;
     }
   };
 
   const menuItems = getMenuItems();
 
   const isActive = (path) => {
-    if (path === '/dashboard') {
-      return location.pathname === '/dashboard' || location.pathname === '/';
+    // Xử lý dashboard riêng
+    if (path.endsWith('/dashboard')) {
+      return location.pathname === path;
     }
-    return location.pathname.startsWith(path);
+    return location.pathname === path;
   };
+
 
   return (
     <div className={`glass-effect border-r border-white/20 transition-all duration-300 ${
