@@ -39,6 +39,9 @@ namespace Infrastructure.Persistence
         public async Task<T> GetByIdAsync(int id)
             => await _dbSet.FindAsync(id);
 
+        public IQueryable<T> Query()
+            => _dbSet.AsQueryable();
+
         public void Update(T entity)
             => _dbSet.Update(entity);
     }

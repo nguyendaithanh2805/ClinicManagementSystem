@@ -24,6 +24,7 @@ const Sidebar = () => {
   const location = useLocation();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Xây dựng menu động dựa trên role
   const getMenuItems = () => {
     switch (user?.role) {
       case 'Patient':
@@ -38,32 +39,19 @@ const Sidebar = () => {
       case 'Doctor':
         return [
           { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
-          { icon: Users, label: 'Bệnh nhân', path: '/staff/patients' },
-          { icon: Calendar, label: 'Lịch làm việc', path: '/staff/schedule' },
-          { icon: Stethoscope, label: 'Khám bệnh', path: '/staff/examination' },
-          { icon: FileText, label: 'Hồ sơ bệnh án', path: '/staff/medical-records' },
-          { icon: TestTube, label: 'Xét nghiệm', path: '/staff/lab-tests' },
-          { icon: ClipboardList, label: 'Đơn thuốc', path: '/prescriptions' },
-          { icon: BarChart3, label: 'Báo cáo', path: '/staff/reports' },
-        ];
-      
-      case 'Nurse':
-        return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
-          { icon: Users, label: 'Bệnh nhân', path: '/staff/patients' },
-          { icon: Calendar, label: 'Lịch làm việc', path: '/staff/schedule' },
-          { icon: UserCheck, label: 'Chăm sóc BN', path: '/staff/patient-care' },
-          { icon: TestTube, label: 'Hỗ trợ XN', path: '/staff/lab-support' },
-          { icon: FileText, label: 'Ghi chép y tế', path: '/staff/nursing-notes' },
-          { icon: Activity, label: 'Theo dõi', path: '/staff/monitoring' },
+          { icon: Calendar, label: 'Lịch làm việc', path: '/staff/schedule' }, // Quan ly lich hen
+          { icon: FileText, label: 'Hồ sơ bệnh nhân', path: '/staff/patient-medical-record' }, // Quan ly ho so benh nhan
+          // { icon: TestTube, label: 'Xét nghiệm', path: '/staff/lab-tests' },
+          { icon: ClipboardList, label: 'Đơn thuốc', path: '/staff/prescriptions' }, // Ke don thuoc
+          // { icon: BarChart3, label: 'Báo cáo', path: '/staff/reports' },
         ];
       
       case 'Receptionist':
         return [
           { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
-          { icon: Calendar, label: 'Đặt lịch hẹn', path: '/staff/appointments' },
-          { icon: Users, label: 'Tiếp đón BN', path: '/staff/patient-reception' },
-          { icon: FileText, label: 'Hồ sơ BN', path: '/staff/patient-records' },
+          { icon: Calendar, label: 'Lịch hẹn', path: '/staff/appointments' },
+          { icon: Users, label: 'Tài khoản', path: '/staff/patients' },
+          { icon: FileText, label: 'Thanh toán', path: '/staff/payments' },
           { icon: Activity, label: 'Hàng đợi', path: '/staff/queue-management' },
           { icon: BarChart3, label: 'Báo cáo', path: '/staff/reports' },
         ];

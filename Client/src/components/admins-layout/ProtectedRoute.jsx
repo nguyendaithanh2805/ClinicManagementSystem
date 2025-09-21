@@ -21,7 +21,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
 
   if (!allowedRoles.includes(user.role)) {
     // Đăng nhập rồi nhưng không có quyền → hiển thị Forbidden
-    return <Navigate to= "/forbidden" />;
+    return window.location.href = "/forbidden"; // <Navigate to= "/forbidden" />; 
   }
 
   return children;

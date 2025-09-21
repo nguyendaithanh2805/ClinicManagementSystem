@@ -20,10 +20,10 @@ namespace Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
         private readonly IPasswordHasher<AccountDto> _passwordHasher;
-        private readonly IService<PatientDto> _patientService;
+        private readonly IPatientService _patientService;
         private readonly IService<RoleDto> _roleService;
 
-        public AuthService(IRepository<Account> accountRepository, IMapper mapper, IUnitOfWork unitOfWork, IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher<AccountDto> passwordHasher, IService<PatientDto> patientService, IService<RoleDto> roleService)
+        public AuthService(IRepository<Account> accountRepository, IMapper mapper, IUnitOfWork unitOfWork, IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher<AccountDto> passwordHasher, IPatientService patientService, IService<RoleDto> roleService)
         {
             _accountRepository = accountRepository;
             _mapper = mapper;
@@ -36,22 +36,33 @@ namespace Application.Services
 
         public async Task<AccountDto> AddAsync(AccountDto dto)
         {
-            var account = await _accountRepository.GetAsync(x => x.Username == dto.Username);
-            if (account is not null)
+            var accountExisting = await _accountRepository.GetAsync(x => x.Username == dto.Username);
+            if (accountExisting is not null)
                 throw new AlreadyExistsException("Tên đăng nhập đã tồn tại.");
-            if (dto.RoleId == 0)
-                dto.RoleId = 3; // patient
             dto.Password = _passwordHasher.HashPassword(dto, dto.Password);
             
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                //await _accountRepository.AddAsync(
-                //    _mapper.Map<Account>(dto));
-            
-                await _patientService.AddAsync(
-                    _mapper.Map<PatientDto>(dto));
+                if (dto.RoleId == 0)
+                    dto.RoleId = 3;
+
+                var accountEntity = _mapper.Map<Account>(dto);
+                await _accountRepository.AddAsync(accountEntity);
+                await _unitOfWork.SaveChangeAsync();
+
+                // patient
+                if (accountEntity.RoleId == 3)
+                {
+                    var patient = new PatientDto
+                    {
+                        AccountId = accountEntity.Id,
+                    };
+
+                    await _patientService.AddAsync(patient);    
+                }
+                // Staff
 
                 await _unitOfWork.CommitAsync();
                 return dto;

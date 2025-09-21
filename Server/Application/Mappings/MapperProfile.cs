@@ -15,11 +15,11 @@ namespace Application.Mappings
         {
             CreateMap<Account, AccountDto>().ReverseMap();
             CreateMap<Patient, PatientDto>().ReverseMap();
-            CreateMap<PatientDto, AccountDto>().ReverseMap();
             CreateMap<Appointment, AppointmentDto>().ReverseMap();
             CreateMap<Specialty, SpecialtyDto>().ReverseMap();
             CreateMap<Role, RoleDto>().ReverseMap();
             CreateMap<MedicalService, MedicalServiceDto>().ReverseMap();
+            CreateMap<PatientWithAccountDto, Patient>().ReverseMap();
         }
     }
 }

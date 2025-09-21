@@ -2,6 +2,9 @@
 using Application.DTOs;
 using Application.Exceptions;
 using Application.Interfaces;
+using Application.Services;
+using Domain.Entities;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
@@ -31,6 +34,25 @@ namespace Api.Controllers
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));
             }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+        }
+
+        [Authorize]
+        [HttpGet("{id:int}")]
+        public async Task<IActionResult> GetById([FromRoute] int id)
+        {
+            try
+            {
+                return Ok(new ApiResponse<AccountDto>(true, "Lấy dữ liệu thành công", await _authService.GetByIdAsync(id)));
+            }
+            catch (NotFoundException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+
             catch (Exception ex)
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));

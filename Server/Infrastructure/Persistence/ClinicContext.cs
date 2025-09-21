@@ -1,289 +1,259 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
-namespace Infrastructure.Persistence
+namespace Infrastructure.Persistence;
+
+public partial class ClinicContext : DbContext
 {
-    public class ClinicContext : DbContext
+    public ClinicContext(DbContextOptions<ClinicContext> options)
+        : base(options)
     {
-        public ClinicContext(DbContextOptions options) : base(options) { }
-
-        public DbSet<Account> Accounts { get; set; }
-        public DbSet<Appointment> Appointments { get; set; }
-        public DbSet<ChangeLog> ChangeLogs { get; set; }
-        public DbSet<Invoice> Invoices { get; set; }
-        public DbSet<MedicalService> MedicalServices { get; set; }
-        public DbSet<Medicine> Medicines { get; set; }
-        public DbSet<Patient> Patients { get; set; }
-        public DbSet<PatientMedicalRecord> PatientMedicalRecords { get; set; }
-        public DbSet<Prescription> Prescriptions { get; set; }
-        public DbSet<PrescriptionDetail> PrescriptionDetails { get; set; }
-        public DbSet<Role> Roles { get; set; }
-        public DbSet<Specialty> Specialties { get; set; }
-        public DbSet<Staff> Staffs { get; set; }
-        public DbSet<Symptom> Symptoms { get; set; }
-        public DbSet<TestResult> Results { get; set; }
-
-        protected override void OnModelCreating(ModelBuilder modelBuilder)
-        {
-            // 1. Map tên bảng = tên class
-            modelBuilder.Entity<Account>()
-            .ToTable("Account");
-
-            modelBuilder.Entity<Appointment>()
-                .ToTable("Appointment");
-
-            modelBuilder.Entity<ChangeLog>()
-                .ToTable("ChangeLog");
-
-            modelBuilder.Entity<Invoice>()
-                .ToTable("Invoice");
-
-            modelBuilder.Entity<MedicalService>()
-                .ToTable("MedicalService");
-
-            modelBuilder.Entity<Medicine>()
-                .ToTable("Medicine");
-
-            modelBuilder.Entity<Patient>()
-                .ToTable("Patient");
-
-            modelBuilder.Entity<PatientMedicalRecord>()
-                .ToTable("PatientMedicalRecord");
-
-            modelBuilder.Entity<Prescription>()
-                .ToTable("Prescription");
-
-            modelBuilder.Entity<Role>()
-                .ToTable("Role");
-
-            modelBuilder.Entity<Specialty>()
-                .ToTable("Specialty");
-
-            modelBuilder.Entity<Staff>()
-                .ToTable("Staff");
-
-            modelBuilder.Entity<Symptom>()
-                .ToTable("Symptom");
-
-            modelBuilder.Entity<TestResult>()
-                .ToTable("TestResult");
-
-
-            // 2. Relationships
-            modelBuilder.Entity<MedicalService>(entity =>
-            {
-                entity.Property(ms => ms.Name)
-                      .HasMaxLength(100)
-                      .IsRequired();
-
-                entity.Property(ms => ms.Cost)
-                      .HasColumnType("decimal(15,0)")
-                      .IsRequired();
-
-                entity.HasOne(ms => ms.Specialty)
-                      .WithMany(s => s.MedicalServices)
-                      .HasForeignKey(ms => ms.SpecialtyId);
-            });
-
-
-            modelBuilder.Entity<Appointment>(entity =>
-            {
-                entity.Property(ap => ap.AppointmentDate)
-                      .IsRequired();
-
-                entity.Property(ap => ap.AppointmentTime)
-                      .IsRequired();
-
-                entity.Property(ap => ap.Status)
-                      .IsRequired();
-
-                // Quan hệ
-                entity.HasOne(ap => ap.MedicalService)
-                      .WithMany(ms => ms.Appointments)
-                      .HasForeignKey(ap => ap.MedicalServiceId);
-
-                entity.HasOne(ap => ap.Patient)
-                      .WithMany(pt => pt.Appointments)
-                      .HasForeignKey(ap => ap.PatientId);
-
-                entity.HasOne(ap => ap.Staff)
-                      .WithMany(s => s.Appointments)
-                      .HasForeignKey(ap => ap.StaffId);
-
-                entity.HasOne(ap => ap.Invoice)
-                      .WithOne(i => i.Appointment)
-                      .HasForeignKey<Invoice>(i => i.Id);
-            });
-
-            modelBuilder.Entity<Staff>(entity =>
-            {
-                entity.Property(s => s.FullName)
-                      .HasMaxLength(100)
-                      .IsRequired();
-
-                entity.Property(s => s.Expertise)
-                      .HasMaxLength(200)
-                      .IsRequired();
-
-                // Quan hệ
-                entity.HasOne(s => s.Specialty)
-                      .WithMany(sp => sp.Staffs)
-                      .HasForeignKey(s => s.SpecialtyId);
-            });
-
-            modelBuilder.Entity<Account>(entity =>
-            {
-                entity.Property(a => a.Username)
-                      .HasMaxLength(50)
-                      .IsRequired();
-
-                entity.Property(a => a.Password)
-                      .HasMaxLength(255)
-                      .IsRequired();
-
-                entity.Property(a => a.PhoneNumber)
-                      .HasMaxLength(15);
-
-                entity.Property(a => a.Email)
-                      .HasMaxLength(100);
-
-                // Quan hệ
-                entity.HasOne(a => a.Role)
-                      .WithMany(r => r.Accounts)
-                      .HasForeignKey(a => a.RoleId);
-
-                entity.HasOne(a => a.Staff)
-                      .WithOne(s => s.Account)
-                      .HasForeignKey<Staff>(s => s.Id);
-
-                entity.HasOne(a => a.Patient)
-                      .WithOne(p => p.Account)
-                      .HasForeignKey<Patient>(p => p.Id);
-            });
-
-
-            modelBuilder.Entity<ChangeLog>(entity =>
-            {
-                entity.Property(c => c.TimeStamp)
-                      .IsRequired();
-
-                entity.Property(c => c.RelatedTable)
-                      .HasMaxLength(100)
-                      .IsRequired();
-
-                entity.Property(c => c.Action)
-                      .HasMaxLength(50)
-                      .IsRequired();
-
-                // Quan hệ
-                entity.HasOne(c => c.Staff)
-                      .WithMany(s => s.ChangeLogs)
-                      .HasForeignKey(c => c.StaffId);
-            });
-
-            modelBuilder.Entity<PatientMedicalRecord>(entity =>
-            {
-                entity.Property(pmr => pmr.Diagnosis)
-                      .HasMaxLength(500);
-
-                entity.Property(pmr => pmr.TreatmentMethod)
-                      .HasMaxLength(500);
-
-                entity.Property(pmr => pmr.RequiresTest)
-                      .IsRequired();
-
-                // Quan hệ
-                entity.HasOne(pmr => pmr.Staff)
-                      .WithMany(s => s.PatientMedicalRecords)
-                      .HasForeignKey(pmr => pmr.StaffId);
-            });
-
-            modelBuilder.Entity<TestResult>(entity =>
-            {
-                entity.Property(t => t.Name)
-                      .HasMaxLength(200)
-                      .IsRequired();
-
-                entity.Property(t => t.Image)
-                      .HasMaxLength(255)
-                      .IsRequired();
-
-                entity.Property(t => t.Description)
-                      .HasMaxLength(500);
-
-                entity.Property(t => t.CreatedAt)
-                      .IsRequired();
-
-                // Quan hệ
-                entity.HasOne(t => t.Staff)
-                      .WithMany(s => s.TestResults)
-                      .HasForeignKey(t => t.StaffId);
-            });
-
-
-            modelBuilder.Entity<Symptom>(entity =>
-            {
-                entity.Property(st => st.Name)
-                      .HasMaxLength(200)
-                      .IsRequired();
-
-                // Quan hệ
-                entity.HasOne(st => st.PatientMedicalRecord)
-                      .WithMany(pmr => pmr.Symptoms)
-                      .HasForeignKey(st => st.PatientMedicalRecordId);
-            });
-
-
-            modelBuilder.Entity<PrescriptionDetail>(entity =>
-            {
-                entity.HasKey(pcd => new { pcd.PrescriptionId, pcd.MedicineId });
-
-                entity.Property(pcd => pcd.Dosage)
-                      .HasMaxLength(100);
-
-                entity.Property(pcd => pcd.Frequency)
-                      .HasMaxLength(100);
-
-                entity.Property(pcd => pcd.Amount)
-                      .HasColumnType("decimal(15,0)");
-
-                entity.HasOne(pcd => pcd.Medicine)
-                      .WithMany(m => m.PrescriptionDetails)
-                      .HasForeignKey(pcd => pcd.MedicineId);
-
-                entity.HasOne(pcd => pcd.Prescription)
-                      .WithMany(p => p.PrescriptionDetails)
-                      .HasForeignKey(pcd => pcd.PrescriptionId);
-            });
-
-
-            modelBuilder.Entity<Prescription>(entity =>
-            {
-                entity.HasOne(p => p.Invoice)
-                      .WithOne(i => i.Prescription)
-                      .HasForeignKey<Invoice>(i => i.Id);
-            });
-
-            // 3. Disable tất cả cascade delete
-            foreach (var relationship in modelBuilder.Model.GetEntityTypes().SelectMany(e => e.GetForeignKeys()))
-            {
-                relationship.DeleteBehavior = DeleteBehavior.Restrict; // hoặc DeleteBehavior.NoAction
-            }
-
-            // 4. Insert Data
-            modelBuilder.Entity<Role>().HasData(
-               new Role { Id = 1, Name = "Admin" },
-               new Role { Id = 2, Name = "Nurse" },
-               new Role { Id = 3, Name = "Patient" },
-               new Role { Id = 4, Name = "Doctor" },
-               new Role { Id = 5, Name = "Receptionist" },
-               new Role { Id = 6, Name = "LabTechnician" }
-             );
-        }
     }
+
+    public virtual DbSet<Account> Accounts { get; set; }
+
+    public virtual DbSet<Appointment> Appointments { get; set; }
+
+    public virtual DbSet<Invoice> Invoices { get; set; }
+
+    public virtual DbSet<MedicalService> MedicalServices { get; set; }
+
+    public virtual DbSet<Medicine> Medicines { get; set; }
+
+    public virtual DbSet<Patient> Patients { get; set; }
+
+    public virtual DbSet<PatientMedicalRecord> PatientMedicalRecords { get; set; }
+
+    public virtual DbSet<Prescription> Prescriptions { get; set; }
+
+    public virtual DbSet<PrescriptionDetail> PrescriptionDetails { get; set; }
+
+    public virtual DbSet<Role> Roles { get; set; }
+
+    public virtual DbSet<Specialty> Specialties { get; set; }
+
+    public virtual DbSet<Staff> Staff { get; set; }
+
+    public virtual DbSet<Symptom> Symptoms { get; set; }
+
+    public virtual DbSet<TestResult> TestResults { get; set; }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Account>(entity =>
+        {
+            entity.ToTable("Account");
+
+            entity.Property(e => e.Email).HasMaxLength(200);
+            entity.Property(e => e.Password).HasMaxLength(200);
+            entity.Property(e => e.PhoneNumber).HasMaxLength(50);
+            entity.Property(e => e.Username).HasMaxLength(200);
+
+            entity.HasOne(d => d.Role).WithMany(p => p.Accounts)
+                .HasForeignKey(d => d.RoleId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Account_Role");
+        });
+
+        modelBuilder.Entity<Appointment>(entity =>
+        {
+            entity.ToTable("Appointment");
+
+            entity.HasOne(d => d.MedicalService).WithMany(p => p.Appointments)
+                .HasForeignKey(d => d.MedicalServiceId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Appointment_MedicalService");
+
+            entity.HasOne(d => d.Patient).WithMany(p => p.Appointments)
+                .HasForeignKey(d => d.PatientId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Appointment_Patient");
+
+            entity.HasOne(d => d.Staff).WithMany(p => p.Appointments)
+                .HasForeignKey(d => d.StaffId)
+                .HasConstraintName("FK_Appointment_Staff");
+        });
+
+        modelBuilder.Entity<Invoice>(entity =>
+        {
+            entity.ToTable("Invoice");
+
+            entity.HasIndex(e => e.PrescriptionId, "UQ__Invoice__40130833F7CD7A20").IsUnique();
+
+            entity.HasIndex(e => e.AppointmentId, "UQ__Invoice__8ECDFCC31E0AE998").IsUnique();
+
+            entity.Property(e => e.PaymentDate).HasColumnType("datetime");
+            entity.Property(e => e.TotalAmount).HasColumnType("decimal(15, 0)");
+
+            entity.HasOne(d => d.Appointment).WithOne(p => p.Invoice)
+                .HasForeignKey<Invoice>(d => d.AppointmentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Invoice_Appoinment");
+
+            entity.HasOne(d => d.Prescription).WithOne(p => p.Invoice)
+                .HasForeignKey<Invoice>(d => d.PrescriptionId)
+                .HasConstraintName("FK_Invoice_Prescription");
+        });
+
+        modelBuilder.Entity<MedicalService>(entity =>
+        {
+            entity.ToTable("MedicalService");
+
+            entity.Property(e => e.Cost).HasColumnType("decimal(15, 0)");
+            entity.Property(e => e.Name).HasMaxLength(200);
+
+            entity.HasOne(d => d.Specialty).WithMany(p => p.MedicalServices)
+                .HasForeignKey(d => d.SpecialtyId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_MedicalService_Specialty");
+        });
+
+        modelBuilder.Entity<Medicine>(entity =>
+        {
+            entity.ToTable("Medicine");
+
+            entity.Property(e => e.Category).HasMaxLength(100);
+            entity.Property(e => e.Contraindications).HasMaxLength(500);
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Interactions).HasMaxLength(500);
+            entity.Property(e => e.Name).HasMaxLength(200);
+            entity.Property(e => e.Price).HasColumnType("decimal(18, 2)");
+            entity.Property(e => e.Unit).HasMaxLength(50);
+        });
+
+        modelBuilder.Entity<Patient>(entity =>
+        {
+            entity.ToTable("Patient");
+
+            entity.HasIndex(e => e.AccountId, "UQ__Patient__349DA5A7BC88B0AC").IsUnique();
+
+            entity.Property(e => e.Address).HasMaxLength(300);
+            entity.Property(e => e.FullName).HasMaxLength(200);
+
+            entity.HasOne(d => d.Account).WithOne(p => p.Patient)
+                .HasForeignKey<Patient>(d => d.AccountId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Patient_Account");
+        });
+
+        modelBuilder.Entity<PatientMedicalRecord>(entity =>
+        {
+            entity.ToTable("PatientMedicalRecord");
+
+            entity.Property(e => e.Diagnosis).HasMaxLength(500);
+            entity.Property(e => e.TreatmentMethod).HasMaxLength(500);
+
+            entity.HasOne(d => d.Patient).WithMany(p => p.PatientMedicalRecords)
+                .HasForeignKey(d => d.PatientId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PatientMedicalRecord_Patient");
+
+            entity.HasOne(d => d.Staff).WithMany(p => p.PatientMedicalRecords)
+                .HasForeignKey(d => d.StaffId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_PatientMedicalRecord_Staff");
+        });
+
+        modelBuilder.Entity<Prescription>(entity =>
+        {
+            entity.ToTable("Prescription");
+
+            entity.Property(e => e.PrescriptionDate).HasColumnType("datetime");
+
+            entity.HasOne(d => d.PatientMedicalRecord).WithMany(p => p.Prescriptions)
+                .HasForeignKey(d => d.PatientMedicalRecordId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Prescription_PatientMedicalRecord");
+        });
+
+        modelBuilder.Entity<PrescriptionDetail>(entity =>
+        {
+            entity.HasKey(e => new { e.PrescriptionId, e.MedicineId });
+
+            entity.ToTable("PrescriptionDetail");
+
+            entity.Property(e => e.Amount).HasColumnType("decimal(15, 0)");
+            entity.Property(e => e.Dosage).HasMaxLength(200);
+            entity.Property(e => e.Frequency).HasMaxLength(200);
+
+            entity.HasOne(d => d.Medicine).WithMany(p => p.PrescriptionDetails)
+                .HasForeignKey(d => d.MedicineId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PrescriptionDetail_Medicine");
+
+            entity.HasOne(d => d.Prescription).WithMany(p => p.PrescriptionDetails)
+                .HasForeignKey(d => d.PrescriptionId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PrescriptionDetail_Prescription");
+        });
+
+        modelBuilder.Entity<Role>(entity =>
+        {
+            entity.ToTable("Role");
+
+            entity.Property(e => e.Name).HasMaxLength(100);
+        });
+
+        modelBuilder.Entity<Specialty>(entity =>
+        {
+            entity.ToTable("Specialty");
+
+            entity.Property(e => e.Name).HasMaxLength(200);
+        });
+
+        modelBuilder.Entity<Staff>(entity =>
+        {
+            entity.HasIndex(e => e.AccountId, "UQ__Staff__349DA5A7F8C130F5").IsUnique();
+
+            entity.Property(e => e.Expertise).HasMaxLength(200);
+            entity.Property(e => e.FullName).HasMaxLength(200);
+
+            entity.HasOne(d => d.Account).WithOne(p => p.Staff)
+                .HasForeignKey<Staff>(d => d.AccountId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_Staff_Account");
+
+            entity.HasOne(d => d.Specialty).WithMany(p => p.Staff)
+                .HasForeignKey(d => d.SpecialtyId)
+                .HasConstraintName("FK_Staff_Specialty");
+        });
+
+        modelBuilder.Entity<Symptom>(entity =>
+        {
+            entity.ToTable("Symptom");
+
+            entity.Property(e => e.Name).HasMaxLength(200);
+
+            entity.HasOne(d => d.PatientMedicalRecord).WithMany(p => p.Symptoms)
+                .HasForeignKey(d => d.PatientMedicalRecordId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Symptom_PatientMedicalRecord");
+        });
+
+        modelBuilder.Entity<TestResult>(entity =>
+        {
+            entity.ToTable("TestResult");
+
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+            entity.Property(e => e.Description).HasMaxLength(500);
+            entity.Property(e => e.Image).HasMaxLength(300);
+            entity.Property(e => e.Name).HasMaxLength(200);
+
+            entity.HasOne(d => d.PatientMedicalRecord).WithMany(p => p.TestResults)
+                .HasForeignKey(d => d.PatientMedicalRecordId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_TestResult_PatientMedicalRecord");
+
+            entity.HasOne(d => d.Staff).WithMany(p => p.TestResults)
+                .HasForeignKey(d => d.StaffId)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_TestResult_Staff");
+        });
+
+        OnModelCreatingPartial(modelBuilder);
+    }
+
+    partial void OnModelCreatingPartial(ModelBuilder modelBuilder);
 }

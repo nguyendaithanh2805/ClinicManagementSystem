@@ -7,8 +7,12 @@ using System.Threading.Tasks;
 
 namespace Application.DTOs
 {
-    public class PatientDto : AccountDto
+    public class PatientDto
     {
+        public int Id { get; set; }
+
+        public int AccountId { get; set; }
+
         [StringLength(100, ErrorMessage = "Họ tên không được vượt quá 100 ký tự.")]
         public string? FullName { get; set; }
 

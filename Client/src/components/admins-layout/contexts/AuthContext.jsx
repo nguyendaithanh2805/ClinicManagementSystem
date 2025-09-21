@@ -25,7 +25,7 @@ export const AuthProvider = ({ children }) => {
    // State lưu thông tin người dùng hiện tại
   const [user, setUser] = useState(null);
 
-  // State kiểm tra đang tải (dùng để hiển thị spinner hoặc loading UI)
+  // State kiểm tra đang tải
   const [loading, setLoading] = useState(true);
 
     /**
@@ -101,6 +101,7 @@ export const AuthProvider = ({ children }) => {
   const logout = () => {
     setUser(null);
     localStorage.removeItem('clinic_user');
+    window.location.href = "/login"
   };
 
   // Dữ liệu sẽ được chia sẻ qua context cho các component con

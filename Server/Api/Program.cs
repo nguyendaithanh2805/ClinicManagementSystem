@@ -17,6 +17,7 @@ using Application.DTOs;
 using Microsoft.Extensions.Options;
 using Application.Common;
 using Microsoft.AspNetCore.Mvc;
+using Domain.Entities;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -79,16 +80,17 @@ builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
 builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 
 // Service
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPasswordHasher<AccountDto>, PasswordHasher<AccountDto>>();
-builder.Services.AddScoped<IService<PatientDto>, PatientService>();
+builder.Services.AddScoped<IPasswordHasher<PatientWithAccountDto>, PasswordHasher<PatientWithAccountDto>>();
+builder.Services.AddScoped<IPatientService, PatientService>();
 builder.Services.AddScoped<IAccountHelper, AccountHelper>();
 builder.Services.AddScoped<IService<AppointmentDto>, AppointmentService>();
-builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IService<SpecialtyDto>, SpecialtyService>();
 builder.Services.AddScoped<IService<RoleDto>, RoleService>();
 builder.Services.AddScoped<IService<MedicalServiceDto>, MedicalServiceImpl>();
-
+builder.Services.AddScoped<IAccounService, AccountService>();
 // Handle when validation returns an invalid format
 builder.Services.Configure<ApiBehaviorOptions>(options =>
 {

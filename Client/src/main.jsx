@@ -10,14 +10,11 @@ const path = window.location.pathname;
 
 if (path.startsWith('/patient') || path.startsWith('/staff') || path.startsWith('/admin')) {
   createRoot(document.getElementById('root-admin')).render(
-    <StrictMode>
-      <AdminApp />
-    </StrictMode>
+    <AdminApp />
+
   );
 } else {
   createRoot(document.getElementById('root-user')).render(
-    <StrictMode>
-      <App />
-    </StrictMode>
+    <App />
   );
 }
