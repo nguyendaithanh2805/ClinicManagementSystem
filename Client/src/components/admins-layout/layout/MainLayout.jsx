@@ -15,7 +15,6 @@ const MainLayout = () => {
           <Outlet />
         </main>
       </div>
-      <NotificationPanel />
       <ChatPanel />
     </div>
   );

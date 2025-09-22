@@ -40,7 +40,7 @@ export const setupAxiosInterceptors = () => {
             // Gắn Authorization header
             config.headers = config.headers || {};
             config.headers.Authorization = `Bearer ${user.token}`;
-            console.log("Attached header:", config.headers.Authorization);
+            // console.log("Attached header:", config.headers.Authorization);
           }
         } catch (err) {
           console.error("Invalid saved user in localStorage:", err);
@@ -48,7 +48,7 @@ export const setupAxiosInterceptors = () => {
         }
       }
 
-      console.log("Interceptor config before return:", config);
+      // console.log("Interceptor config before return:", config);
       return config;
     },
     (error) => Promise.reject(error)

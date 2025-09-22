@@ -9,9 +9,9 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Api.Controllers
 {
-    [Route("api/appointments")]
+    [Route("api/staff/appointments")]
     [ApiController]
-    [Authorize]
+    [Authorize(Roles = "Receptionist, Doctor")]
     public class AppointmentController : ControllerBase
     {
         private readonly IService<AppointmentDto> _appointmentService;
@@ -53,6 +53,7 @@ namespace Api.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Patient")]
         public async Task<IActionResult> AddAsync(AppointmentDto appointmentDto)
         {
             try
@@ -62,6 +63,31 @@ namespace Api.Controllers
                     await _appointmentService.AddAsync(appointmentDto)));
             }
             catch (AlreadyExistsException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+        }
+
+        [HttpPatch("{id:int}")]
+        [Authorize(Roles = "Patient, Receptionist")]
+        public async Task<IActionResult> Update([FromRoute] int id, [FromBody] AppointmentDto appointmentDto)
+        {
+            try
+            {
+                if (!ModelState.IsValid)
+                    return BadRequest(ModelState);
+
+                if (id != appointmentDto.Id)
+                    return BadRequest("Id không khớp");
+
+                return Ok(new ApiResponse<AppointmentDto>(true, "Cập nhật lịch hẹn thành công",
+                    await _appointmentService.Update(appointmentDto)));
+            }
+            catch (NotFoundException ex)
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));
             }

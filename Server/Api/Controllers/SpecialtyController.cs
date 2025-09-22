@@ -11,7 +11,7 @@ namespace Api.Controllers
 {
     [Route("api/specialties")]
     [ApiController]
-    [Authorize(Roles = "Admin, Nurse, Doctor, Receptionist, LabTechnician")]
+    [Authorize(Roles = "Admin, Doctor, Receptionist, LabTechnician")]
     public class SpecialtyController : ControllerBase
     {
         private readonly IService<SpecialtyDto> _specialtyService;

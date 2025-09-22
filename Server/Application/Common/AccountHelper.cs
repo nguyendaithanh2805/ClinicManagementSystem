@@ -30,7 +30,7 @@ namespace Application.Common
 
         public int GetRoleId()
         {
-            var claim = _contextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role);
+            var claim = _contextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier);
             if (claim is null)
                 throw new NotFoundException("Không tìm thấy claim Role");
             return int.Parse(claim.Value);

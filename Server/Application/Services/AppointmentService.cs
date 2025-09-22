@@ -9,6 +9,7 @@ using Application.Interfaces;
 using AutoMapper;
 using Domain.Entities;
 using Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
@@ -70,19 +71,63 @@ namespace Application.Services
             }
         }
 
-        public Task<IEnumerable<AppointmentDto>> GetAllAsync()
+        public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
         {
-            throw new NotImplementedException();
+
+            return _mapper.Map<IEnumerable<AppointmentDto>>(
+                await _appointmentRepository.Query()
+                .Include(a => a.Patient)
+                .Include(a => a.Staff)
+                .Include(a => a.MedicalService)
+                .ToListAsync());
         }
 
-        public Task<AppointmentDto> GetByIdAsync(int id)
+        public async Task<AppointmentDto> GetByIdAsync(int id)
         {
-            throw new NotImplementedException();
+            var appointment = await _appointmentRepository.GetByIdAsync(id);
+            if (appointment is null)
+                throw new NotFoundException($"Không tìm thấy lịch hẹn với ID {id}");
+            return _mapper.Map<AppointmentDto>(appointment);
         }
 
-        public Task<AppointmentDto> Update(AppointmentDto dto)
+        public async Task<AppointmentDto> Update(AppointmentDto dto)
         {
-            throw new NotImplementedException();
+            var appointment = await _appointmentRepository.GetByIdAsync(dto.Id);
+            if (appointment is null)
+                throw new NotFoundException("Không tìm thấy lịch hẹn, không thể cập nhật.");
+
+            if (appointment.Status == AppointmentStatus.Completed)
+                throw new Exception("Lịch hẹn này đã hoàn thành, không thể thay đổi trạng thái");
+
+            if (appointment.Status == AppointmentStatus.Cancelled)
+                throw new Exception("Lịch hẹn này đã bị hủy, không thể thay đổi trạng thái");
+
+            if (dto.Status == AppointmentStatus.Cancelled && 
+                dto.StaffId != appointment.StaffId)
+                throw new Exception("Không thay đổi bác sĩ cho lịch hẹn đánh dấu trạng thái là hủy");
+
+            if (appointment.Status == AppointmentStatus.Confirmed && dto.StaffId is null)
+                throw new Exception("Lịch hẹn này chưa phân công bác sĩ khám");
+
+            if (appointment.Status == AppointmentStatus.Confirmed && 
+                dto.StaffId != appointment.StaffId && 
+                dto.Status != AppointmentStatus.Cancelled)
+                throw new Exception("Lịch hẹn này đã xác nhận, không thể thay đổi bác sĩ.");
+
+            if (appointment.Status == AppointmentStatus.Confirmed && 
+                dto.StaffId is null)
+                throw new Exception("Vui lòng phân công bác sĩ cho lịch hẹn này");
+
+            if (appointment.Status == AppointmentStatus.Pending && 
+                dto.Status != AppointmentStatus.Confirmed)
+                throw new Exception("Vui lòng xác nhận lịch hẹn trước");
+
+            appointment.StaffId = dto.StaffId;
+            appointment.Status = dto.Status;
+
+            await _unitOfWork.SaveChangeAsync();
+
+            return _mapper.Map<AppointmentDto>(await _appointmentRepository.GetByIdAsync(dto.Id));
         }
     }
 }

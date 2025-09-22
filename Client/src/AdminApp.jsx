@@ -27,6 +27,7 @@ function App() {
     <ErrorBoundary>
       <AuthProvider>
         <AppContent />
+        <ToastContainer position="top-right" autoClose={3000} />
       </AuthProvider>
     </ErrorBoundary>
   )
@@ -135,7 +136,6 @@ function AppContent() {
               } />
             </Route>
           </Routes>
-          <ToastContainer position="top-right" autoClose={3000} />
         </BrowserRouter>
       </ChatProvider>
     </NotificationProvider>
