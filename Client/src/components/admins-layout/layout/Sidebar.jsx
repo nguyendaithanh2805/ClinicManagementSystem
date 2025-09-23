@@ -50,7 +50,7 @@ const Sidebar = () => {
         return [
           { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
           { icon: Calendar, label: 'Lịch hẹn', path: '/staff/appointments' },
-          { icon: Users, label: 'Tài khoản', path: '/staff/patients' },
+          { icon: Users, label: 'Bệnh nhân', path: '/staff/patients' },
           { icon: FileText, label: 'Thanh toán', path: '/staff/payments' },
           { icon: Activity, label: 'Hàng đợi', path: '/staff/queue-management' },
           { icon: BarChart3, label: 'Báo cáo', path: '/staff/reports' },

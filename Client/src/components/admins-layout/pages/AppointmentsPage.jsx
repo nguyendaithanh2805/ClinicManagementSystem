@@ -3,7 +3,7 @@ import { Calendar as CalendarIcon, Clock, User, MapPin, ChevronLeft, ChevronRigh
 import { format, addDays, subDays, startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, addWeeks, subWeeks, isToday, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from "react-toastify";
-import api from "../../admins-layout/contexts/Api"; // Assuming your API client is correctly configured
+import api from "../../admins-layout/contexts/Api";
 
 const ITEMS_PER_PAGE = 5; // Number of appointments per page
 
@@ -297,7 +297,7 @@ const AppointmentsPage = () => {
               <X className="w-5 h-5" />
             </button>
             <h2 className="text-2xl font-bold text-gray-800 mb-5 border-b pb-3 flex items-center gap-2">
-              <Edit className="w-6 h-6 text-blue-600" /> Chỉnh sửa lịch hẹn
+              <Edit className="w-6 h-6 text-blue-600" /> Chi tiết lịch hẹn
             </h2>
 
             <div className="space-y-4 text-gray-700">
