@@ -46,14 +46,14 @@ namespace Application.Services
                 await _unitOfWork.BeginTransactionAsync();
 
                 if (dto.RoleId == 0)
-                    dto.RoleId = 3;
+                    dto.RoleId = 2;
 
                 var accountEntity = _mapper.Map<Account>(dto);
                 await _accountRepository.AddAsync(accountEntity);
                 await _unitOfWork.SaveChangeAsync();
 
                 // patient
-                if (accountEntity.RoleId == 3)
+                if (accountEntity.RoleId == 2)
                 {
                     var patient = new PatientDto
                     {

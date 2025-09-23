@@ -52,7 +52,7 @@ namespace Application.Services
                 {
                     Username = dto.Username!,
                     Password = _passwordHasher.HashPassword(dto, dto.Password),
-                    RoleId = 3,
+                    RoleId = 2,
                     PhoneNumber = dto.PhoneNumber,
                     Email = dto.Email,
                 };

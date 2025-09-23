@@ -25,6 +25,8 @@ namespace Application.Mappings
             CreateMap<Role, RoleDto>().ReverseMap();
 
             CreateMap<MedicalService, MedicalServiceDto>().ReverseMap();
+
+            CreateMap<Invoice, InvoiceDto>().ReverseMap();
         }
     }
 }

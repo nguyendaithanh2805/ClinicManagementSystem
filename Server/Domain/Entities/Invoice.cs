@@ -11,7 +11,7 @@ public partial class Invoice
 
     public int? PrescriptionId { get; set; }
 
-    public DateTime PaymentDate { get; set; }
+    public DateTime? PaymentDate { get; set; }
 
     public decimal TotalAmount { get; set; }
 

@@ -11,7 +11,6 @@ namespace Api.Controllers
 {
     [Route("api/staff/appointments")]
     [ApiController]
-    [Authorize(Roles = "Receptionist, Doctor")]
     public class AppointmentController : ControllerBase
     {
         private readonly IService<AppointmentDto> _appointmentService;
@@ -22,6 +21,7 @@ namespace Api.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Receptionist, Doctor")]
         public async Task<IActionResult> GetAll()
         {
             try
@@ -35,6 +35,7 @@ namespace Api.Controllers
         }
 
         [HttpGet("{id:int}")]
+        [Authorize(Roles = "Receptionist, Doctor")]
         public async Task<IActionResult> GetById([FromRoute] int id)
         {
             try
@@ -86,6 +87,25 @@ namespace Api.Controllers
 
                 return Ok(new ApiResponse<AppointmentDto>(true, "Cập nhật lịch hẹn thành công",
                     await _appointmentService.Update(appointmentDto)));
+            }
+            catch (NotFoundException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+        }
+
+        [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> Delete([FromRoute] int id)
+        {
+            try
+            {
+                await _appointmentService.Delete(id);
+                return NoContent();
             }
             catch (NotFoundException ex)
             {

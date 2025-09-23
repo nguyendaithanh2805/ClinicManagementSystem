@@ -11,7 +11,6 @@ namespace Api.Controllers
 {
     [Route("api/specialties")]
     [ApiController]
-    [Authorize(Roles = "Admin, Doctor, Receptionist, LabTechnician")]
     public class SpecialtyController : ControllerBase
     {
         private readonly IService<SpecialtyDto> _specialtyService;
@@ -55,6 +54,7 @@ namespace Api.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin, Receptionist")]
         public async Task<IActionResult> Add([FromBody] SpecialtyDto specialtyDto)
         {
             try
@@ -78,6 +78,7 @@ namespace Api.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin, Receptionist")]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] SpecialtyDto specialtyDto)
         {
             try
@@ -102,6 +103,7 @@ namespace Api.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin, Receptionist")]
         public IActionResult Delete([FromRoute] int id)
         {
             try

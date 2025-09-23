@@ -20,24 +20,30 @@ namespace Application.Services
         private readonly IMapper _mapper;
         private readonly IAccountHelper _accountHelper;
         private readonly IRepository<Invoice> _invoiceRepository;
+        private readonly IService<InvoiceDto> _invoiceService;
+        private readonly IRepository<Patient> _patientRepository;
 
-        public AppointmentService(IRepository<Appointment> appointmentRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Invoice> invoiceRepository)
+        public AppointmentService(IRepository<Appointment> appointmentRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Invoice> invoiceRepository, IService<InvoiceDto> invoiceService, IRepository<Patient> patientRepository)
         {
             _appointmentRepository = appointmentRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _accountHelper = accountHelper;
             _invoiceRepository = invoiceRepository;
+            _invoiceService = invoiceService;
+            _patientRepository = patientRepository;
         }
 
         public async Task<AppointmentDto> AddAsync(AppointmentDto dto)
         {
-            dto.PatientId = _accountHelper.GetAccountId();
-            dto.Status = AppointmentStatus.Pending;
-
-            var appointment = await _appointmentRepository.GetAsync(a => a.PatientId == dto.PatientId);
+            var patient = await _patientRepository.GetAsync(p => p.AccountId == _accountHelper.GetAccountId());
+            
+            var appointment = await _appointmentRepository.GetAsync(a => a.PatientId == patient.Id);
             if (appointment is not null)
                 throw new AlreadyExistsException("Bạn có một lịch hẹn đang chờ xử lý");
+            
+            dto.PatientId = patient.Id;
+            dto.Status = AppointmentStatus.Pending;
 
             await _appointmentRepository.AddAsync(
                 _mapper.Map<Appointment>(dto));
@@ -90,6 +96,7 @@ namespace Application.Services
             return _mapper.Map<AppointmentDto>(appointment);
         }
 
+        // Update appointment status and add invoice when the appointment status is 'Completed'
         public async Task<AppointmentDto> Update(AppointmentDto dto)
         {
             var appointment = await _appointmentRepository.GetByIdAsync(dto.Id);
@@ -106,26 +113,41 @@ namespace Application.Services
                 dto.StaffId != appointment.StaffId)
                 throw new Exception("Không thay đổi bác sĩ cho lịch hẹn đánh dấu trạng thái là hủy");
 
-            if (appointment.Status == AppointmentStatus.Confirmed && dto.StaffId is null)
-                throw new Exception("Lịch hẹn này chưa phân công bác sĩ khám");
-
             if (appointment.Status == AppointmentStatus.Confirmed && 
                 dto.StaffId != appointment.StaffId && 
                 dto.Status != AppointmentStatus.Cancelled)
                 throw new Exception("Lịch hẹn này đã xác nhận, không thể thay đổi bác sĩ.");
 
-            if (appointment.Status == AppointmentStatus.Confirmed && 
+            if (appointment.Status == AppointmentStatus.Pending &&
                 dto.StaffId is null)
                 throw new Exception("Vui lòng phân công bác sĩ cho lịch hẹn này");
 
             if (appointment.Status == AppointmentStatus.Pending && 
                 dto.Status != AppointmentStatus.Confirmed)
-                throw new Exception("Vui lòng xác nhận lịch hẹn trước");
+                throw new Exception("Bạn phải 'xác nhận' lịch hẹn trước tiên");
 
-            appointment.StaffId = dto.StaffId;
-            appointment.Status = dto.Status;
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
 
-            await _unitOfWork.SaveChangeAsync();
+                appointment.StaffId = dto.StaffId;
+                appointment.Status = dto.Status;
+
+                if (dto.Status == AppointmentStatus.Completed)
+                {
+                    var invoice = new InvoiceDto
+                    {
+                        AppointmentId = appointment.Id,
+                    };
+                    await _invoiceService.AddAsync(invoice);
+                }
+                await _unitOfWork.CommitAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
 
             return _mapper.Map<AppointmentDto>(await _appointmentRepository.GetByIdAsync(dto.Id));
         }
