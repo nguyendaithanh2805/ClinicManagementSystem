@@ -20,10 +20,10 @@ namespace Application.Services
         private readonly IMapper _mapper;
         private readonly IAccountHelper _accountHelper;
         private readonly IRepository<Invoice> _invoiceRepository;
-        private readonly IService<InvoiceDto> _invoiceService;
+        private readonly IInvoiceService _invoiceService;
         private readonly IRepository<Patient> _patientRepository;
 
-        public AppointmentService(IRepository<Appointment> appointmentRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Invoice> invoiceRepository, IService<InvoiceDto> invoiceService, IRepository<Patient> patientRepository)
+        public AppointmentService(IRepository<Appointment> appointmentRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Invoice> invoiceRepository, IInvoiceService invoiceService, IRepository<Patient> patientRepository)
         {
             _appointmentRepository = appointmentRepository;
             _unitOfWork = unitOfWork;

@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Domain.Entities;
 
 namespace Application.DTOs
 {
@@ -27,5 +28,10 @@ namespace Application.DTOs
 
         [Required(ErrorMessage = "Yêu cầu xét nghiệm là bắt buộc.")]
         public bool RequiresTest { get; set; }
+        public virtual Patient? Patient { get; set; }
+
+        public virtual ICollection<PrescriptionDto>? Prescriptions { get; set; }
+
+        public virtual StaffDto? Staff { get; set; }
     }
 }

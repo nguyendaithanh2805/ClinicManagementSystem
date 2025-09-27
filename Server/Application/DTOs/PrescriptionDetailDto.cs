@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Domain.Entities;
 
 namespace Application.DTOs
 {
@@ -28,5 +29,6 @@ namespace Application.DTOs
         [Required(ErrorMessage = "Số tiền là bắt buộc.")]
         [Range(0.01, double.MaxValue, ErrorMessage = "Amount phải lớn hơn 0.")]
         public decimal Amount { get; set; }
+        public virtual MedicineDto? Medicine { get; set; }
     }
 }

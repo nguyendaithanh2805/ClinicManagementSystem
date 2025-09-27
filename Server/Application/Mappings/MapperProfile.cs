@@ -18,6 +18,8 @@ namespace Application.Mappings
 
             CreateMap<Patient, PatientDto>().ReverseMap();
             CreateMap<PatientWithAccountDto, Patient>().ReverseMap();
+            CreateMap<Prescription, PrescriptionDto>().ReverseMap();
+            CreateMap<PrescriptionDetail, PrescriptionDetailDto>().ReverseMap();
 
             CreateMap<Staff, StaffDto>().ReverseMap();
             CreateMap<Specialty, SpecialtyDto>().ReverseMap();
@@ -25,6 +27,7 @@ namespace Application.Mappings
             CreateMap<Role, RoleDto>().ReverseMap();
 
             CreateMap<MedicalService, MedicalServiceDto>().ReverseMap();
+            CreateMap<Medicine, MedicineDto>().ReverseMap();
 
             CreateMap<Invoice, InvoiceDto>().ReverseMap();
         }

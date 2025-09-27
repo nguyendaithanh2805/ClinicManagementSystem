@@ -1,20 +1,27 @@
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext'; // Assuming AuthContext is available
-import { CreditCard, DollarSign, BriefcaseMedical , Filter, Search, Calendar, CheckCircle, XCircle, User, FileText, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../contexts/AuthContext';
+import { CreditCard, DollarSign, BriefcaseMedical, Filter, Search, Calendar, CheckCircle, XCircle, User, FileText, ChevronLeft, ChevronRight, X, Printer, Download } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from "react-toastify";
-import api from "../../admins-layout/contexts/Api"; // Correct API import
+import api from "../../admins-layout/contexts/Api";
+import PrintableInvoice from './PrintableInvoice';
 
-const ITEMS_PER_PAGE = 5; // Number of invoices per page
+import html2canvas from 'html2canvas-pro';
+import jsPDF from 'jspdf';
+
+const ITEMS_PER_PAGE = 5;
 
 const PaymentsPage = () => {
-  const { user } = useAuth(); // Assuming useAuth provides user role
+  const { user } = useAuth();
   const [invoices, setInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all'); // 'all', 'paid', 'pending'
+  const [filterStatus, setFilterStatus] = useState('all');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedInvoice, setSelectedInvoice] = useState(null); // For detail/edit modal
+  const [selectedInvoice, setSelectedInvoice] = useState(null);
+  const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
+
+  const pdfContentRef = useRef();
 
   useEffect(() => {
     fetchInvoices();
@@ -36,7 +43,6 @@ const PaymentsPage = () => {
   };
 
   const getStatusText = (status) => {
-    // API status: true = paid, false = pending/cancelled (assuming false is pending for now)
     switch (status) {
       case true: return 'Đã thanh toán';
       case false: return 'Chờ thanh toán';
@@ -64,8 +70,8 @@ const PaymentsPage = () => {
 
       if (response.data.status) {
         toast.success(response.data.message || 'Cập nhật trạng thái hóa đơn thành công!');
-        fetchInvoices(); // Re-fetch to update the list
-        setSelectedInvoice(null); // Close modal if open
+        fetchInvoices();
+        setSelectedInvoice(null);
       } else {
         toast.error(response.data.message || 'Không thể cập nhật trạng thái hóa đơn.');
         console.error(response.data.message);
@@ -93,7 +99,6 @@ const PaymentsPage = () => {
     return matchesSearch && matchesStatus;
   });
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredInvoices.length / ITEMS_PER_PAGE);
   const paginatedInvoices = filteredInvoices.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -109,6 +114,54 @@ const PaymentsPage = () => {
       style: 'currency',
       currency: currency,
     }).format(amount);
+  };
+
+  const handleOpenPdfPreview = () => {
+    if (selectedInvoice) {
+      setShowPdfPreviewModal(true);
+    }
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!selectedInvoice || !pdfContentRef.current) return;
+
+    try {
+      const input = pdfContentRef.current;
+      const canvas = await html2canvas(input, {
+        scale: 2,
+        useCORS: true,
+        logging: true,
+      });
+      const imgData = canvas.toDataURL('image/png');
+
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+
+      const imgProps = pdf.getImageProperties(imgData);
+      const imgWidth = pdfWidth;
+      const imgHeight = (imgProps.height * imgWidth) / imgProps.width;
+
+      let position = 0;
+      let heightLeft = imgHeight;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pdfHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pdfHeight;
+      }
+
+      pdf.save(`HoaDon_${selectedInvoice.id}.pdf`);
+      toast.success("Hóa đơn đã được tải về thành công!");
+      setShowPdfPreviewModal(false);
+    } catch (error) {
+      console.error("Lỗi khi tạo PDF:", error);
+      toast.error("Không thể tạo PDF. Vui lòng thử lại hoặc kiểm tra console.");
+    }
   };
 
   const InvoiceCard = ({ invoice }) => (
@@ -169,7 +222,7 @@ const PaymentsPage = () => {
 
           {user?.role !== 'patient' && (
             <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-medical-100">
-              {invoice.status === false && ( // Only show if pending (false)
+              {invoice.status === false && (
                 <button
                   onClick={(e) => { e.stopPropagation(); handleUpdateInvoiceStatus(invoice.id, true); }}
                   className="text-sm text-green-600 hover:text-green-700 font-medium inline-flex items-center gap-1"
@@ -177,9 +230,6 @@ const PaymentsPage = () => {
                   <CheckCircle className="w-4 h-4" /> Xác nhận thanh toán
                 </button>
               )}
-              {/* <button className="btn-secondary text-sm py-2 px-4">
-                Chỉnh sửa
-              </button> */}
             </div>
           )}
         </div>
@@ -215,13 +265,8 @@ const PaymentsPage = () => {
                 <option value="all">Tất cả trạng thái</option>
                 <option value="paid">Đã thanh toán</option>
                 <option value="pending">Chờ thanh toán</option>
-                {/* <option value="cancelled">Đã hủy</option> // Add if API supports distinct cancelled status */}
               </select>
             </div>
-            {/* <button className="btn-primary inline-flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Tạo hóa đơn mới
-            </button> */}
           </div>
         </div>
       </div>
@@ -307,7 +352,7 @@ const PaymentsPage = () => {
       {/* Invoice Detail Modal */}
       {selectedInvoice && (
         <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg relative shadow-lg">
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg relative shadow-lg max-h-[90vh] flex flex-col"> {/* Added max-h and flex-col */}
             <button
               className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
               onClick={() => setSelectedInvoice(null)}
@@ -318,7 +363,8 @@ const PaymentsPage = () => {
               <FileText className="w-6 h-6 text-blue-600" /> Chi tiết hóa đơn
             </h2>
 
-            <div className="space-y-4 text-gray-700">
+            {/* Scrollable content for the modal */}
+            <div className="flex-1 overflow-y-auto space-y-4 text-gray-700 pr-2"> {/* Added overflow-y-auto and pr-2 for scrollbar */}
               {/* Invoice ID */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <FileText className="w-5 h-5 text-blue-500 flex-shrink-0" />
@@ -376,19 +422,88 @@ const PaymentsPage = () => {
                   {getStatusText(selectedInvoice.status)}
                 </p>
               </div>
+
+              {/* Prescription Details - ONLY show if prescription exists */}
+              {selectedInvoice.prescription && selectedInvoice.prescription.prescriptionDetails && selectedInvoice.prescription.prescriptionDetails.length > 0 && (
+                <div className="pt-4 border-t border-gray-200 mt-4">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                    <FileText className="w-5 h-5 text-orange-500" /> Chi tiết đơn thuốc
+                  </h3>
+                  <ul className="space-y-2">
+                    {selectedInvoice.prescription.prescriptionDetails.map((detail, index) => (
+                      <li key={index} className="flex flex-col border border-gray-100 rounded-lg p-3 bg-white shadow-sm">
+                        <div className="flex justify-between items-center mb-1">
+                          <span className="font-medium text-gray-900">{detail.medicine?.name || 'Thuốc không xác định'}</span>
+                          <span className="text-sm text-gray-600">x{detail.quantity}</span>
+                        </div>
+                        <p className="text-sm text-gray-600 italic">{detail.dosage} ({detail.frequency})</p>
+                        <p className="text-sm font-semibold text-gray-800 mt-1 self-end">
+                          {formatCurrency(detail.amount, 'VND')}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Action Buttons */}
-            {user?.role !== 'patient' && selectedInvoice.status === false && (
-              <div className="mt-6 pt-4 border-t border-gray-200 flex justify-end">
+            <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
+              {user?.role !== 'patient' && selectedInvoice.status === false && (
                 <button
                   onClick={() => handleUpdateInvoiceStatus(selectedInvoice.id, true)}
-                  className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-md"
+                  className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-md order-2 sm:order-1"
                 >
                   <CheckCircle className="w-5 h-5 mr-2" /> Xác nhận thanh toán
                 </button>
+              )}
+              <button
+                onClick={handleOpenPdfPreview}
+                className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md order-1 sm:order-2"
+              >
+                <Printer className="w-5 h-5 mr-2" /> Xem trước & Xuất PDF
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* PDF Preview Modal */}
+      {showPdfPreviewModal && selectedInvoice && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] p-4">
+          <div className="bg-white rounded-xl shadow-2xl relative w-full h-full max-w-4xl max-h-[90vh] flex flex-col">
+            {/* Header của modal xem trước */}
+            <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
+              <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
+                <FileText className="w-5 h-5 text-blue-600" />
+                Xem trước Hóa đơn #{selectedInvoice.id}
+              </h3>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDownloadPdf}
+                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-md"
+                >
+                  <Download className="w-5 h-5 mr-2" /> Tải về PDF
+                </button>
+                <button
+                  onClick={() => setShowPdfPreviewModal(false)}
+                  className="p-2 rounded-full bg-gray-200 hover:bg-gray-300 text-gray-700"
+                >
+                  <X className="w-6 h-6" />
+                </button>
               </div>
-            )}
+            </div>
+
+            {/* Nội dung hóa đơn có thể cuộn */}
+            <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: '#f9fafb' }}> {/* Added overflow-y-auto */}
+              <div
+                ref={pdfContentRef}
+                className="bg-white p-8 rounded-lg shadow-md mx-auto"
+                style={{ maxWidth: '210mm', boxSizing: 'border-box' }}
+              >
+                <PrintableInvoice invoice={selectedInvoice} formatCurrency={formatCurrency} />
+              </div>
+            </div>
           </div>
         </div>
       )}

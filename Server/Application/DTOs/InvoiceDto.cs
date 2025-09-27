@@ -16,13 +16,17 @@ namespace Application.DTOs
         public int? PrescriptionId { get; set; }
 
         public DateTime? PaymentDate { get; set; }
-
+        public DateTime? PaymentDateVN =>
+        PaymentDate.HasValue
+            ? TimeZoneInfo.ConvertTimeFromUtc(PaymentDate.Value,
+                TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time"))
+            : null;
         public decimal TotalAmount { get; set; }
 
         public bool Status { get; set; }
 
-        public virtual Appointment? Appointment { get; set; }
+        public virtual AppointmentDto? Appointment { get; set; }
 
-        public virtual Prescription? Prescription { get; set; }
+        public virtual PrescriptionDto? Prescription { get; set; }
     }
 }

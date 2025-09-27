@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Application.DTOs;
+using Application.Exceptions;
 using Application.Interfaces;
 using AutoMapper;
 using Domain.Entities;
@@ -12,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
-    public class InvoiceService : IService<InvoiceDto>
+    public class InvoiceService : IInvoiceService
     {
         private readonly IRepository<Invoice> _invoiceRepository;
         private readonly IMapper _mapper;
@@ -51,8 +52,13 @@ namespace Application.Services
         {
             return _mapper.Map<IEnumerable<InvoiceDto>>(await _invoiceRepository.Query()
                 .Include(i => i.Appointment)
-                .Include(i => i.Prescription).ToListAsync());
-
+                    .ThenInclude(a => a.Patient)
+                .Include(i => i.Appointment)
+                    .ThenInclude(a => a.MedicalService)
+                .Include(i => i.Prescription)
+                    .ThenInclude(p => p.PrescriptionDetails)
+                    .ThenInclude(p => p.Medicine)
+                .ToListAsync());
         }
 
         public Task<InvoiceDto> GetByIdAsync(int id)
@@ -63,6 +69,20 @@ namespace Application.Services
         public Task<InvoiceDto> Update(InvoiceDto dto)
         {
             throw new NotImplementedException();
+        }
+
+        public async Task<InvoiceDto> UpdateStatus(InvoiceStatusDto dto)
+        {
+            var invoice = await _invoiceRepository.GetByIdAsync(dto.Id);
+            if (invoice is null)
+                throw new NotFoundException($"Hóa đơn với ID {dto.Id} không tồn tại");
+
+            invoice.Status = dto.Status;
+            invoice.PaymentDate = DateTime.UtcNow;
+            _invoiceRepository.Update(invoice);
+            await _unitOfWork.SaveChangeAsync();
+
+            return _mapper.Map<InvoiceDto>(await _invoiceRepository.GetByIdAsync(dto.Id));
         }
     }
 }
