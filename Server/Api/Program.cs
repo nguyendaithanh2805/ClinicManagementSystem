@@ -93,6 +93,7 @@ builder.Services.AddScoped<IService<MedicalServiceDto>, MedicalServiceImpl>();
 builder.Services.AddScoped<IAccounService, AccountService>();
 builder.Services.AddScoped<IService<StaffDto>, StaffService>();
 builder.Services.AddScoped<IInvoiceService, InvoiceService>();
+builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 
 // Handle when validation returns an invalid format
 builder.Services.Configure<ApiBehaviorOptions>(options =>

@@ -21,6 +21,7 @@ import { ToastContainer } from "react-toastify";
 import { setupAxiosInterceptors } from "./components/admins-layout/contexts/Api";
 import React, { useEffect } from 'react';
 import LoadingSpinner from "./components/admins-layout/LoadingSpinner";
+import AppointmentPageForDoctor from './components/admins-layout/doctor/AppointmentPageForDoctor';
 
 function App() {
   return (
@@ -74,7 +75,7 @@ function AppContent() {
 
               {/* Doctor Routes */}
               <Route path="dashboard" element={<StaffDashboardContent />} />
-              <Route path="schedule" element={ <SchedulePage /> } />
+              <Route path="schedule" element={ <AppointmentPageForDoctor /> } />
               <Route path="patient-medical-record" element={ <MedicalRecordsPage/> } />
               <Route path="examination" element={
                 <ProtectedRoute allowedRoles={['Doctor']}>

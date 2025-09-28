@@ -13,20 +13,34 @@ namespace Api.Controllers
     [ApiController]
     public class AppointmentController : ControllerBase
     {
-        private readonly IService<AppointmentDto> _appointmentService;
+        private readonly IAppointmentService _appointmentService;
 
-        public AppointmentController(IService<AppointmentDto> appointmentService)
+        public AppointmentController(IAppointmentService appointmentService)
         {
             _appointmentService = appointmentService;
         }
 
         [HttpGet]
-        [Authorize(Roles = "Receptionist, Doctor")]
+        [Authorize(Roles = "Receptionist")]
         public async Task<IActionResult> GetAll()
         {
             try
             {
                 return Ok(new ApiResponse<IEnumerable<AppointmentDto>>(true, "Lấy dữ liệu thành công", await _appointmentService.GetAllAsync()));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+        }
+
+        [HttpGet("me")]
+        [Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> GetByDoctor()
+        {
+            try
+            {
+                return Ok(new ApiResponse<IEnumerable<AppointmentDto>>(true, "Lấy dữ liệu thành công", await _appointmentService.GetByDoctorAsync()));
             }
             catch (Exception ex)
             {
@@ -74,7 +88,7 @@ namespace Api.Controllers
         }
 
         [HttpPatch("{id:int}")]
-        [Authorize(Roles = "Patient, Receptionist")]
+        [Authorize(Roles = "Patient, Receptionist, Doctor")]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] AppointmentDto appointmentDto)
         {
             try

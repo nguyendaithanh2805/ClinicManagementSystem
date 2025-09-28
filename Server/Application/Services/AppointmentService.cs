@@ -13,7 +13,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
-    public class AppointmentService : IService<AppointmentDto>
+    public class AppointmentService : IAppointmentService
     {
         private readonly IRepository<Appointment> _appointmentRepository;
         private readonly IUnitOfWork _unitOfWork;
@@ -22,8 +22,9 @@ namespace Application.Services
         private readonly IRepository<Invoice> _invoiceRepository;
         private readonly IInvoiceService _invoiceService;
         private readonly IRepository<Patient> _patientRepository;
+        private readonly IRepository<Staff> _staffRepository;
 
-        public AppointmentService(IRepository<Appointment> appointmentRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Invoice> invoiceRepository, IInvoiceService invoiceService, IRepository<Patient> patientRepository)
+        public AppointmentService(IRepository<Appointment> appointmentRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Invoice> invoiceRepository, IInvoiceService invoiceService, IRepository<Patient> patientRepository, IRepository<Staff> staffRepository)
         {
             _appointmentRepository = appointmentRepository;
             _unitOfWork = unitOfWork;
@@ -32,6 +33,7 @@ namespace Application.Services
             _invoiceRepository = invoiceRepository;
             _invoiceService = invoiceService;
             _patientRepository = patientRepository;
+            _staffRepository = staffRepository;
         }
 
         public async Task<AppointmentDto> AddAsync(AppointmentDto dto)
@@ -85,6 +87,20 @@ namespace Application.Services
                 .Include(a => a.Patient)
                 .Include(a => a.Staff)
                 .Include(a => a.MedicalService)
+                .ToListAsync());
+        }
+
+        public async Task<IEnumerable<AppointmentDto>> GetByDoctorAsync()
+        {
+            var accountId = _accountHelper.GetAccountId();
+            var staff = await _staffRepository.GetAsync(s => s.AccountId == accountId);
+
+            return _mapper.Map<IEnumerable<AppointmentDto>>(
+                await _appointmentRepository.Query()
+                .Include(a => a.Patient)
+                .Include(a => a.Staff)
+                .Include(a => a.MedicalService)
+                .Where(a => a.StaffId == staff.Id)
                 .ToListAsync());
         }
 
