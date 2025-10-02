@@ -22,6 +22,8 @@ import { setupAxiosInterceptors } from "./components/admins-layout/contexts/Api"
 import React, { useEffect } from 'react';
 import LoadingSpinner from "./components/admins-layout/LoadingSpinner";
 import AppointmentPageForDoctor from './components/admins-layout/doctor/AppointmentPageForDoctor';
+import MedicalRecordPageForDoctor from './components/admins-layout/doctor/MedicalRecordPageForDoctor ';
+import DoctorDashboardContent from './components/admins-layout/doctor/DoctorDashboardContent';
 
 function App() {
   return (
@@ -53,8 +55,7 @@ function AppContent() {
                 <MainLayout />
               </ProtectedRoute>
             }>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<PatientDashboardContent />} />
+            <Route path="patient-dashboard" element={<PatientDashboardContent />} />
               <Route path="appointments" element={<AppointmentsPage /> } />
               <Route path="medical-records" element={ <MedicalRecordsPage /> } />
               <Route path="test-results" element={ <TestResultsPage /> } />
@@ -67,16 +68,17 @@ function AppContent() {
                 <MainLayout />
               </ProtectedRoute>
             }>
-              <Route index element={<Navigate to="dashboard" replace />} />
               {/* Receptionist Routes */}
+              <Route path="receptionist-dashboard" element={<StaffDashboardContent />} />
               <Route path="appointments" element={<AppointmentsPage />} />
               <Route path="payments" element={<PaymentsPage />} />
               <Route path="patients" element={ <PatientsPage /> } />
+              <Route path="medical-records" element={ <MedicalRecordsPage /> } />
 
               {/* Doctor Routes */}
-              <Route path="dashboard" element={<StaffDashboardContent />} />
+              <Route path="doctor-dashboard" element={<DoctorDashboardContent />} />
               <Route path="schedule" element={ <AppointmentPageForDoctor /> } />
-              <Route path="patient-medical-record" element={ <MedicalRecordsPage/> } />
+              <Route path="patient-medical-records" element={ <MedicalRecordPageForDoctor/> } />
               <Route path="examination" element={
                 <ProtectedRoute allowedRoles={['Doctor']}>
                   <div className="glass-effect rounded-2xl p-12 text-center">
@@ -93,8 +95,7 @@ function AppContent() {
                 <MainLayout />
               </ProtectedRoute>
             }>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<LabDashboardContent />} />
+              <Route path="lab-dashboard" element={<LabDashboardContent />} />
               <Route path="test-queue" element={
                   <div className="glass-effect rounded-2xl p-12 text-center">
                     <h2 className="text-xl font-bold text-medical-900 mb-4">Hàng đợi xét nghiệm</h2>
@@ -121,8 +122,7 @@ function AppContent() {
               </ProtectedRoute>
             }> 
               {/* Admin Routes */}
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<AdminDashboardContent />} />
+              <Route path="admin-dashboard" element={<AdminDashboardContent />} />
               <Route path="user-management" element={
                   <div className="glass-effect rounded-2xl p-12 text-center">
                     <h2 className="text-xl font-bold text-medical-900 mb-4">Quản lý người dùng</h2>

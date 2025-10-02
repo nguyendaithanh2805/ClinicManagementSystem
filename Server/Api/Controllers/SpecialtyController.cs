@@ -70,7 +70,6 @@ namespace Api.Controllers
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));
             }
-
             catch (Exception ex)
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));

@@ -29,7 +29,7 @@ const Sidebar = () => {
     switch (user?.role) {
       case 'Patient':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/patient/dashboard' },
+          { icon: Home, label: 'Trang chủ', path: '/patient/patient-dashboard' },
           { icon: Calendar, label: 'Lịch khám', path: '/patient/appointments' },
           { icon: FileText, label: 'Hồ sơ y tế', path: '/patient/medical-records' },
           { icon: TestTube, label: 'Kết quả XN', path: '/patient/test-results' },
@@ -38,27 +38,23 @@ const Sidebar = () => {
       
       case 'Doctor':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
-          { icon: Calendar, label: 'Lịch làm việc', path: '/staff/schedule' }, // Quan ly lich hen
-          { icon: FileText, label: 'Hồ sơ bệnh nhân', path: '/staff/patient-medical-record' }, // Quan ly ho so benh nhan
-          // { icon: TestTube, label: 'Xét nghiệm', path: '/staff/lab-tests' },
-          { icon: ClipboardList, label: 'Đơn thuốc', path: '/staff/prescriptions' }, // Ke don thuoc
-          // { icon: BarChart3, label: 'Báo cáo', path: '/staff/reports' },
+          { icon: Home, label: 'Trang chủ', path: '/staff/doctor-dashboard' },
+          { icon: Calendar, label: 'Lịch làm việc', path: '/staff/schedule' },
+          { icon: FileText, label: 'Hồ sơ Bệnh nhân', path: '/staff/patient-medical-records' },
         ];
       
       case 'Receptionist':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
+          { icon: Home, label: 'Trang chủ', path: '/staff/receptionist-dashboard' },
           { icon: Calendar, label: 'Lịch hẹn', path: '/staff/appointments' },
           { icon: Users, label: 'Bệnh nhân', path: '/staff/patients' },
-          { icon: FileText, label: 'Thanh toán', path: '/staff/payments' },
-          { icon: Activity, label: 'Hàng đợi', path: '/staff/queue-management' },
-          { icon: BarChart3, label: 'Báo cáo', path: '/staff/reports' },
+          { icon: FileText, label: 'Hồ sơ Bệnh nhân', path: '/staff/medical-records' },
+          { icon: FileText, label: 'Thanh toán', path: '/staff/payments' }
         ];
       
       case 'Lab_technician':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
+          { icon: Home, label: 'Trang chủ', path: '/staff/lab-dashboard' },
           { icon: TestTube, label: 'Hàng đợi XN', path: '/staff/test-queue' },
           { icon: Activity, label: 'Theo dõi mẫu', path: '/staff/sample-tracking' },
           { icon: Shield, label: 'Kiểm soát CL', path: '/staff/quality-control' },
@@ -69,7 +65,7 @@ const Sidebar = () => {
       
       case 'Admin':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/dashboard' },
+          { icon: Home, label: 'Trang chủ', path: '/staff/admin-dashboard' },
           { icon: Users, label: 'Quản lý người dùng', path: '/admin/user-management' },
           { icon: Shield, label: 'Hệ thống', path: '/admin/system-management' },
           { icon: Activity, label: 'Hoạt động', path: '/admin/activity-logs' },

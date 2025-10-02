@@ -10,6 +10,7 @@ namespace Application.DTOs
 {
     public class PrescriptionDto
     {
+        public int Id { get; set; }
         public int PatientMedicalRecordId { get; set; }
 
         public DateTime PrescriptionDate { get; set; }

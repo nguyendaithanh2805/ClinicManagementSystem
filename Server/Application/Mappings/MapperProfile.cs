@@ -15,11 +15,13 @@ namespace Application.Mappings
         {
             CreateMap<Account, AccountDto>().ReverseMap();
             CreateMap<Appointment, AppointmentDto>().ReverseMap();
+            CreateMap<Appointment, AppointmentWithPatientDto>();
 
             CreateMap<Patient, PatientDto>().ReverseMap();
             CreateMap<PatientWithAccountDto, Patient>().ReverseMap();
             CreateMap<Prescription, PrescriptionDto>().ReverseMap();
             CreateMap<PrescriptionDetail, PrescriptionDetailDto>().ReverseMap();
+            CreateMap<PatientMedicalRecord, PatientMedicalRecordDto>().ReverseMap();
 
             CreateMap<Staff, StaffDto>().ReverseMap();
             CreateMap<Specialty, SpecialtyDto>().ReverseMap();
@@ -30,6 +32,10 @@ namespace Application.Mappings
             CreateMap<Medicine, MedicineDto>().ReverseMap();
 
             CreateMap<Invoice, InvoiceDto>().ReverseMap();
+
+            CreateMap<Symptom, SymptomDto>().ReverseMap();
+
+            CreateMap<TestResult, TestResultDto>().ReverseMap();
         }
     }
 }

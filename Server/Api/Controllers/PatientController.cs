@@ -19,7 +19,7 @@ namespace Api.Controllers
         }
 
         [HttpGet]
-        [Authorize(Roles = "Admin, Receptionist")]
+        [Authorize(Roles = "Admin, Receptionist, Doctor")]
         public async Task<IActionResult> GetAll()
         {
             try

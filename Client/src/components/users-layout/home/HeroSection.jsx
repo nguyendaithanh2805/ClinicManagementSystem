@@ -38,7 +38,7 @@ const HeroSection = ({ clinicStatus }) => {
             <div className="space-y-6">
               <div className="inline-flex items-center space-x-2 bg-primary-100 text-primary-800 px-4 py-2 rounded-full text-sm font-medium">
                 <div className={`w-2 h-2 rounded-full ${clinicStatus === 'open' ? 'bg-green-500' : 'bg-red-500'}`}></div>
-                <span>{clinicStatus === 'open' ? 'Đang phục vụ' : 'Ngoài giờ làm việc'}</span>
+                <span>{clinicStatus === 'open' ? 'Đang mở cửa' : 'Ngoài giờ làm việc'}</span>
               </div>
               
               <h1 className="text-4xl lg:text-6xl font-bold text-gray-900 leading-tight">
@@ -89,14 +89,23 @@ const HeroSection = ({ clinicStatus }) => {
 
           {/* Hero Image */}
           <div className="relative animate-slide-up">
-            <div className="relative rounded-2xl overflow-hidden shadow-2xl">
-              <img
-                src="https://images.unsplash.com/photo-1559757148-5c350d0d3c56?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&q=80"
-                alt="Modern medical facility"
-                className="w-full h-[500px] object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
+            <div className="relative animate-slide-up">
+              <div className="relative rounded-2xl overflow-hidden shadow-2xl">
+                <img
+                  src="../../../../public/images/avt_nguyendaithanh.png"
+                  alt="Modern medical facility"
+                  className="w-full h-[700px] object-cover"
+                />
+                {/* Gradient chỉ ở phía dưới */}
+                <div className="absolute inset-x-0 bottom-0 h-1/3 bg-gradient-to-t from-black/50 to-transparent"></div>
+
+                <div className="absolute bottom-5 left-5 z-10 text-white">
+                  <h2 className="text-2xl font-bold">DR. NGUYỄN ĐẠI THÀNH</h2>
+                  <p className="text-sm">Phòng khám đa khoa hiện đại</p>
+                </div>
+              </div>
             </div>
+
 
             {/* Floating Cards */}
             <div className="absolute -top-6 -left-6 bg-white rounded-xl shadow-xl p-4 animate-pulse-slow">

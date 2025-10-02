@@ -11,10 +11,8 @@ namespace Application.DTOs
     public class PrescriptionDetailDto
     {
         public int PrescriptionId { get; set; }
-
-        [Required(ErrorMessage = "MedicineId là bắt buộc.")]
-        [Range(1, int.MaxValue, ErrorMessage = "MedicineId phải lớn hơn 0.")]
         public int MedicineId { get; set; }
+        public int? PatientMedicalRecordId { get; set; }
 
         [Required(ErrorMessage = "Quantity là bắt buộc.")]
         [Range(1, int.MaxValue, ErrorMessage = "Quantity phải lớn hơn 0.")]
@@ -26,8 +24,6 @@ namespace Application.DTOs
         [StringLength(100, ErrorMessage = "Tần suất không được vượt quá 100 ký tự.")]
         public string? Frequency { get; set; }
 
-        [Required(ErrorMessage = "Số tiền là bắt buộc.")]
-        [Range(0.01, double.MaxValue, ErrorMessage = "Amount phải lớn hơn 0.")]
         public decimal Amount { get; set; }
         public virtual MedicineDto? Medicine { get; set; }
     }

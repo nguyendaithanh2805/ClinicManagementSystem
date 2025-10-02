@@ -34,8 +34,6 @@ namespace Application.Services
 
         public async Task<PatientDto> AddAsync(PatientDto dto)
         {
-            dto.FullName = "Bệnh nhân chưa có tên";
-
             await _patientRepository.AddAsync(
                 _mapper.Map<Patient>(dto));
             return dto;
@@ -127,12 +125,26 @@ namespace Application.Services
             var patient = await _patientRepository.GetByIdAsync(dto.Id);
             if (patient is null)
                 throw new NotFoundException("Không tìm thấy bệnh nhân, không thể cập nhật.");
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
 
-            patient.FullName = dto.FullName!;
-            patient.DateOfBirth = dto.DateOfBirth;
-            patient.Address = dto.Address;
-            _patientRepository.Update(patient);
-            await _unitOfWork.SaveChangeAsync();
+                patient.FullName = dto.FullName!;
+                patient.DateOfBirth = dto.DateOfBirth;
+                patient.Address = dto.Address;
+                _patientRepository.Update(patient);
+
+                var account = await _accountRepository.GetByIdAsync(patient.AccountId);
+                account.Email = dto.Email;
+                _accountRepository.Update(account);
+
+                await _unitOfWork.CommitAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
 
             return _mapper.Map<PatientDto>(await _patientRepository.GetByIdAsync(dto.Id));
         }

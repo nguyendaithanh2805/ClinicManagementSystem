@@ -120,6 +120,7 @@ const AppointmentsPage = () => {
 
     const updatedData = {
       id: selectedAppointment.id, // Ensure ID is part of the payload if needed by backend PATCH
+      patientId: selectedAppointment.patient?.id,
       staffId: editedStaffId ? parseInt(editedStaffId) : null, // Send null if not selected or initial
       status: newStatus !== null ? newStatus : editedStatus, // Use newStatus if provided (buttons), otherwise use editedStatus (dropdown)
     };
@@ -127,6 +128,10 @@ const AppointmentsPage = () => {
     // Remove staffId if it's not selected (e.g., empty string or 0)
     if (!updatedData.staffId) {
       delete updatedData.staffId;
+    }
+
+    if (!updatedData.patientId) {
+        delete updatedData.patientId;
     }
 
     try {
@@ -326,7 +331,7 @@ const AppointmentsPage = () => {
                 <select
                   id="staff"
                   value={editedStaffId}
-                  onChange={(e) => setEditedStaffId(e.target.value)} // Keep as string for empty option
+                  onChange={(e) => setEditedStaffId(e.target.value)}
                   className="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-blue-500 focus:border-blue-500"
                 >
                   <option value="">Chưa phân công</option>

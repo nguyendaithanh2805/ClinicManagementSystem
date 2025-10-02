@@ -23,8 +23,10 @@ namespace Application.Services
         private readonly IInvoiceService _invoiceService;
         private readonly IRepository<Patient> _patientRepository;
         private readonly IRepository<Staff> _staffRepository;
+        private readonly IMedicalRecordService _medicalRecordService;
+        private readonly IRepository<Account> _accountRepository;
 
-        public AppointmentService(IRepository<Appointment> appointmentRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Invoice> invoiceRepository, IInvoiceService invoiceService, IRepository<Patient> patientRepository, IRepository<Staff> staffRepository)
+        public AppointmentService(IRepository<Appointment> appointmentRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Invoice> invoiceRepository, IInvoiceService invoiceService, IRepository<Patient> patientRepository, IRepository<Staff> staffRepository, IMedicalRecordService medicalRecordService, IRepository<Account> accountRepository)
         {
             _appointmentRepository = appointmentRepository;
             _unitOfWork = unitOfWork;
@@ -34,22 +36,48 @@ namespace Application.Services
             _invoiceService = invoiceService;
             _patientRepository = patientRepository;
             _staffRepository = staffRepository;
+            _medicalRecordService = medicalRecordService;
+            _accountRepository = accountRepository;
         }
 
         public async Task<AppointmentDto> AddAsync(AppointmentDto dto)
         {
-            var patient = await _patientRepository.GetAsync(p => p.AccountId == _accountHelper.GetAccountId());
+            var accountId = _accountHelper.GetAccountId();
+            var patient = await _patientRepository.GetAsync(p => p.AccountId == accountId);
             
-            var appointment = await _appointmentRepository.GetAsync(a => a.PatientId == patient.Id);
+            var appointment = await _appointmentRepository.GetAsync(a => a.PatientId == patient.Id && a.Status == AppointmentStatus.Pending);
             if (appointment is not null)
-                throw new AlreadyExistsException("Bạn có một lịch hẹn đang chờ xử lý");
-            
-            dto.PatientId = patient.Id;
-            dto.Status = AppointmentStatus.Pending;
+                throw new AlreadyExistsException("Bạn có một lịch hẹn đang chờ xác nhận");
 
-            await _appointmentRepository.AddAsync(
-                _mapper.Map<Appointment>(dto));
-            await _unitOfWork.SaveChangeAsync();
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                dto.PatientId = patient.Id;
+                dto.Status = AppointmentStatus.Pending;
+                await _appointmentRepository.AddAsync(
+                    _mapper.Map<Appointment>(dto));
+
+                if (dto.FullName != null)
+                {
+                    patient.FullName = dto.FullName;
+                    _patientRepository.Update(patient);
+                }
+
+                if (dto.phoneNumber != null)
+                {
+                    var account = await _accountRepository.GetByIdAsync(accountId);
+                    account.PhoneNumber = dto.phoneNumber;
+                    _accountRepository.Update(account);
+                }
+
+                await _unitOfWork.CommitAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
             return dto;
         }
 
@@ -116,8 +144,17 @@ namespace Application.Services
         public async Task<AppointmentDto> Update(AppointmentDto dto)
         {
             var appointment = await _appointmentRepository.GetByIdAsync(dto.Id);
+
+            if (appointment.Status == AppointmentStatus.Confirmed &&
+                dto.Status == AppointmentStatus.Pending)
+                throw new Exception("Lịch hẹn này đã được xác nhận, vì vậy không thể thay đổi thành chờ xác nhận");
+
+            if (appointment.Status == AppointmentStatus.Confirmed &&
+                dto.StaffId != appointment.StaffId)
+                throw new Exception("Lịch hẹn này đã được xác nhận, vì vậy không thể thay đổi Bác sĩ khám");
+
             if (appointment is null)
-                throw new NotFoundException("Không tìm thấy lịch hẹn, không thể cập nhật.");
+                throw new NotFoundException("Không tìm thấy lịch hẹn, không thể cập nhật");
 
             if (appointment.Status == AppointmentStatus.Completed)
                 throw new Exception("Lịch hẹn này đã hoàn thành, không thể thay đổi trạng thái");
@@ -127,29 +164,46 @@ namespace Application.Services
 
             if (dto.Status == AppointmentStatus.Cancelled && 
                 dto.StaffId != appointment.StaffId)
-                throw new Exception("Không thay đổi bác sĩ cho lịch hẹn đánh dấu trạng thái là hủy");
+                throw new Exception("Không thể thay đổi bác sĩ cho lịch hẹn đánh dấu trạng thái là hủy");
 
-            if (appointment.Status == AppointmentStatus.Confirmed && 
-                dto.StaffId != appointment.StaffId && 
-                dto.Status != AppointmentStatus.Cancelled)
-                throw new Exception("Lịch hẹn này đã xác nhận, không thể thay đổi bác sĩ.");
+            //if (appointment.Status == AppointmentStatus.Confirmed && 
+            //    dto.StaffId != appointment.StaffId && 
+            //    dto.Status != AppointmentStatus.Cancelled)
+            //    throw new Exception("Lịch hẹn này đã xác nhận, không thể thay đổi bác sĩ.");
 
             if (appointment.Status == AppointmentStatus.Pending &&
                 dto.StaffId is null)
                 throw new Exception("Vui lòng phân công bác sĩ cho lịch hẹn này");
 
-            if (appointment.Status == AppointmentStatus.Pending && 
-                dto.Status != AppointmentStatus.Confirmed)
-                throw new Exception("Bạn phải 'xác nhận' lịch hẹn trước tiên");
-
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                appointment.StaffId = dto.StaffId;
+                // Trạng thái lịch hẹn trước thay đổi
+                var oldStatus = appointment.Status;
+
+                // Gán trạng thái mới
                 appointment.Status = dto.Status;
 
-                if (dto.Status == AppointmentStatus.Completed)
+                /* Chỉ tạo Hồ sơ Bệnh án khi trạng thái cũ là 'Chờ xác nhận' và trạng thái mới là 'Đã xác nhận'
+                 *
+                 * Mục đích của việc này là để khi Update lại Bác sĩ nếu phân công nhầm nhưng lịch hẹn đã xác nhận rồi thì nó không tạo Hồ sơ Bệnh án nữa
+                */
+                if (oldStatus == AppointmentStatus.Pending &&
+                    dto.Status == AppointmentStatus.Confirmed)
+                {
+                    var medicalRecord = new PatientMedicalRecordDto
+                    {
+                        PatientId = dto.PatientId,
+                        StaffId = (int)dto.StaffId!, // Nếu đã xác nhận thì chắc chắn có StaffId
+                        RequiresTest = false
+                    };
+                    await _medicalRecordService.AddAsync(medicalRecord);
+                }
+
+                // Lịch hẹn đã xác nhận thì tạo hóa đơn tạm
+
+                if (dto.Status == AppointmentStatus.Confirmed)
                 {
                     var invoice = new InvoiceDto
                     {
@@ -157,6 +211,20 @@ namespace Application.Services
                     };
                     await _invoiceService.AddAsync(invoice);
                 }
+
+                /*
+                 * Bác sĩ truyền từ form khác Bác sĩ đã được phân công của lịch (tức là phân công nhầm Bác sĩ cho lịch hẹn)
+                 * Nếu trạng thái lịch hẹn ko phải là 'Đã hủy' hoặc 'Đã hoàn thành' thì cho Update trạng thái.
+                 * 
+                */
+                if (dto.StaffId != appointment.StaffId &&
+                dto.Status != AppointmentStatus.Cancelled &&
+                dto.Status != AppointmentStatus.Completed)
+                {
+                    appointment.StaffId = dto.StaffId;
+                    _appointmentRepository.Update(appointment);
+                }
+
                 await _unitOfWork.CommitAsync();
             }
             catch

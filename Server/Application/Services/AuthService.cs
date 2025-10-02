@@ -58,6 +58,7 @@ namespace Application.Services
                     var patient = new PatientDto
                     {
                         AccountId = accountEntity.Id,
+                        FullName = accountEntity.Username // Đặt tên mặc định là username
                     };
 
                     await _patientService.AddAsync(patient);    

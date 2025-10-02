@@ -4,9 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Application.DTOs;
-using Application.Interfaces;
 
-namespace Application.Services
+namespace Application.Interfaces
 {
     public interface IAppointmentService : IService<AppointmentDto>
     {
