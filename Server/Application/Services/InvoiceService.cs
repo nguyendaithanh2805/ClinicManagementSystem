@@ -37,6 +37,7 @@ namespace Application.Services
 
             dto.Status = false; // Unpaid
             dto.TotalAmount = medicalService.Cost;
+            dto.PaymentDate = DateTime.UtcNow;
 
             await _invoiceRepository.AddAsync(
                 _mapper.Map<Invoice>(dto));

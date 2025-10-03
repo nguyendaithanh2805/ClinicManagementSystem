@@ -24,6 +24,7 @@ import LoadingSpinner from "./components/admins-layout/LoadingSpinner";
 import AppointmentPageForDoctor from './components/admins-layout/doctor/AppointmentPageForDoctor';
 import MedicalRecordPageForDoctor from './components/admins-layout/doctor/MedicalRecordPageForDoctor ';
 import DoctorDashboardContent from './components/admins-layout/doctor/DoctorDashboardContent';
+import LabTechnicianPage from './components/admins-layout/lab/LabTechnicianPage';
 
 function App() {
   return (
@@ -64,7 +65,7 @@ function AppContent() {
 
             {/* Staff Routes */}
             <Route path="/staff" element={
-              <ProtectedRoute allowedRoles={['Doctor','Receptionist']}>
+              <ProtectedRoute allowedRoles={['Doctor','Receptionist', 'LabTechnician']}>
                 <MainLayout />
               </ProtectedRoute>
             }>
@@ -79,49 +80,17 @@ function AppContent() {
               <Route path="doctor-dashboard" element={<DoctorDashboardContent />} />
               <Route path="schedule" element={ <AppointmentPageForDoctor /> } />
               <Route path="patient-medical-records" element={ <MedicalRecordPageForDoctor/> } />
-              <Route path="examination" element={
-                <ProtectedRoute allowedRoles={['Doctor']}>
-                  <div className="glass-effect rounded-2xl p-12 text-center">
-                    <h2 className="text-xl font-bold text-medical-900 mb-4">Khám bệnh</h2>
-                    <p className="text-medical-600">Tính năng đang được phát triển</p>
-                  </div>
-                </ProtectedRoute>
-              } />
-            </Route>
-
-            {/* Lab Routes */}
-            <Route path="/lab" element={
-              <ProtectedRoute allowedRoles={['Lab_technician']}>
-                <MainLayout />
-              </ProtectedRoute>
-            }>
+             
               <Route path="lab-dashboard" element={<LabDashboardContent />} />
-              <Route path="test-queue" element={
-                  <div className="glass-effect rounded-2xl p-12 text-center">
-                    <h2 className="text-xl font-bold text-medical-900 mb-4">Hàng đợi xét nghiệm</h2>
-                    <p className="text-medical-600">Tính năng đang được phát triển</p>
-                  </div>
-              } />
-              <Route path="sample-tracking" element={
-                  <div className="glass-effect rounded-2xl p-12 text-center">
-                    <h2 className="text-xl font-bold text-medical-900 mb-4">Theo dõi mẫu</h2>
-                    <p className="text-medical-600">Tính năng đang được phát triển</p>
-                  </div>
-              } />
-              <Route path="quality-control" element={
-                  <div className="glass-effect rounded-2xl p-12 text-center">
-                    <h2 className="text-xl font-bold text-medical-900 mb-4">Kiểm soát chất lượng</h2>
-                    <p className="text-medical-600">Tính năng đang được phát triển</p>
-                  </div>
-              } />
+              <Route path="test-queue" element={<LabTechnicianPage />} />
             </Route>
 
+            {/* Admin Routes */}
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['Admin']}>
                 <MainLayout />
               </ProtectedRoute>
             }> 
-              {/* Admin Routes */}
               <Route path="admin-dashboard" element={<AdminDashboardContent />} />
               <Route path="user-management" element={
                   <div className="glass-effect rounded-2xl p-12 text-center">

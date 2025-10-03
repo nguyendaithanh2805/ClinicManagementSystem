@@ -23,6 +23,7 @@ namespace Application.DTOs
         public string? TreatmentMethod { get; set; }
 
         public bool RequiresTest { get; set; }
+        public DateTime CreateAt { get; set; }
         public virtual PatientDto? Patient { get; set; }
 
         public virtual ICollection<PrescriptionDto>? Prescriptions { get; set; }

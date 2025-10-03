@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -32,6 +33,7 @@ namespace Application.Services
 
         public async Task<PatientMedicalRecordDto> AddAsync(PatientMedicalRecordDto dto)
         {
+            dto.CreateAt = DateTime.UtcNow;
             await _patientMedicalRecordRepository.AddAsync(_mapper.Map<PatientMedicalRecord>(dto));
             return dto;
         }
@@ -41,9 +43,22 @@ namespace Application.Services
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<PatientMedicalRecordDto>> GetAllAsync()
+        public async Task<IEnumerable<PatientMedicalRecordDto>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            var medicalRecord = await _patientMedicalRecordRepository.Query()
+                .Include(p => p.Patient)
+                    .ThenInclude(pt => pt.Appointments)
+                        .ThenInclude(a => a.MedicalService)
+                .Include(p => p.Prescriptions)
+                    .ThenInclude(pr => pr.PrescriptionDetails)
+                        .ThenInclude(pd => pd.Medicine)
+                .Include(p => p.Staff)
+                .Include(p => p.Symptoms)
+                .Include(p => p.TestResults)
+                    .ThenInclude(t => t.Staff)
+                .Where(p => p.RequiresTest == true)
+                .ToListAsync();
+            return _mapper.Map<IEnumerable<PatientMedicalRecordDto>>(medicalRecord);
         }
 
         public async Task<IEnumerable<PatientMedicalRecordDto>> GetAllByDoctorAsync()
@@ -78,6 +93,7 @@ namespace Application.Services
             if (medicalRecord is null)
                 throw new NotFoundException($"Không tìm thấy Hồ sơ Bệnh án với ID {dto.Id}");
 
+            medicalRecord.CreateAt = DateTime.UtcNow;
             medicalRecord.Diagnosis = dto.Diagnosis;
             medicalRecord.TreatmentMethod = dto.TreatmentMethod;
             medicalRecord.RequiresTest = dto.RequiresTest;

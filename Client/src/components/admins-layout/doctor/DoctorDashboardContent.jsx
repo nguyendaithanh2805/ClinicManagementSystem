@@ -68,7 +68,7 @@ const DoctorDashboard = () => {
 
   const fetchRecentMedicalRecords = async () => {
     try {
-      const response = await api.get('/staff/medical-records');
+      const response = await api.get('/staff/medical-records/me');
       if (response.data.status) {
         // Sắp xếp theo thời gian tạo giảm dần và lấy 5 bản ghi mới nhất
         const sortedRecords = response.data.data
@@ -94,7 +94,7 @@ const DoctorDashboard = () => {
 
       // Ví dụ: Đếm số bệnh án yêu cầu xét nghiệm chưa có kết quả (giả định)
       // Trong thực tế, bạn sẽ cần một endpoint API cụ thể để lấy dữ liệu này
-      const recordsResponse = await api.get('/staff/medical-records');
+      const recordsResponse = await api.get('/staff/medical-records/me');
       if (recordsResponse.data.status) {
         const recordsNeedingTest = recordsResponse.data.data.filter(
           record => record.requiresTest && (!record.testResults || record.testResults.length === 0)

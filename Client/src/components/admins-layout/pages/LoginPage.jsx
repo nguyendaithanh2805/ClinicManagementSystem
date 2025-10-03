@@ -30,7 +30,7 @@ const LoginPage = () => {
         return "/staff/doctor-dashboard"
       case "Receptionist":
         return "/staff/receptionist-dashboard"
-      case "Lab_technician":
+      case "LabTechnician":
         return "/staff/lab-dashboard"
       case "Admin":
         return "/admin/admin-dashboard";

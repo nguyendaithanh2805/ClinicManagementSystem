@@ -17,7 +17,7 @@ namespace Application.DTOs
 
         public string Name { get; set; } = null!;
 
-        public string Image { get; set; } = null!;
+        public string? Image { get; set; }
 
         public string? Description { get; set; }
 

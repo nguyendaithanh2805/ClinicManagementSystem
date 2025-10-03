@@ -21,6 +21,20 @@ namespace Api.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Doctor, LabTechnician")]
+        public async Task<IActionResult> GetAll()
+        {
+            try
+            {
+                return Ok(new ApiResponse<IEnumerable<PatientMedicalRecordDto>>(true, "Lấy dữ liệu thành công", await _medicalRecordService.GetAllAsync()));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+        }
+
+        [HttpGet("me")]
         [Authorize(Roles = "Doctor")]
         public async Task<IActionResult> GetAllByDoctor()
         {

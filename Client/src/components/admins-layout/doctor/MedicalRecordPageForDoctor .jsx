@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import api from "../../admins-layout/contexts/Api";
 import { formatInTimeZone } from 'date-fns-tz';
 import ConfirmationModal from  "../ConfirmationModal";
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL; 
 
 const ITEMS_PER_PAGE = 5;
 
@@ -136,7 +137,7 @@ const MedicalRecordPageForDoctor = () => {
 
   const fetchMedicalRecords = async () => {
     try {
-      const response = await api.get('/staff/medical-records');
+      const response = await api.get('/staff/medical-records/me');
       if (response.data.status) {
         const sortedRecords = response.data.data.sort((a, b) => b.id - a.id);
         setMedicalRecords(sortedRecords);
@@ -464,11 +465,11 @@ const handleDeleteSymptom = (symptomId) => {
           <div>
             <h3 className="font-semibold text-gray-900 text-lg">
               <p>
-                  Bệnh nhân:{" "}
-                  <span className="text-blue-600 font-semibold">
-                    {record.patient?.fullName || "Chưa có bệnh nhân"}
-                  </span>
-                </p>
+                Bệnh nhân:{" "}
+                <span className="text-blue-600 font-semibold">
+                  {record.patient?.fullName || "Chưa có bệnh nhân"}
+                </span>
+              </p>
             </h3>
             <p className="text-sm text-gray-600 flex items-center gap-1">
               <Stethoscope className="w-4 h-4 inline-block text-gray-500" />
@@ -486,6 +487,10 @@ const handleDeleteSymptom = (symptomId) => {
           <div className="flex items-center gap-2">
             <ClipboardCheck className="w-4 h-4 text-gray-500" />
             <span>Chẩn đoán: {record.diagnosis || 'N/A'}</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <ClipboardCheck className="w-4 h-4 text-gray-500" />
+            <span>Ngày tạo: {format(parseISO(record.createAt), 'HH:mm dd/MM/yyyy', { locale: vi })}</span>
           </div>
           <div className="flex items-center gap-2">
             <ListTodo className="w-4 h-4 text-gray-500" />
@@ -901,7 +906,7 @@ const handleDeleteSymptom = (symptomId) => {
                             <div>
                               <p className="font-medium mt-2">Hình ảnh:</p>
                               <ResultImage
-                                  src={`/images/${result.image}`}
+                                  src={`${IMAGE_URL}/${result.image}`}
                                   alt={`Kết quả ${result.name}`}
                                   onViewFull={openFullScreenImage} // NEW: Truyền hàm mở ảnh full-screen
                                 />

@@ -52,15 +52,10 @@ const Sidebar = () => {
           { icon: FileText, label: 'Thanh toán', path: '/staff/payments' }
         ];
       
-      case 'Lab_technician':
+      case 'LabTechnician':
         return [
           { icon: Home, label: 'Trang chủ', path: '/staff/lab-dashboard' },
           { icon: TestTube, label: 'Hàng đợi XN', path: '/staff/test-queue' },
-          { icon: Activity, label: 'Theo dõi mẫu', path: '/staff/sample-tracking' },
-          { icon: Shield, label: 'Kiểm soát CL', path: '/staff/quality-control' },
-          { icon: Settings, label: 'Thiết bị', path: '/staff/equipment' },
-          { icon: FileText, label: 'Kết quả', path: '/staff/test-results' },
-          { icon: BarChart3, label: 'Báo cáo', path: '/staff/lab-reports' },
         ];
       
       case 'Admin':
