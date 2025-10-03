@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Domain.Entities;
 
 namespace Application.DTOs
 {
@@ -11,12 +12,8 @@ namespace Application.DTOs
     {
         public int Id { get; set; }
 
-        [Required(ErrorMessage = "PatientId là bắt buộc.")]
-        [Range(1, int.MaxValue, ErrorMessage = "PatientId phải lớn hơn 0.")]
         public int PatientId { get; set; }
 
-        [Required(ErrorMessage = "StaffId là bắt buộc.")]
-        [Range(1, int.MaxValue, ErrorMessage = "StaffId phải lớn hơn 0.")]
         public int StaffId { get; set; }
 
         [StringLength(500, ErrorMessage = "Chẩn đoán không được vượt quá 500 ký tự.")]
@@ -25,7 +22,16 @@ namespace Application.DTOs
         [StringLength(500, ErrorMessage = "Phương pháp điều trị không được vượt quá 500 ký tự.")]
         public string? TreatmentMethod { get; set; }
 
-        [Required(ErrorMessage = "Yêu cầu xét nghiệm là bắt buộc.")]
         public bool RequiresTest { get; set; }
+        public DateTime CreateAt { get; set; }
+        public virtual PatientDto? Patient { get; set; }
+
+        public virtual ICollection<PrescriptionDto>? Prescriptions { get; set; }
+
+        public virtual StaffDto? Staff { get; set; }
+
+        public virtual ICollection<SymptomDto>? Symptoms { get; set; }
+
+        public virtual ICollection<TestResultDto>? TestResults { get; set; }
     }
 }

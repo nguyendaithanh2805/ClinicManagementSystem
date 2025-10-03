@@ -9,7 +9,6 @@ namespace Api.Controllers
 {
     [Route("api/staff/patients")]
     [ApiController]
-    [Authorize(Roles = "Admin, Receptionist")]
     public class PatientController : ControllerBase
     {
         private readonly IPatientService _patientService;
@@ -20,6 +19,7 @@ namespace Api.Controllers
         }
 
         [HttpGet]
+        [Authorize(Roles = "Admin, Receptionist, Doctor")]
         public async Task<IActionResult> GetAll()
         {
             try
@@ -52,6 +52,7 @@ namespace Api.Controllers
         }
 
         [HttpPatch("{id:int}")]
+        [Authorize(Roles = "Admin, Receptionist")]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] PatientDto patientDto)
         {
             try
@@ -76,6 +77,7 @@ namespace Api.Controllers
         }
 
         [HttpPost]
+        [Authorize(Roles = "Admin, Receptionist")]
         public async Task<IActionResult> Add([FromBody] PatientWithAccountDto dto)
         {
             try
@@ -94,6 +96,7 @@ namespace Api.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin, Receptionist")]
         public async Task<IActionResult> Delete([FromRoute] int id)
         {
             try

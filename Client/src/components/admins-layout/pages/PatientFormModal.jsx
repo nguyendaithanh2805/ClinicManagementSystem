@@ -3,6 +3,7 @@ import { X, Calendar, Save } from "lucide-react";
 import { toast } from "react-toastify";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
+import api from "../../admins-layout/contexts/Api";
 
 const PatientFormModal = ({
   isOpen,
@@ -22,7 +23,6 @@ const PatientFormModal = ({
     gender: "",
   });
   const [loading, setLoading] = useState(false);
-  const API_BASE_URL = import.meta.env.VITE_API_URL;
 
   useEffect(() => {
     if (patientData) {
@@ -74,18 +74,21 @@ const PatientFormModal = ({
         : null,
     };
 
-    const method = patientData ? "PATCH" : "POST";
     const url = patientData
-      ? `${API_BASE_URL}/staff/patients/${patientData.id}`
-      : `${API_BASE_URL}/staff/patients`;
-
+      ? `/staff/patients/${patientData.id}`
+      : `/staff/patients`;
+    let response;
     try {
-      const response = await api[method](url, dataToSend);
+      if (patientData)
+        response = await api.patch(url, dataToSend);
+      else
+        response = await api.post(url, dataToSend);
+      
 
       if (response.data.status) {
         toast.success(response.data.message);
-        onSaveSuccess(); // Làm mới danh sách
-        onClose(); // Đóng modal
+        onSaveSuccess();
+        onClose();
       } else {
         toast.error(response.data.message);
       }

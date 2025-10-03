@@ -80,8 +80,6 @@ public partial class ClinicContext : DbContext
         {
             entity.ToTable("Invoice");
 
-            entity.HasIndex(e => e.PrescriptionId, "UQ__Invoice__40130833F7CD7A20").IsUnique();
-
             entity.HasIndex(e => e.AppointmentId, "UQ__Invoice__8ECDFCC31E0AE998").IsUnique();
 
             entity.Property(e => e.PaymentDate).HasColumnType("datetime");

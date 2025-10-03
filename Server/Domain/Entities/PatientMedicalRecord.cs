@@ -16,6 +16,7 @@ public partial class PatientMedicalRecord
     public string? TreatmentMethod { get; set; }
 
     public bool RequiresTest { get; set; }
+    public DateTime CreateAt { get; set; }
 
     public virtual Patient Patient { get; set; } = null!;
 

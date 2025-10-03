@@ -21,5 +21,7 @@ namespace Application.DTOs
 
         [StringLength(200, ErrorMessage = "Địa chỉ không được vượt quá 200 ký tự.")]
         public string? Address { get; set; }
+        public string? Email { get; set; }
+        public ICollection<AppointmentWithPatientDto>? Appointments { get; set; }
     }
 }

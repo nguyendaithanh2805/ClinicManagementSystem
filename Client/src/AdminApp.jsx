@@ -21,12 +21,17 @@ import { ToastContainer } from "react-toastify";
 import { setupAxiosInterceptors } from "./components/admins-layout/contexts/Api";
 import React, { useEffect } from 'react';
 import LoadingSpinner from "./components/admins-layout/LoadingSpinner";
+import AppointmentPageForDoctor from './components/admins-layout/doctor/AppointmentPageForDoctor';
+import MedicalRecordPageForDoctor from './components/admins-layout/doctor/MedicalRecordPageForDoctor ';
+import DoctorDashboardContent from './components/admins-layout/doctor/DoctorDashboardContent';
+import LabTechnicianPage from './components/admins-layout/lab/LabTechnicianPage';
 
 function App() {
   return (
     <ErrorBoundary>
       <AuthProvider>
         <AppContent />
+        <ToastContainer position="top-right" autoClose={3000} />
       </AuthProvider>
     </ErrorBoundary>
   )
@@ -51,8 +56,7 @@ function AppContent() {
                 <MainLayout />
               </ProtectedRoute>
             }>
-            <Route index element={<Navigate to="/dashboard" replace />} />
-            <Route path="dashboard" element={<PatientDashboardContent />} />
+            <Route path="patient-dashboard" element={<PatientDashboardContent />} />
               <Route path="appointments" element={<AppointmentsPage /> } />
               <Route path="medical-records" element={ <MedicalRecordsPage /> } />
               <Route path="test-results" element={ <TestResultsPage /> } />
@@ -61,66 +65,33 @@ function AppContent() {
 
             {/* Staff Routes */}
             <Route path="/staff" element={
-              <ProtectedRoute allowedRoles={['Doctor','Receptionist']}>
+              <ProtectedRoute allowedRoles={['Doctor','Receptionist', 'LabTechnician']}>
                 <MainLayout />
               </ProtectedRoute>
             }>
-              <Route index element={<Navigate to="dashboard" replace />} />
               {/* Receptionist Routes */}
+              <Route path="receptionist-dashboard" element={<StaffDashboardContent />} />
               <Route path="appointments" element={<AppointmentsPage />} />
               <Route path="payments" element={<PaymentsPage />} />
               <Route path="patients" element={ <PatientsPage /> } />
+              <Route path="medical-records" element={ <MedicalRecordsPage /> } />
 
               {/* Doctor Routes */}
-              <Route path="dashboard" element={<StaffDashboardContent />} />
-              <Route path="schedule" element={ <SchedulePage /> } />
-              <Route path="patient-medical-record" element={ <MedicalRecordsPage/> } />
-              <Route path="examination" element={
-                <ProtectedRoute allowedRoles={['Doctor']}>
-                  <div className="glass-effect rounded-2xl p-12 text-center">
-                    <h2 className="text-xl font-bold text-medical-900 mb-4">Khám bệnh</h2>
-                    <p className="text-medical-600">Tính năng đang được phát triển</p>
-                  </div>
-                </ProtectedRoute>
-              } />
+              <Route path="doctor-dashboard" element={<DoctorDashboardContent />} />
+              <Route path="schedule" element={ <AppointmentPageForDoctor /> } />
+              <Route path="patient-medical-records" element={ <MedicalRecordPageForDoctor/> } />
+             
+              <Route path="lab-dashboard" element={<LabDashboardContent />} />
+              <Route path="test-queue" element={<LabTechnicianPage />} />
             </Route>
 
-            {/* Lab Routes */}
-            <Route path="/lab" element={
-              <ProtectedRoute allowedRoles={['Lab_technician']}>
-                <MainLayout />
-              </ProtectedRoute>
-            }>
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<LabDashboardContent />} />
-              <Route path="test-queue" element={
-                  <div className="glass-effect rounded-2xl p-12 text-center">
-                    <h2 className="text-xl font-bold text-medical-900 mb-4">Hàng đợi xét nghiệm</h2>
-                    <p className="text-medical-600">Tính năng đang được phát triển</p>
-                  </div>
-              } />
-              <Route path="sample-tracking" element={
-                  <div className="glass-effect rounded-2xl p-12 text-center">
-                    <h2 className="text-xl font-bold text-medical-900 mb-4">Theo dõi mẫu</h2>
-                    <p className="text-medical-600">Tính năng đang được phát triển</p>
-                  </div>
-              } />
-              <Route path="quality-control" element={
-                  <div className="glass-effect rounded-2xl p-12 text-center">
-                    <h2 className="text-xl font-bold text-medical-900 mb-4">Kiểm soát chất lượng</h2>
-                    <p className="text-medical-600">Tính năng đang được phát triển</p>
-                  </div>
-              } />
-            </Route>
-
+            {/* Admin Routes */}
             <Route path="/admin" element={
               <ProtectedRoute allowedRoles={['Admin']}>
                 <MainLayout />
               </ProtectedRoute>
             }> 
-              {/* Admin Routes */}
-              <Route index element={<Navigate to="dashboard" replace />} />
-              <Route path="dashboard" element={<AdminDashboardContent />} />
+              <Route path="admin-dashboard" element={<AdminDashboardContent />} />
               <Route path="user-management" element={
                   <div className="glass-effect rounded-2xl p-12 text-center">
                     <h2 className="text-xl font-bold text-medical-900 mb-4">Quản lý người dùng</h2>
@@ -135,7 +106,6 @@ function AppContent() {
               } />
             </Route>
           </Routes>
-          <ToastContainer position="top-right" autoClose={3000} />
         </BrowserRouter>
       </ChatProvider>
     </NotificationProvider>

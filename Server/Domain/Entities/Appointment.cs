@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Domain.Enums;
 
 namespace Domain.Entities;
 
@@ -17,7 +18,7 @@ public partial class Appointment
 
     public TimeOnly AppointmentTime { get; set; }
 
-    public int Status { get; set; }
+    public AppointmentStatus Status { get; set; }
 
     public virtual Invoice? Invoice { get; set; }
 

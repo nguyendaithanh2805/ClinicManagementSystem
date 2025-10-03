@@ -36,12 +36,9 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-4">
             {/* Quick Actions */}
             <div className="flex items-center gap-2">
-              <Link
-                to="/settings"
-                className="p-2 text-medical-600 hover:text-medical-900 transition-colors rounded-lg hover:bg-white/50"
-              >
-                <Settings className="w-5 h-5" />
-              </Link>
+
+            <Settings className="w-5 h-5" />
+
               
               <button className="relative p-2 text-medical-600 hover:text-medical-900 transition-colors rounded-lg hover:bg-white/50">
                 <Bell className="w-5 h-5" />
@@ -68,22 +65,16 @@ const Navbar = () => {
 
               {showUserMenu && (
                 <div className="absolute right-0 top-full mt-2 w-48 glass-effect rounded-xl shadow-lg py-2">
-                  <Link
-                    to="/profile"
-                    onClick={() => setShowUserMenu(false)}
+                  <div
                     className="w-full px-4 py-2 text-left text-sm text-medical-700 hover:bg-white/50 flex items-center gap-2"
                   >
                     <User className="w-4 h-4" />
                     Thông tin cá nhân
-                  </Link>
-                  <Link
-                    to="/settings"
-                    onClick={() => setShowUserMenu(false)}
-                    className="w-full px-4 py-2 text-left text-sm text-medical-700 hover:bg-white/50 flex items-center gap-2"
-                  >
+                  </div>
+                  <div className="w-full px-4 py-2 text-left text-sm text-medical-700 hover:bg-white/50 flex items-center gap-2">
                     <Settings className="w-4 h-4" />
                     Cài đặt
-                  </Link>
+                  </div>
                   <hr className="my-2 border-medical-200" />
                   <button
                     onClick={handleLogout}

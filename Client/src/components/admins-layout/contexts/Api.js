@@ -9,49 +9,53 @@ let logoutTimer = null;
 
 export const setupAxiosInterceptors = () => {
   api.interceptors.request.use(
-    (config) => {
-      // Lấy user từ localStorage thay vì từ context vì reload lại là mất (lỗi đã gặp)
-      const savedUser = localStorage.getItem('clinic_user');
-      if (savedUser) {
-        try {
-          const user = JSON.parse(savedUser);
-          if (user?.token) {
-            const decoded = jwtDecode(user.token);
-            const now = Math.floor(Date.now() / 1000);
-            const remaining = (decoded.exp - now) * 1000;
+  (config) => {
+    const savedUser = localStorage.getItem('clinic_user');
 
-            if (remaining <= 0) {
-              // Token đã hết hạn
-              localStorage.removeItem('clinic_user');
-              toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
-              return Promise.reject(new Error("Token expired"));
-            }
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        if (user?.token) {
+          const decoded = jwtDecode(user.token);
+          const now = Math.floor(Date.now() / 1000);
+          const remaining = (decoded.exp - now) * 1000;
 
-            // Clear timer cũ nếu có
-            if (logoutTimer) clearTimeout(logoutTimer);
-
-            // Set timer mới đến lúc hết hạn
-            logoutTimer = setTimeout(() => {
-              localStorage.removeItem('clinic_user');
-              toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
-              window.location.href = "/login"; // tự logout
-            }, remaining);
-
-            // Gắn Authorization header
-            config.headers = config.headers || {};
-            config.headers.Authorization = `Bearer ${user.token}`;
-            console.log("Attached header:", config.headers.Authorization);
+          if (remaining <= 0) {
+            localStorage.removeItem('clinic_user');
+            toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+            return Promise.reject(new Error("Token expired"));
           }
-        } catch (err) {
-          console.error("Invalid saved user in localStorage:", err);
-          localStorage.removeItem('clinic_user');
-        }
-      }
 
-      console.log("Interceptor config before return:", config);
-      return config;
-    },
-    (error) => Promise.reject(error)
+          if (logoutTimer) clearTimeout(logoutTimer);
+          logoutTimer = setTimeout(() => {
+            localStorage.removeItem('clinic_user');
+            toast.error("Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại!");
+            window.location.href = "/login";
+          }, remaining);
+
+          config.headers = config.headers || {};
+          config.headers.Authorization = `Bearer ${user.token}`;
+        }
+      } catch (err) {
+        console.error("Invalid saved user in localStorage:", err);
+        localStorage.removeItem('clinic_user');
+      }
+    }
+
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
+  api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      if (error.response && error.response.status === 401) {
+        localStorage.removeItem("clinic_user");
+        toast.error("Bạn cần đăng nhập lại!");
+        window.location.href = "/login";
+      }
+      return Promise.reject(error);
+    }
   );
 };
 

@@ -8,6 +8,7 @@ namespace Application.DTOs
 {
     using System;
     using System.ComponentModel.DataAnnotations;
+    using Domain.Entities;
     using Domain.Enums;
 
     public class AppointmentDto
@@ -28,10 +29,15 @@ namespace Application.DTOs
 
         [Required(ErrorMessage = "Thời gian hẹn là bắt buộc.")]
         [DataType(DataType.Time, ErrorMessage = "Thời gian hẹn phải là thời gian hợp lệ.")]
-        public TimeSpan AppointmentTime { get; set; }
+        public TimeOnly AppointmentTime { get; set; }
 
         [Required(ErrorMessage = "Trạng thái là bắt buộc.")]
         public AppointmentStatus Status { get; set; }
+        public string? FullName { get; set; }
+        public string? phoneNumber { get; set; }
+        public PatientDto? Patient { get; set; }
+        public StaffDto? Staff { get; set; }
+        public MedicalServiceDto? MedicalService { get; set; }
     }
 
 }

@@ -107,7 +107,7 @@ const AppointmentBooking = () => {
       const decoded = decodeJwt(token);
       const payload = { ...formData, patientId: parseInt(decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'], 10) };
 
-      const response = await api.post("/appointments", payload);
+      const response = await api.post("/staff/appointments", payload);
       if (!response.data.status) {
         toast.error(response.data.message);
         return;
