@@ -17,5 +17,6 @@ namespace Application.DTOs
         public string? FullName { get; set; }
 
         public string? Expertise { get; set; }
+        public virtual AccountDto? Account { get; set; }
     }
 }

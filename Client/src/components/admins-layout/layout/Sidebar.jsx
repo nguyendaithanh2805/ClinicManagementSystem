@@ -31,9 +31,8 @@ const Sidebar = () => {
         return [
           { icon: Home, label: 'Trang chủ', path: '/patient/patient-dashboard' },
           { icon: Calendar, label: 'Lịch khám', path: '/patient/appointments' },
-          { icon: FileText, label: 'Hồ sơ y tế', path: '/patient/medical-records' },
+          { icon: FileText, label: 'Hồ sơ Bệnh án', path: '/patient/medical-records' },
           { icon: TestTube, label: 'Kết quả XN', path: '/patient/test-results' },
-          { icon: Activity, label: 'Sức khỏe', path: '/patient/health-tracking' },
         ];
       
       case 'Doctor':

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Application.Common;
 using Application.DTOs;
 using Application.Exceptions;
 using Application.Interfaces;
@@ -21,8 +22,10 @@ namespace Application.Services
         private readonly IAccounService _accountService;
         private readonly IPasswordHasher<PatientWithAccountDto> _passwordHasher;
         private readonly IRepository<Account> _accountRepository;
+        private readonly IAccountHelper _accountHelper;
+        private readonly IRepository<PatientMedicalRecord> _patientMedicalRecordRepository;
 
-        public PatientService(IRepository<Patient> patientRepository, IMapper mapper, IUnitOfWork unitOfWork, IAccounService accountService, IPasswordHasher<PatientWithAccountDto> passwordHasher, IRepository<Account> accountRepository)
+        public PatientService(IRepository<Patient> patientRepository, IMapper mapper, IUnitOfWork unitOfWork, IAccounService accountService, IPasswordHasher<PatientWithAccountDto> passwordHasher, IRepository<Account> accountRepository, IAccountHelper accountHelper, IRepository<PatientMedicalRecord> patientMedicalRecordRepository)
         {
             _patientRepository = patientRepository;
             _mapper = mapper;
@@ -30,6 +33,8 @@ namespace Application.Services
             _accountService = accountService;
             _passwordHasher = passwordHasher;
             _accountRepository = accountRepository;
+            _accountHelper = accountHelper;
+            _patientMedicalRecordRepository = patientMedicalRecordRepository;
         }
 
         public async Task<PatientDto> AddAsync(PatientDto dto)
@@ -95,6 +100,28 @@ namespace Application.Services
         public async Task<IEnumerable<PatientDto>> GetAllAsync()
         {
             return _mapper.Map<IEnumerable<PatientDto>>(await _patientRepository.GetAllAsync());
+        }
+
+        public async Task<IEnumerable<PatientMedicalRecordDto>> GetAllMedicalRecordByPatient()
+        {
+            var accountId = _accountHelper.GetAccountId();
+            var patient = await _patientRepository.GetAsync(s => s.AccountId == accountId);
+
+            var medicalRecord = await _patientMedicalRecordRepository.Query()
+                .Include(p => p.Patient)
+                    .ThenInclude(pt => pt.Appointments)
+                        .ThenInclude(a => a.MedicalService)
+                .Include(p => p.Prescriptions)
+                    .ThenInclude(pr => pr.PrescriptionDetails)
+                        .ThenInclude(pd => pd.Medicine)
+                .Include(p => p.Staff)
+                    .ThenInclude(s => s.Account)
+                .Include(p => p.Symptoms)
+                .Include(p => p.TestResults)
+                    .ThenInclude(t => t.Staff)
+                .Where(pt => pt.PatientId == patient.Id)
+                .ToListAsync();
+            return _mapper.Map<IEnumerable<PatientMedicalRecordDto>>(medicalRecord);
         }
 
         public async Task<IEnumerable<PatientWithAccountDto>> GetAllWithAccountAsync()

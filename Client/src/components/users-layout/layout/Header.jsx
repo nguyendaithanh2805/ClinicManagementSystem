@@ -23,9 +23,6 @@ const Header = ({ onSearchOpen, clinicStatus, currentLanguage }) => {
     const navigationItems = [
         { name: 'Trang Chủ', path: '/', icon: null },
         { name: 'Dịch Vụ', path: '/services', icon: null },
-        { name: 'Bác Sĩ', path: '/doctors', icon: null },
-        { name: 'Về Chúng Tôi', path: '/about', icon: null },
-        { name: 'Liên Hệ', path: '/contact', icon: null },
     ];
 
     const handleEmergencyCall = () => {
@@ -104,7 +101,7 @@ const Header = ({ onSearchOpen, clinicStatus, currentLanguage }) => {
                             className="hidden md:flex items-center space-x-2 text-gray-700 hover:text-primary-600 font-medium transition-colors duration-200"
                         >
                             <FileText className="w-5 h-5" />
-                            <span>Hồ sơ bệnh án</span>
+                            <span>Cổng thông tin Bệnh nhân</span>
                         </button>
 
 

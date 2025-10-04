@@ -10,7 +10,6 @@ import MedicalRecordsPage from './components/admins-layout/pages/MedicalRecordsP
 import TestResultsPage from './components/admins-layout/pages/TestResultsPage';
 import HealthTrackingPage from './components/admins-layout/pages/HealthTrackingPage';
 import PatientsPage from './components/admins-layout/pages/PatientsPage';
-import SchedulePage from './components/admins-layout/pages/SchedulePage';
 import ProtectedRoute from './components/admins-layout/ProtectedRoute';
 import ErrorBoundary from './components/admins-layout/ErrorBoundary';
 import LabDashboardContent from './components/admins-layout/dashboard/LabDashboardContent';
