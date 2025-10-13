@@ -34,7 +34,7 @@ const MedicalRecordsPage = () => {
     const fetchMedicalRecords = async () => {
       try {
         setLoading(true);
-        const response = await api.get('/staff/patients/me');
+        const response = await api.get('/patients/medical-records/me');
         if (response.data.status) {
           const formattedRecords = response.data.data.map(record => ({
             id: record.id,
@@ -43,7 +43,6 @@ const MedicalRecordsPage = () => {
             doctor: record.staff?.fullName,
             department: record.staff?.expertise,
             diagnosis: record.diagnosis,
-            priority: record.requiresTest ? 'high' : 'normal',
             symptoms: record.symptoms || [],
             prescriptions: record.prescriptions || [],
             labTests: record.testResults || [],
@@ -62,7 +61,7 @@ const MedicalRecordsPage = () => {
           setError(response.data.message);
         }
       } catch (err) {
-        setError("Không thể tải hồ sơ y tế. Vui lòng thử lại sau.");
+        setError("Không thể tải hồ sơ bệnh án. Vui lòng thử lại sau.");
       } finally {
         setLoading(false);
       }
@@ -130,7 +129,7 @@ const MedicalRecordsPage = () => {
         const canvas = await html2canvas(printAreaElement, {
           scale: 2, // Tăng scale để ảnh nét hơn
           useCORS: true, // Quan trọng để tải ảnh từ nguồn khác domain
-          allowTaint: true,
+          allowTaint: false,
           scrollX: 0,
           scrollY: 0,
           windowWidth: printAreaElement.offsetWidth,
@@ -175,7 +174,7 @@ const MedicalRecordsPage = () => {
           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
           <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
         </svg>
-        Đang tải hồ sơ y tế...
+        Đang tải hồ sơ bệnh án...
       </div>
     );
   }
@@ -196,7 +195,7 @@ const MedicalRecordsPage = () => {
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-medical-900 mb-2">
-              Quản lý hồ sơ y tế của bạn
+              Quản lý hồ sơ bệnh án của bạn
             </h1>
             <p className="text-medical-600 text-sm">
               Xem lịch sử khám bệnh và kết quả điều trị của bạn.
@@ -241,7 +240,7 @@ const MedicalRecordsPage = () => {
       <div className="glass-effect rounded-2xl p-6 shadow-md">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
           <h2 className="text-xl font-bold text-medical-900">
-            Hồ sơ y tế ({filteredRecords.length})
+            Hồ sơ bệnh án ({filteredRecords.length})
           </h2>
           <div className="flex items-center gap-2 text-sm text-medical-600">
             <Calendar className="w-4 h-4" />
@@ -315,17 +314,20 @@ const MedicalRecordsPage = () => {
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-medical-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-medical-900 mb-2">
-              Không tìm thấy hồ sơ y tế
+              Không tìm thấy hồ sơ bệnh án
             </h3>
             <p className="text-medical-600">
-              {searchTerm ? 'Thử thay đổi từ khóa tìm kiếm' : 'Bạn chưa có hồ sơ y tế nào.'}
+              {searchTerm ? 'Thử thay đổi từ khóa tìm kiếm' : 'Bạn chưa có hồ sơ bệnh án nào.'}
             </p>
           </div>
         )}
       </div>
 
       {selectedRecordDetail && (
-        <div className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          style={{ marginTop: 0 }}
+        >
           <div className="bg-white rounded-xl p-6 w-full max-w-4xl relative shadow-lg max-h-[90vh] overflow-y-auto">
             <button
               className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
@@ -556,6 +558,7 @@ function ResultImage({ src, alt, onViewFull }) {
       <img
         src={src}
         alt={alt}
+        crossorigin="anonymous"
         className="max-w-full h-auto rounded-lg shadow-md border border-gray-200 object-cover max-h-32 w-48 cursor-pointer transform hover:scale-105 transition-transform duration-200"
         onError={() => setError(true)}
         onClick={() => onViewFull(src)}

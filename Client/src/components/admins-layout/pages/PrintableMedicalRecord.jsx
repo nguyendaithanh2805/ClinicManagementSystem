@@ -3,6 +3,7 @@ import { format, parseISO, isValid } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { formatInTimeZone } from 'date-fns-tz';
 
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 const PrintableMedicalRecord = ({ record }) => {
   if (!record) {
     return <div className="text-center p-2 text-sm">Không có dữ liệu hồ sơ bệnh án để in.</div>;
@@ -104,7 +105,7 @@ const PrintableMedicalRecord = ({ record }) => {
         </div>
 
         <div style={{ marginBottom: '2rem' }}>
-          <h2 style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.8rem', paddingBottom: '0.4rem', borderBottom: '1px solid #e5e7eb' }}>CHI TIẾT HỒ SƠ Y TẾ</h2>
+          <h2 style={{ fontSize: '1.1em', fontWeight: 'bold', color: '#1f2937', marginBottom: '0.8rem', paddingBottom: '0.4rem', borderBottom: '1px solid #e5e7eb' }}>CHI TIẾT HỒ SƠ BỆNH ÁN</h2>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.8rem', color: '#4b5563', fontSize: '1em' }}>
             <p><strong style={{ color: '#1f2937' }}>Bác sĩ:</strong> {record.doctor || 'N/A'}</p>
             <p><strong style={{ color: '#1f2937' }}>Chuyên khoa:</strong> {record.department || 'N/A'}</p>

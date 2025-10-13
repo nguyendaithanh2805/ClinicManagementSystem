@@ -32,20 +32,6 @@ namespace Api.Controllers
             }
         }
 
-        [HttpGet("me")]
-        [Authorize(Roles = "Patient")]
-        public async Task<IActionResult> GetAllMedicalRecordByPatient()
-        {
-            try
-            {
-                return Ok(new ApiResponse<IEnumerable<PatientMedicalRecordDto>>(true, "Lấy dữ liệu thành công", await _patientService.GetAllMedicalRecordByPatient()));
-            }
-            catch (Exception ex)
-            {
-                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
-            }
-        }
-
         [Authorize(Roles = "Admin, Receptionist, Patient")]
         [HttpGet("{id:int}")]
         public async Task<IActionResult> GetById(int id)
@@ -66,7 +52,7 @@ namespace Api.Controllers
         }
 
         [HttpPatch("{id:int}")]
-        [Authorize(Roles = "Admin, Receptionist")]
+        [Authorize(Roles = "Admin, Receptionist, Patient")]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] PatientDto patientDto)
         {
             try
@@ -77,7 +63,7 @@ namespace Api.Controllers
                 if (id != patientDto.Id)
                     return BadRequest("Id không khớp");
 
-                return Ok(new ApiResponse<PatientDto>(true, "Cập nhật bệnh nhân thành công",
+                return Ok(new ApiResponse<PatientDto>(true, "Cập nhật thành công",
                     await _patientService.Update(patientDto)));
             }
             catch (NotFoundException ex)

@@ -27,9 +27,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("MyAllowSpecificOrigins", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -82,7 +83,7 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 // Service
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IPasswordHasher<AccountDto>, PasswordHasher<AccountDto>>();
+builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
 builder.Services.AddScoped<IPasswordHasher<PatientWithAccountDto>, PasswordHasher<PatientWithAccountDto>>();
 builder.Services.AddScoped<IPatientService, PatientService>();
 builder.Services.AddScoped<IAccountHelper, AccountHelper>();
@@ -129,12 +130,11 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Allow serve static file from wwwroot
-app.UseStaticFiles();
-
 app.UseHttpsRedirection();
+app.UseRouting();
 
 app.UseCors(MyAllowSpecificOrigins);
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 

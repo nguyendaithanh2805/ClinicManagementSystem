@@ -35,7 +35,7 @@ const PatientPortal = () => {
 
             <div className="p-6 border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
               <FileText className="w-8 h-8 text-primary-600 mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Hồ sơ y tế</h3>
+              <h3 className="text-lg font-semibold mb-2">Hồ sơ bệnh án</h3>
               <p className="text-gray-600 mb-4">Xem kết quả khám và hồ sơ bệnh án</p>
               <button className="text-primary-600 hover:text-primary-700 font-medium">
                 Xem hồ sơ →

@@ -21,17 +21,19 @@ namespace Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IAccounService _accountService;
         private readonly IPasswordHasher<PatientWithAccountDto> _passwordHasher;
+        private readonly IPasswordHasher<Account> _hasher;
         private readonly IRepository<Account> _accountRepository;
         private readonly IAccountHelper _accountHelper;
         private readonly IRepository<PatientMedicalRecord> _patientMedicalRecordRepository;
 
-        public PatientService(IRepository<Patient> patientRepository, IMapper mapper, IUnitOfWork unitOfWork, IAccounService accountService, IPasswordHasher<PatientWithAccountDto> passwordHasher, IRepository<Account> accountRepository, IAccountHelper accountHelper, IRepository<PatientMedicalRecord> patientMedicalRecordRepository)
+        public PatientService(IRepository<Patient> patientRepository, IMapper mapper, IUnitOfWork unitOfWork, IAccounService accountService, IPasswordHasher<PatientWithAccountDto> passwordHasher, IPasswordHasher<Account> hasher, IRepository<Account> accountRepository, IAccountHelper accountHelper, IRepository<PatientMedicalRecord> patientMedicalRecordRepository)
         {
             _patientRepository = patientRepository;
             _mapper = mapper;
             _unitOfWork = unitOfWork;
             _accountService = accountService;
             _passwordHasher = passwordHasher;
+            _hasher = hasher;
             _accountRepository = accountRepository;
             _accountHelper = accountHelper;
             _patientMedicalRecordRepository = patientMedicalRecordRepository;
@@ -95,6 +97,17 @@ namespace Application.Services
                 await _unitOfWork.RollbackAsync();
                 throw;
             }
+        }
+
+        public async Task<PatientDto> GetPatientByIdIncludeAccount()
+        {
+            var accountId = _accountHelper.GetAccountId();
+            var patient = await _patientRepository.GetAsync(s => s.AccountId == accountId);
+
+            return _mapper.Map<PatientDto>(
+                await _patientRepository.Query()
+                .Include(p => p.Account)
+                .FirstOrDefaultAsync(p => p.Id == patient.Id));
         }
 
         public async Task<IEnumerable<PatientDto>> GetAllAsync()
@@ -174,6 +187,52 @@ namespace Application.Services
             }
 
             return _mapper.Map<PatientDto>(await _patientRepository.GetByIdAsync(dto.Id));
+        }
+
+        public async Task UpdatePasswordForPatientAccountAsync(ChangePasswordDto dto)
+        {
+            var account = await _accountRepository.GetByIdAsync(dto.AccountId);
+            if (account is null)
+                throw new NotFoundException("Không tìm thấy tài khoản.");
+
+            // Kiểm tra mật khẩu cũ
+            var verifyResult = _hasher.VerifyHashedPassword(account, account.Password, dto.CurrentPassword);
+            if (verifyResult == PasswordVerificationResult.Failed)
+                throw new InvalidPasswordException("Mật khẩu hiện tại không đúng.");
+
+            account.Password = _hasher.HashPassword(account, dto.NewPassword);
+            _accountRepository.Update(account);
+            await _unitOfWork.SaveChangeAsync();
+        }
+
+        public async Task UpdatePatientAccount(PatientWithAccountDto dto)
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var patient = await _patientRepository.GetByIdAsync(dto.Id);
+                if (patient is null)
+                    throw new NotFoundException("Không tìm thấy bệnh nhân, không thể cập nhật.");
+
+                var account = await _accountRepository.GetByIdAsync(patient.AccountId);
+
+                account.PhoneNumber = dto.PhoneNumber;
+                account.Email = dto.Email;
+                _accountRepository.Update(account);
+
+                patient.FullName = dto.FullName;
+                patient.DateOfBirth = dto.DateOfBirth;
+                patient.Address = dto.Address;
+                _patientRepository.Update(patient);
+
+                await _unitOfWork.CommitAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
         }
     }
 }

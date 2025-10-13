@@ -6,7 +6,6 @@ import Footer from '../users-layout/layout/Footer';
 const Forbidden = () => {
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header />
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="max-w-2xl bg-white shadow-lg rounded-2xl p-8 text-center">
             <h1 className="text-3xl font-bold text-red-600 mb-4">Không có quyền truy cập</h1>
@@ -19,7 +18,6 @@ const Forbidden = () => {
             </Link>
         </div>
         </div>
-      <Footer />
     </div>
   );
 };

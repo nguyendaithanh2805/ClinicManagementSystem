@@ -24,6 +24,10 @@ import AppointmentPageForDoctor from './components/admins-layout/doctor/Appointm
 import MedicalRecordPageForDoctor from './components/admins-layout/doctor/MedicalRecordPageForDoctor ';
 import DoctorDashboardContent from './components/admins-layout/doctor/DoctorDashboardContent';
 import LabTechnicianPage from './components/admins-layout/lab/LabTechnicianPage';
+import AppointmentsForPatientPage from './components/admins-layout/patient/AppointmentsForPatientPage';
+import MyAccountPage from './components/admins-layout/patient/MyAccountPage';
+import InvoicesPage from './components/admins-layout/patient/InvoicesPage';
+import DrugAnalyzerPage from './components/admins-layout/patient/DrugAnalyzerPage';
 
 function App() {
   return (
@@ -56,10 +60,11 @@ function AppContent() {
               </ProtectedRoute>
             }>
             <Route path="patient-dashboard" element={<PatientDashboardContent />} />
-              <Route path="appointments" element={<AppointmentsPage /> } />
+              <Route path="appointments" element={<AppointmentsForPatientPage /> } />
               <Route path="medical-records" element={ <MedicalRecordsPage /> } />
-              <Route path="test-results" element={ <TestResultsPage /> } />
-              <Route path="health-tracking" element={ <HealthTrackingPage /> } />
+              <Route path="invoices" element={ <InvoicesPage /> } />
+              <Route path="drug-analyzer" element={ <DrugAnalyzerPage /> } />
+              <Route path="my-account" element={ <MyAccountPage /> } />
             </Route>
 
             {/* Staff Routes */}

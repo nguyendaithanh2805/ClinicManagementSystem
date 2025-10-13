@@ -10,5 +10,6 @@ namespace Application.Interfaces
     public interface IInvoiceService : IService<InvoiceDto>
     {
         Task<InvoiceDto> UpdateStatus(InvoiceStatusDto status);
+        Task<IEnumerable<InvoiceDto>> GetAllInvoiceByPatient();
     }
 }

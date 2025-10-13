@@ -179,11 +179,11 @@ const ChatPanel = () => {
 
   const getRoleText = (role) => {
     switch (role) {
-      case 'doctor':
+      case 'Doctor':
         return 'Bác sĩ';
-      case 'nurse':
-        return 'Y tá';
-      case 'patient':
+      case 'Receptionist':
+        return 'Bác sĩ';
+      case 'Patient':
         return 'Bệnh nhân';
       default:
         return 'Người dùng';
