@@ -101,7 +101,7 @@ namespace Application.Services
 
         public async Task<PatientDto> GetPatientByIdIncludeAccount()
         {
-            var accountId = _accountHelper.GetAccountId();
+            var accountId = await _accountHelper.GetAccountId();
             var patient = await _patientRepository.GetAsync(s => s.AccountId == accountId);
 
             return _mapper.Map<PatientDto>(
@@ -117,7 +117,7 @@ namespace Application.Services
 
         public async Task<IEnumerable<PatientMedicalRecordDto>> GetAllMedicalRecordByPatient()
         {
-            var accountId = _accountHelper.GetAccountId();
+            var accountId = await _accountHelper.GetAccountId();
             var patient = await _patientRepository.GetAsync(s => s.AccountId == accountId);
 
             var medicalRecord = await _patientMedicalRecordRepository.Query()

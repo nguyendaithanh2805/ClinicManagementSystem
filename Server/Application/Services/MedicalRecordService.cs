@@ -63,7 +63,7 @@ namespace Application.Services
 
         public async Task<IEnumerable<PatientMedicalRecordDto>> GetAllByDoctorAsync()
         {
-            var accountId = _accountHelper.GetAccountId();
+            var accountId = await _accountHelper.GetAccountId();
             var staff = await _staffRepository.GetAsync(s => s.AccountId == accountId);
 
             var medicalRecord = await _patientMedicalRecordRepository.Query()

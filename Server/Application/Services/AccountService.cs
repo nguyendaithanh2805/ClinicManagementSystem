@@ -12,7 +12,7 @@ using Microsoft.AspNetCore.Identity;
 
 namespace Application.Services
 {
-    public class AccountService :IAccounService
+    public class AccountService : IAccounService
     {
         private readonly IRepository<Account> _accountRepository;
         private readonly IMapper _mapper;

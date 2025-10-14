@@ -23,6 +23,32 @@ const PaymentsPage = () => {
 
   const pdfContentRef = useRef();
 
+  const Pill = () => (
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        viewBox="0 0 64 32"
+        className="w-4 h-4 mr-1"
+      >
+        <g transform="rotate(45 32 16)">
+          {/* Nửa đỏ */}
+          <path d="M0,16a16,16 0 0,1 16,-16h16v32H16A16,16 0 0,1 0,16Z" fill="#ef4444" />
+          {/* Nửa vàng */}
+          <path d="M32,0h16a16,16 0 0,1 0,32H32V0Z" fill="#facc15" />
+          {/* Viền */}
+          <rect
+            x="0"
+            y="0"
+            width="64"
+            height="32"
+            rx="16"
+            fill="none"
+            stroke="#9ca3af"
+            strokeWidth="2"
+          />
+        </g>
+      </svg>
+    );
+
   useEffect(() => {
     fetchInvoices();
   }, []);
@@ -395,6 +421,14 @@ const PaymentsPage = () => {
                 </p>
               </div>
 
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                <DollarSign className="w-5 h-5 text-green-500 flex-shrink-0" />
+                <strong className="font-semibold w-32">Giá dịch vụ:</strong>
+                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                  {formatCurrency(selectedInvoice.appointment?.medicalService?.cost, 'VND')}
+                </p>
+              </div>
+
               {/* Payment Date */}
               {selectedInvoice.paymentDate && (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -436,9 +470,12 @@ const PaymentsPage = () => {
                     {selectedInvoice.prescription.prescriptionDetails.map((detail, index) => (
                       <li key={index} className="flex flex-col border border-gray-100 rounded-lg p-3 bg-white shadow-sm">
                         <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium text-gray-900">{detail.medicine?.name || 'Thuốc không xác định'}</span>
+                          <span className="font-medium text-gray-900 whitespace-nowrap flex items-center">
+                            <Pill className="inline-block mr-1" /> {detail.medicine?.name || 'Thuốc không xác định'}
+                          </span>
                           <span className="text-sm text-gray-600">x{detail.quantity}</span>
                         </div>
+                        <p className="text-sm text-gray-600 italic">{formatCurrency(detail.medicine?.price, 'VND')} / {detail.medicine?.unit}</p>
                         <p className="text-sm text-gray-600 italic">{detail.dosage} ({detail.frequency})</p>
                         <p className="text-sm font-semibold text-gray-800 mt-1 self-end">
                           {formatCurrency(detail.amount, 'VND')}

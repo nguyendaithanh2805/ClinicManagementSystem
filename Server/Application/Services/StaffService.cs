@@ -12,7 +12,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
-    public class StaffService : IService<StaffDto>
+    public class StaffService : IStaffService
     {
         private readonly IMapper _mapper;
         private readonly IRepository<Staff> _staffRepository;
@@ -40,6 +40,14 @@ namespace Application.Services
             return _mapper.Map<IEnumerable<StaffDto>>(
                 await _staffRepository.Query()
                 .Where(s => s.SpecialtyId != null) // Chỉ lấy những nhân viên đã có chuyên khoa
+                .ToListAsync());
+        }
+
+        public async Task<IEnumerable<StaffDto>> GetAllReceptionistAsync()
+        {
+            return _mapper.Map<IEnumerable<StaffDto>>(
+                await _staffRepository.Query()
+                .Where(s => s.Account.RoleId == 4) // Chỉ lấy tài khoản lễ tân
                 .ToListAsync());
         }
 

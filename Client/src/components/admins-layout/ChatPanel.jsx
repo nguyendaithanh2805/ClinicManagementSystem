@@ -1,222 +1,117 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { useAuth } from './contexts/AuthContext';
+import { useChat } from './contexts/ChatContext';
 import { MessageCircle, X, Send, Phone, Video, MoreVertical, Search, Paperclip, Smile, Image } from 'lucide-react';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
+// Component chính hiển thị giao diện chat
 const ChatPanel = () => {
-  const { user } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
-  const [selectedChat, setSelectedChat] = useState(null);
-  const [message, setMessage] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const messagesEndRef = useRef(null);
+  const { user } = useAuth(); // Lấy thông tin người dùng hiện tại
+  const {
+    chats,
+    activeChat,
+    unreadCount,
+    setActiveChat,
+    sendMessage,
+    markChatAsRead,
+    connectionState // Trạng thái kết nối SignalR
+  } = useChat(); // Sử dụng ChatContext để lấy dữ liệu và các hàm chat
 
-  // Mock chat data
-  const [chats, setChats] = useState([
-    {
-      id: 'chat001',
-      participantId: user?.role === 'patient' ? 'd001' : 'p001',
-      participantName: user?.role === 'patient' ? 'BS. Trần Thị Bình' : 'Nguyễn Văn An',
-      participantRole: user?.role === 'patient' ? 'doctor' : 'patient',
-      participantAvatar: user?.role === 'patient' 
-        ? 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face'
-        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face',
-      lastMessage: 'Cảm ơn bác sĩ đã tư vấn',
-      lastMessageTime: new Date(Date.now() - 30 * 60 * 1000),
-      unreadCount: 2,
-      isOnline: true,
-      messages: [
-        {
-          id: 'm001',
-          senderId: user?.role === 'patient' ? 'p001' : 'd001',
-          senderName: user?.role === 'patient' ? 'Nguyễn Văn An' : 'BS. Trần Thị Bình',
-          content: 'Chào bác sĩ, tôi muốn hỏi về kết quả xét nghiệm',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          type: 'text',
-          isOwn: user?.role === 'patient'
-        },
-        {
-          id: 'm002',
-          senderId: user?.role === 'patient' ? 'd001' : 'p001',
-          senderName: user?.role === 'patient' ? 'BS. Trần Thị Bình' : 'Nguyễn Văn An',
-          content: 'Chào bạn! Tôi đã xem kết quả xét nghiệm của bạn. Các chỉ số đều trong giới hạn bình thường.',
-          timestamp: new Date(Date.now() - 90 * 60 * 1000),
-          type: 'text',
-          isOwn: user?.role === 'doctor'
-        },
-        {
-          id: 'm003',
-          senderId: user?.role === 'patient' ? 'p001' : 'd001',
-          senderName: user?.role === 'patient' ? 'Nguyễn Văn An' : 'BS. Trần Thị Bình',
-          content: 'Vậy tôi có cần uống thuốc gì không ạ?',
-          timestamp: new Date(Date.now() - 60 * 60 * 1000),
-          type: 'text',
-          isOwn: user?.role === 'patient'
-        },
-        {
-          id: 'm004',
-          senderId: user?.role === 'patient' ? 'd001' : 'p001',
-          senderName: user?.role === 'patient' ? 'BS. Trần Thị Bình' : 'Nguyễn Văn An',
-          content: 'Hiện tại chưa cần thiết. Bạn chỉ cần duy trì chế độ ăn uống lành mạnh và tập thể dục đều đặn.',
-          timestamp: new Date(Date.now() - 45 * 60 * 1000),
-          type: 'text',
-          isOwn: user?.role === 'doctor'
-        },
-        {
-          id: 'm005',
-          senderId: user?.role === 'patient' ? 'p001' : 'd001',
-          senderName: user?.role === 'patient' ? 'Nguyễn Văn An' : 'BS. Trần Thị Bình',
-          content: 'Cảm ơn bác sĩ đã tư vấn',
-          timestamp: new Date(Date.now() - 30 * 60 * 1000),
-          type: 'text',
-          isOwn: user?.role === 'patient'
-        }
-      ]
-    },
-    {
-      id: 'chat002',
-      participantId: user?.role === 'patient' ? 'n001' : 'p002',
-      participantName: user?.role === 'patient' ? 'Y tá Lê Thị Cẩm' : 'Trần Thị Mai',
-      participantRole: user?.role === 'patient' ? 'nurse' : 'patient',
-      participantAvatar: user?.role === 'patient'
-        ? 'https://images.unsplash.com/photo-1582750433449-648ed127bb54?w=150&h=150&fit=crop&crop=face'
-        : 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face',
-      lastMessage: 'Lịch tái khám đã được xác nhận',
-      lastMessageTime: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      unreadCount: 0,
-      isOnline: false,
-      messages: [
-        {
-          id: 'm006',
-          senderId: user?.role === 'patient' ? 'p001' : 'n001',
-          senderName: user?.role === 'patient' ? 'Nguyễn Văn An' : 'Y tá Lê Thị Cẩm',
-          content: 'Xin chào, tôi muốn đặt lịch tái khám',
-          timestamp: new Date(Date.now() - 3 * 60 * 60 * 1000),
-          type: 'text',
-          isOwn: user?.role === 'patient'
-        },
-        {
-          id: 'm007',
-          senderId: user?.role === 'patient' ? 'n001' : 'p002',
-          senderName: user?.role === 'patient' ? 'Y tá Lê Thị Cẩm' : 'Trần Thị Mai',
-          content: 'Lịch tái khám đã được xác nhận cho ngày 15/12 lúc 14:30',
-          timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-          type: 'text',
-          isOwn: user?.role !== 'patient'
-        }
-      ]
-    }
-  ]);
+  const [isOpen, setIsOpen] = useState(false); // Trạng thái đóng/mở panel chat
+  const [message, setMessage] = useState(''); // Nội dung tin nhắn đang nhập
+  const [searchTerm, setSearchTerm] = useState(''); // Từ khóa tìm kiếm trong danh sách chat
+  const messagesEndRef = useRef(null); // Ref để cuộn đến cuối danh sách tin nhắn
 
-  const scrollToBottom = () => {
+  // Hàm cuộn xuống cuối danh sách tin nhắn
+  const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, []);
 
+  // useEffect để cuộn xuống cuối khi activeChat hoặc tin nhắn thay đổi
   useEffect(() => {
     scrollToBottom();
-  }, [selectedChat?.messages]);
+  }, [activeChat?.messages, scrollToBottom]);
 
-  const handleSendMessage = () => {
-    if (!message.trim() || !selectedChat) return;
-
-    const newMessage = {
-      id: `m${Date.now()}`,
-      senderId: user?.id,
-      senderName: user?.username,
-      content: message.trim(),
-      timestamp: new Date(),
-      type: 'text',
-      isOwn: true
-    };
-
-    setChats(prevChats =>
-      prevChats.map(chat =>
-        chat.id === selectedChat.id
-          ? {
-              ...chat,
-              messages: [...chat.messages, newMessage],
-              lastMessage: message.trim(),
-              lastMessageTime: new Date()
-            }
-          : chat
-      )
-    );
-
-    setSelectedChat(prev => ({
-      ...prev,
-      messages: [...prev.messages, newMessage]
-    }));
-
-    setMessage('');
+  // Xử lý khi người dùng chọn một cuộc trò chuyện từ danh sách
+  const handleSelectChat = (chat) => {
+    setActiveChat(chat); // Đặt chat được chọn làm activeChat
+    if (chat.unreadCount > 0) {
+      markChatAsRead(chat.id); // Đánh dấu là đã đọc nếu có tin nhắn chưa đọc
+    }
   };
 
+  // Xử lý gửi tin nhắn
+  const handleSendMessage = async () => {
+    if (!message.trim() || !activeChat) return; // Không gửi tin nhắn rỗng hoặc khi không có activeChat
+
+    await sendMessage(activeChat.participantId, message.trim()); // Gọi hàm gửi tin nhắn từ ChatContext
+    setMessage(''); // Xóa nội dung input sau khi gửi
+    scrollToBottom(); // Cuộn xuống cuối để xem tin nhắn vừa gửi
+  };
+
+  // Xử lý phím Enter để gửi tin nhắn
   const handleKeyPress = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === 'Enter' && !e.shiftKey) { // Gửi khi nhấn Enter (không kèm Shift)
       e.preventDefault();
       handleSendMessage();
     }
   };
 
+  // Lọc danh sách chat dựa trên từ khóa tìm kiếm
   const filteredChats = chats.filter(chat =>
     chat.participantName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const totalUnreadCount = chats.reduce((sum, chat) => sum + chat.unreadCount, 0);
-
+  // Hàm trả về màu sắc cho vai trò của người dùng
   const getRoleColor = (role) => {
     switch (role) {
-      case 'doctor':
-        return 'text-blue-600';
-      case 'nurse':
-        return 'text-green-600';
-      case 'patient':
-        return 'text-cyan-600';
-      default:
-        return 'text-gray-600';
+      case 'Doctor': return 'text-blue-600';
+      case 'Patient': return 'text-cyan-600';
+      case 'Receptionist': return 'text-purple-600';
+      default: return 'text-gray-600';
     }
   };
 
+  // Hàm trả về tên hiển thị của vai trò
   const getRoleText = (role) => {
     switch (role) {
-      case 'Doctor':
-        return 'Bác sĩ';
-      case 'Receptionist':
-        return 'Bác sĩ';
-      case 'Patient':
-        return 'Bệnh nhân';
-      default:
-        return 'Người dùng';
+      case 'Receptionist': return 'Lễ tân';
+      case 'Patient': return 'Bệnh nhân';
+      default: return 'Người dùng';
     }
   };
 
   return (
     <>
-      {/* Chat Trigger Button */}
+      {/* Nút kích hoạt mở Chat Panel */}
       <button
         onClick={() => setIsOpen(true)}
         className="fixed bottom-6 right-20 w-14 h-14 bg-gradient-to-r from-green-600 to-teal-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40"
       >
         <MessageCircle className="w-6 h-6" />
-        {totalUnreadCount > 0 && (
+        {/* Hiển thị số lượng tin nhắn chưa đọc */}
+        {unreadCount > 0 && (
           <span className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-            {totalUnreadCount > 9 ? '9+' : totalUnreadCount}
+            {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
-      {/* Chat Panel */}
+      {/* Chat Panel chính */}
       {isOpen && (
         <div className="fixed inset-0 z-50 overflow-hidden">
+          {/* Lớp phủ nền mờ khi panel mở */}
           <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setIsOpen(false)} />
           
           <div className="absolute right-0 top-0 h-full w-full max-w-4xl bg-white shadow-2xl flex">
-            {/* Chat List */}
+            {/* Cột danh sách các cuộc trò chuyện */}
             <div className="w-80 border-r border-gray-200 flex flex-col">
-              {/* Chat Header */}
+              {/* Header của danh sách chat */}
               <div className="p-4 border-b border-gray-200">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold text-medical-900">Tin nhắn</h2>
+                  {/* Nút đóng panel */}
                   <button
                     onClick={() => setIsOpen(false)}
                     className="p-2 text-medical-400 hover:text-medical-600 transition-colors"
@@ -225,7 +120,7 @@ const ChatPanel = () => {
                   </button>
                 </div>
                 
-                {/* Search */}
+                {/* Thanh tìm kiếm chat */}
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-medical-400" />
                   <input
@@ -238,7 +133,12 @@ const ChatPanel = () => {
                 </div>
               </div>
 
-              {/* Chat List */}
+              {/* Trạng thái kết nối SignalR */}
+              <div className={`py-1 px-4 text-xs font-medium text-center ${connectionState === 'Connected' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                Trạng thái: {connectionState === 'Connected' ? 'Đã kết nối' : 'Đang ngắt kết nối...'}
+              </div>
+
+              {/* Danh sách các cuộc trò chuyện đã lọc */}
               <div className="flex-1 overflow-y-auto">
                 {filteredChats.length === 0 ? (
                   <div className="flex flex-col items-center justify-center h-full p-8 text-center">
@@ -250,9 +150,9 @@ const ChatPanel = () => {
                     {filteredChats.map((chat) => (
                       <div
                         key={chat.id}
-                        onClick={() => setSelectedChat(chat)}
+                        onClick={() => handleSelectChat(chat)}
                         className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${
-                          selectedChat?.id === chat.id ? 'bg-blue-50 border-r-2 border-blue-500' : ''
+                          activeChat?.id === chat.id ? 'bg-blue-50 border-r-2 border-blue-500' : ''
                         }`}
                       >
                         <div className="flex items-start gap-3">
@@ -262,6 +162,7 @@ const ChatPanel = () => {
                               alt={chat.participantName}
                               className="w-12 h-12 rounded-full object-cover"
                             />
+                            {/* Hiển thị trạng thái online */}
                             {chat.isOnline && (
                               <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-500 border-2 border-white rounded-full"></div>
                             )}
@@ -281,6 +182,7 @@ const ChatPanel = () => {
                               <p className="text-sm text-medical-600 truncate">
                                 {chat.lastMessage}
                               </p>
+                              {/* Hiển thị số tin nhắn chưa đọc của từng chat */}
                               {chat.unreadCount > 0 && (
                                 <span className="ml-2 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center flex-shrink-0">
                                   {chat.unreadCount}
@@ -300,30 +202,30 @@ const ChatPanel = () => {
               </div>
             </div>
 
-            {/* Chat Messages */}
+            {/* Cột hiển thị tin nhắn của cuộc trò chuyện đang active */}
             <div className="flex-1 flex flex-col">
-              {selectedChat ? (
+              {activeChat ? (
                 <>
-                  {/* Chat Header */}
+                  {/* Header của cuộc trò chuyện đang active */}
                   <div className="p-4 border-b border-gray-200 bg-white">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="relative">
                           <img
-                            src={selectedChat.participantAvatar}
-                            alt={selectedChat.participantName}
+                            src={activeChat.participantAvatar}
+                            alt={activeChat.participantName}
                             className="w-10 h-10 rounded-full object-cover"
                           />
-                          {selectedChat.isOnline && (
+                          {activeChat.isOnline && (
                             <div className="absolute -bottom-1 -right-1 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></div>
                           )}
                         </div>
                         <div>
                           <h3 className="font-medium text-medical-900">
-                            {selectedChat.participantName}
+                            {activeChat.participantName}
                           </h3>
-                          <p className={`text-xs ${getRoleColor(selectedChat.participantRole)}`}>
-                            {getRoleText(selectedChat.participantRole)} • {selectedChat.isOnline ? 'Đang hoạt động' : 'Không hoạt động'}
+                          <p className={`text-xs ${getRoleColor(activeChat.participantRole)}`}>
+                            {getRoleText(activeChat.participantRole)} • {activeChat.isOnline ? 'Đang hoạt động' : 'Ngoại tuyến'}
                           </p>
                         </div>
                       </div>
@@ -342,9 +244,9 @@ const ChatPanel = () => {
                     </div>
                   </div>
 
-                  {/* Messages */}
+                  {/* Khu vực hiển thị tin nhắn */}
                   <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-                    {selectedChat.messages.map((msg) => (
+                    {(activeChat.messages || []).map((msg) => (
                       <div
                         key={msg.id}
                         className={`flex ${msg.isOwn ? 'justify-end' : 'justify-start'}`}
@@ -365,10 +267,10 @@ const ChatPanel = () => {
                         </div>
                       </div>
                     ))}
-                    <div ref={messagesEndRef} />
+                    <div ref={messagesEndRef} /> {/* Dùng để cuộn xuống cuối */}
                   </div>
 
-                  {/* Message Input */}
+                  {/* Input nhập tin nhắn */}
                   <div className="p-4 border-t border-gray-200 bg-white">
                     <div className="flex items-end gap-3">
                       <div className="flex gap-2">
@@ -397,7 +299,7 @@ const ChatPanel = () => {
                       
                       <button
                         onClick={handleSendMessage}
-                        disabled={!message.trim()}
+                        disabled={!message.trim() || connectionState !== 'Connected'} // Vô hiệu hóa nút gửi khi không có tin nhắn hoặc chưa kết nối
                         className="p-3 bg-gradient-to-r from-blue-600 to-cyan-600 text-white rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Send className="w-5 h-5" />
@@ -406,6 +308,7 @@ const ChatPanel = () => {
                   </div>
                 </>
               ) : (
+                // Hiển thị khi chưa có cuộc trò chuyện nào được chọn
                 <div className="flex-1 flex items-center justify-center bg-gray-50">
                   <div className="text-center">
                     <MessageCircle className="w-16 h-16 text-medical-300 mx-auto mb-4" />

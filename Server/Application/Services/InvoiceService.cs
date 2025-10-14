@@ -69,7 +69,7 @@ namespace Application.Services
 
         public async Task<IEnumerable<InvoiceDto>> GetAllInvoiceByPatient()
         {
-            var accountId = _accountHelper.GetAccountId();
+            var accountId = await _accountHelper.GetAccountId();
             var patient = await _patientRepository.GetAsync(s => s.AccountId == accountId);
 
             return _mapper.Map<IEnumerable<InvoiceDto>>(await _invoiceRepository.Query()

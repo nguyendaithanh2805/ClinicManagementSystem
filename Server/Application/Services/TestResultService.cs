@@ -35,7 +35,7 @@ namespace Application.Services
 
         public async Task<TestResultDto> AddAsync(TestResultDto dto)
         {
-            var accountId = _accountHelper.GetAccountId();
+            var accountId = await _accountHelper.GetAccountId();
             var staff = await _staffRepository.GetAsync(s => s.AccountId == accountId);
 
             dto.StaffId = staff.Id;
@@ -78,7 +78,7 @@ namespace Application.Services
 
         public async Task<TestResultDto> Update(TestResultDto dto)
         {
-            var accountId = _accountHelper.GetAccountId();
+            var accountId = await _accountHelper.GetAccountId();
             var staff = await _staffRepository.GetAsync(s => s.AccountId == accountId);
 
             var testResult = await _testResultRepository.GetByIdAsync(dto.Id);
