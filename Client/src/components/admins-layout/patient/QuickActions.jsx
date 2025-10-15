@@ -13,7 +13,7 @@ const QuickActions = () => {
     {
       icon: FileText,
       label: 'Xem hồ sơ',
-      description: 'Hồ sơ y tế chi tiết',
+      description: 'Hồ sơ bệnh án chi tiết',
       color: 'bg-green-500 hover:bg-green-600',
       action: () => console.log('Xem hồ sơ')
     },

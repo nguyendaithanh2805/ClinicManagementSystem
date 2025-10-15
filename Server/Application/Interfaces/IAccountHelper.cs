@@ -8,7 +8,7 @@ namespace Application.Interfaces
 {
     public interface IAccountHelper
     {
-        int GetAccountId();
-        int GetRoleId();
+        Task<int> GetAccountId();
+        Task<int> GetRoleId();
     }
 }

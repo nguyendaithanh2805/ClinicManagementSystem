@@ -10,7 +10,6 @@ import MedicalRecordsPage from './components/admins-layout/pages/MedicalRecordsP
 import TestResultsPage from './components/admins-layout/pages/TestResultsPage';
 import HealthTrackingPage from './components/admins-layout/pages/HealthTrackingPage';
 import PatientsPage from './components/admins-layout/pages/PatientsPage';
-import SchedulePage from './components/admins-layout/pages/SchedulePage';
 import ProtectedRoute from './components/admins-layout/ProtectedRoute';
 import ErrorBoundary from './components/admins-layout/ErrorBoundary';
 import LabDashboardContent from './components/admins-layout/dashboard/LabDashboardContent';
@@ -25,6 +24,10 @@ import AppointmentPageForDoctor from './components/admins-layout/doctor/Appointm
 import MedicalRecordPageForDoctor from './components/admins-layout/doctor/MedicalRecordPageForDoctor ';
 import DoctorDashboardContent from './components/admins-layout/doctor/DoctorDashboardContent';
 import LabTechnicianPage from './components/admins-layout/lab/LabTechnicianPage';
+import AppointmentsForPatientPage from './components/admins-layout/patient/AppointmentsForPatientPage';
+import MyAccountPage from './components/admins-layout/patient/MyAccountPage';
+import InvoicesPage from './components/admins-layout/patient/InvoicesPage';
+import DrugAnalyzerPage from './components/admins-layout/patient/DrugAnalyzerPage';
 
 function App() {
   return (
@@ -57,10 +60,11 @@ function AppContent() {
               </ProtectedRoute>
             }>
             <Route path="patient-dashboard" element={<PatientDashboardContent />} />
-              <Route path="appointments" element={<AppointmentsPage /> } />
+              <Route path="appointments" element={<AppointmentsForPatientPage /> } />
               <Route path="medical-records" element={ <MedicalRecordsPage /> } />
-              <Route path="test-results" element={ <TestResultsPage /> } />
-              <Route path="health-tracking" element={ <HealthTrackingPage /> } />
+              <Route path="invoices" element={ <InvoicesPage /> } />
+              <Route path="drug-analyzer" element={ <DrugAnalyzerPage /> } />
+              <Route path="my-account" element={ <MyAccountPage /> } />
             </Route>
 
             {/* Staff Routes */}

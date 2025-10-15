@@ -7,9 +7,8 @@ using Application.DTOs;
 
 namespace Application.Interfaces
 {
-    public interface IInvoiceService : IService<InvoiceDto>
+    public interface IStaffService : IService<StaffDto>
     {
-        Task<InvoiceDto> UpdateStatus(InvoiceStatusDto status);
-        Task<IEnumerable<InvoiceDto>> GetAllInvoiceByPatient();
+        Task<IEnumerable<StaffDto>> GetAllReceptionistAsync();
     }
 }

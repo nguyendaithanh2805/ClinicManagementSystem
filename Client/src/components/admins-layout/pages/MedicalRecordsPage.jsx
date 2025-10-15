@@ -1,251 +1,246 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom/client';
 import { useAuth } from '../contexts/AuthContext';
-import { FileText, Search, Filter, Plus, Download, Eye, Calendar, User, Activity, Heart, TestTube, Pill, AlertCircle, CheckCircle } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import {
+  FileText, Search, Filter, Download, Eye, Calendar, User, CalendarDays, Heart, TestTube, Pill, AlertCircle, CheckCircle, Stethoscope,
+  Info, ListTodo, ClipboardCheck, Microscope, X
+} from 'lucide-react';
+import { format, parseISO, isValid } from 'date-fns';
 import { vi } from 'date-fns/locale';
+import { formatInTimeZone } from 'date-fns-tz';
+import api from "../../admins-layout/contexts/Api";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas-pro';
+import PrintableMedicalRecord from '../pages/PrintableMedicalRecord'; // Đảm bảo đúng đường dẫn
+
+const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 
 const MedicalRecordsPage = () => {
   const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [medicalRecords, setMedicalRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const medicalRecords = [
-    {
-      id: 'HS001',
-      date: new Date(),
-      type: 'Khám tổng quát',
-      doctor: 'BS. Trần Thị Bình',
-      department: 'Nội khoa - Tim mạch',
-      diagnosis: 'Huyết áp cao nhẹ',
-      status: 'completed',
-      priority: 'normal',
-      symptoms: ['Đau đầu nhẹ', 'Mệt mỏi', 'Chóng mặt'],
-      vitalSigns: {
-        bloodPressure: '140/90 mmHg',
-        heartRate: '78 bpm',
-        temperature: '36.5°C',
-        weight: '68 kg',
-        height: '165 cm'
-      },
-      prescription: [
-        { name: 'Amlodipine 5mg', dosage: '1 viên/ngày', duration: '30 ngày' },
-        { name: 'Aspirin 100mg', dosage: '1 viên/ngày', duration: '30 ngày' }
-      ],
-      labTests: ['Xét nghiệm máu tổng quát', 'Đo điện tim'],
-      notes: 'Bệnh nhân cần theo dõi huyết áp hàng tuần, điều chỉnh chế độ ăn ít muối.',
-      followUp: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-      attachments: ['ECG_20241227.pdf', 'BloodTest_20241227.pdf']
-    },
-    {
-      id: 'HS002',
-      date: subDays(new Date(), 7),
-      type: 'Xét nghiệm máu',
-      doctor: 'BS. Lê Văn Cường',
-      department: 'Xét nghiệm',
-      diagnosis: 'Kết quả bình thường',
-      status: 'completed',
-      priority: 'normal',
-      symptoms: [],
-      vitalSigns: {},
-      prescription: [],
-      labTests: ['Sinh hóa máu', 'Lipid profile', 'HbA1c'],
-      results: {
-        glucose: { value: 95, unit: 'mg/dL', range: '70-100', status: 'normal' },
-        cholesterol: { value: 180, unit: 'mg/dL', range: '<200', status: 'normal' },
-        hba1c: { value: 5.8, unit: '%', range: '<6.0', status: 'normal' }
-      },
-      notes: 'Tất cả các chỉ số trong giới hạn bình thường. Tiếp tục duy trì lối sống lành mạnh.',
-      followUp: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
-      attachments: ['LabResults_20241220.pdf']
-    },
-    {
-      id: 'HS003',
-      date: subDays(new Date(), 14),
-      type: 'Siêu âm tim',
-      doctor: 'BS. Phạm Thị Hoa',
-      department: 'Chẩn đoán hình ảnh',
-      diagnosis: 'Chức năng tim bình thường',
-      status: 'completed',
-      priority: 'high',
-      symptoms: ['Đau ngực', 'Khó thở khi gắng sức'],
-      vitalSigns: {
-        bloodPressure: '135/85 mmHg',
-        heartRate: '82 bpm'
-      },
-      prescription: [],
-      labTests: ['Siêu âm tim', 'Đo điện tim'],
-      notes: 'Siêu âm tim cho thấy chức năng tim hoạt động bình thường. Không có dấu hiệu bất thường về cấu trúc.',
-      followUp: new Date(Date.now() + 180 * 24 * 60 * 60 * 1000),
-      attachments: ['Echocardiogram_20241213.pdf', 'ECG_20241213.pdf']
-    },
-    {
-      id: 'HS004',
-      date: subDays(new Date(), 30),
-      type: 'Khám da liễu',
-      doctor: 'BS. Nguyễn Thị Mai',
-      department: 'Da liễu',
-      diagnosis: 'Viêm da cơ địa',
-      status: 'completed',
-      priority: 'normal',
-      symptoms: ['Ngứa', 'Phát ban', 'Da khô'],
-      vitalSigns: {},
-      prescription: [
-        { name: 'Kem Hydrocortisone 1%', dosage: 'Thoa 2 lần/ngày', duration: '14 ngày' },
-        { name: 'Cetirizine 10mg', dosage: '1 viên/ngày', duration: '14 ngày' }
-      ],
-      labTests: [],
-      notes: 'Tránh tiếp xúc với các chất gây dị ứng. Giữ da ẩm và sạch sẽ.',
-      followUp: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      attachments: ['SkinPhotos_20241127.jpg']
-    }
-  ];
+  const [selectedRecordDetail, setSelectedRecordDetail] = useState(null);
+  const [activeTabDetail, setActiveTabDetail] = useState('summary');
+  const [fullScreenImage, setFullScreenImage] = useState(null);
 
-  const categories = [
-    { id: 'all', label: 'Tất cả', icon: FileText },
-    { id: 'examination', label: 'Khám bệnh', icon: User },
-    { id: 'lab', label: 'Xét nghiệm', icon: TestTube },
-    { id: 'imaging', label: 'Chẩn đoán hình ảnh', icon: Activity },
-    { id: 'prescription', label: 'Đơn thuốc', icon: Pill }
-  ];
+  // Thêm ref cho vùng render PDF ẩn
+  const pdfPrintAreaRef = useRef(null);
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-700 border-green-200';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-200';
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-700 border-blue-200';
-      default:
-        return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
+  useEffect(() => {
+    const fetchMedicalRecords = async () => {
+      try {
+        setLoading(true);
+        const response = await api.get('/patients/medical-records/me');
+        if (response.data.status) {
+          const formattedRecords = response.data.data.map(record => ({
+            id: record.id,
+            date: parseISO(record.createAt),
+            type: record.diagnosis,
+            doctor: record.staff?.fullName,
+            department: record.staff?.expertise,
+            diagnosis: record.diagnosis,
+            symptoms: record.symptoms || [],
+            prescriptions: record.prescriptions || [],
+            labTests: record.testResults || [],
+            notes: record.treatmentMethod,
+            patientName: record.patient?.fullName,
+            patientDob: record.patient?.dateOfBirth,
+            patientAddress: record.patient?.address,
+            patientEmail: record.patient?.account?.email,
+            requiresTest: record.requiresTest,
+            staff: record.staff,
+            createAt: record.createAt,
+            treatmentMethod: record.treatmentMethod,
+          }));
+          setMedicalRecords(formattedRecords);
+        } else {
+          setError(response.data.message);
+        }
+      } catch (err) {
+        setError("Không thể tải hồ sơ bệnh án. Vui lòng thử lại sau.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchMedicalRecords();
+  }, []);
+
+  const openFullScreenImage = (imageUrl) => {
+    setFullScreenImage(imageUrl);
   };
 
-  const getStatusText = (status) => {
-    switch (status) {
-      case 'completed':
-        return 'Hoàn thành';
-      case 'pending':
-        return 'Chờ xử lý';
-      case 'in_progress':
-        return 'Đang xử lý';
-      default:
-        return 'Không xác định';
-    }
-  };
-
-  const getPriorityColor = (priority) => {
-    switch (priority) {
-      case 'high':
-        return 'text-red-600';
-      case 'normal':
-        return 'text-blue-600';
-      case 'low':
-        return 'text-gray-600';
-      default:
-        return 'text-gray-600';
-    }
+  const closeFullScreenImage = () => {
+    setFullScreenImage(null);
   };
 
   const getTypeIcon = (type) => {
-    if (type.includes('Xét nghiệm')) return TestTube;
-    if (type.includes('Siêu âm') || type.includes('Chẩn đoán')) return Activity;
-    if (type.includes('Khám')) return User;
+    if (type.toLowerCase().includes('viêm dạ dày') || type.toLowerCase().includes('huyết áp') || type.toLowerCase().includes('khám')) return Stethoscope;
+    if (type.toLowerCase().includes('xét nghiệm') || type.toLowerCase().includes('test')) return TestTube;
     return FileText;
   };
 
   const filteredRecords = medicalRecords.filter(record => {
-    const matchesSearch = searchTerm === '' || 
+    const matchesSearch = searchTerm === '' ||
       record.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.doctor.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.type.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesCategory = selectedCategory === 'all' || 
-      (selectedCategory === 'examination' && record.type.includes('Khám')) ||
-      (selectedCategory === 'lab' && record.type.includes('Xét nghiệm')) ||
-      (selectedCategory === 'imaging' && (record.type.includes('Siêu âm') || record.type.includes('Chẩn đoán'))) ||
-      (selectedCategory === 'prescription' && record.prescription.length > 0);
-    
+      record.doctor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      record.patientName?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesCategory = selectedCategory === 'all' ||
+      (selectedCategory === 'examination' && record.prescriptions.length === 0) ||
+      (selectedCategory === 'prescription' && record.prescriptions.length > 0);
+
     return matchesSearch && matchesCategory;
   });
 
+  const handleViewDetails = (record) => {
+    setSelectedRecordDetail(record);
+    setActiveTabDetail('summary');
+  };
+
+  const handleExportPdf = async (recordToExport) => {
+    if (!recordToExport) {
+      alert("Không có hồ sơ để xuất PDF.");
+      return;
+    }
+
+    // Tạo một div ẩn để render component in
+    let printAreaElement = document.getElementById('hidden-print-area');
+    if (!printAreaElement) {
+      printAreaElement = document.createElement('div');
+      printAreaElement.id = 'hidden-print-area';
+      printAreaElement.style.position = 'absolute';
+      printAreaElement.style.left = '-9999px'; // Đẩy ra ngoài màn hình
+      printAreaElement.style.width = '210mm'; // Đảm bảo đúng kích thước A4
+      document.body.appendChild(printAreaElement);
+    }
+
+    const root = ReactDOM.createRoot(printAreaElement);
+    root.render(React.createElement(PrintableMedicalRecord, { record: recordToExport }));
+
+    // Đợi một chút để React render và trình duyệt tải tài nguyên
+    setTimeout(async () => {
+      try {
+        const canvas = await html2canvas(printAreaElement, {
+          scale: 2, // Tăng scale để ảnh nét hơn
+          useCORS: true, // Quan trọng để tải ảnh từ nguồn khác domain
+          allowTaint: false,
+          scrollX: 0,
+          scrollY: 0,
+          windowWidth: printAreaElement.offsetWidth,
+          windowHeight: printAreaElement.offsetHeight,
+          imageTimeout: 15000,
+        });
+
+        const pdf = new jsPDF('p', 'mm', 'a4');
+        const imgData = canvas.toDataURL('image/jpeg', 1.0);
+        const imgWidth = 210; // Chiều rộng A4 tính bằng mm
+        const pageHeight = 297; // Chiều cao A4 tính bằng mm
+        const imgHeight = canvas.height * imgWidth / canvas.width;
+
+        let heightLeft = imgHeight;
+        let position = 0;
+
+        while (heightLeft > 0) {
+          pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+          heightLeft -= pageHeight;
+          if (heightLeft > 0) {
+            pdf.addPage();
+            position = - (imgHeight - heightLeft);
+          }
+        }
+
+        pdf.save(`Ho_so_benh_an_${recordToExport.patientName || 'BN'}_${format(recordToExport.date, 'dd_MM_yyyy')}.pdf`);
+
+      } catch (pdfError) {
+        console.error("Lỗi khi xuất PDF:", pdfError);
+        alert("Không thể xuất PDF. Vui lòng thử lại. Lỗi: " + pdfError.message);
+      } finally {
+        root.unmount(); // Dọn dẹp root React
+        document.body.removeChild(printAreaElement); // Xóa element ẩn
+      }
+    }, 500);
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[500px] text-medical-600">
+        <svg className="animate-spin -ml-1 mr-3 h-8 w-8 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+        </svg>
+        Đang tải hồ sơ bệnh án...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[500px] text-red-600">
+        <AlertCircle className="w-16 h-16 mb-4" />
+        <h3 className="text-xl font-bold mb-2">Lỗi</h3>
+        <p className="text-lg">{error}</p>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="glass-effect rounded-2xl p-6">
+    <div className="space-y-6 p-4 sm:p-6 lg:p-8">
+      <div className="glass-effect rounded-2xl p-6 shadow-md">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-medical-900 mb-2">
-              {user?.role === 'patient' ? 'Hồ sơ y tế của tôi' : 'Quản lý hồ sơ y tế'}
+              Quản lý hồ sơ bệnh án của bạn
             </h1>
-            <p className="text-medical-600">
-              {user?.role === 'patient' 
-                ? 'Xem lịch sử khám bệnh và kết quả điều trị'
-                : 'Quản lý hồ sơ bệnh án và lịch sử điều trị'
-              }
+            <p className="text-medical-600 text-sm">
+              Xem lịch sử khám bệnh và kết quả điều trị của bạn.
             </p>
           </div>
-          
-          <div className="flex items-center gap-3">
-            <button className="btn-secondary inline-flex items-center gap-2">
-              <Download className="w-4 h-4" />
-              Xuất PDF
-            </button>
-            {user?.role !== 'patient' && (
-              <button className="btn-primary inline-flex items-center gap-2">
-                <Plus className="w-4 h-4" />
-                Tạo hồ sơ mới
+
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            {/* Nút xuất PDF cho hồ sơ đang xem chi tiết */}
+            {selectedRecordDetail && (
+              <button
+                className="btn-primary inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-medical-200 bg-blue-600 text-white hover:bg-blue-700 transition-colors"
+                onClick={() => handleExportPdf(selectedRecordDetail)}
+              >
+                <Download className="w-4 h-4" />
+                Xuất PDF hồ sơ này
               </button>
             )}
           </div>
         </div>
       </div>
 
-      {/* Filters and Search */}
-      <div className="glass-effect rounded-2xl p-6">
+      <div className="glass-effect rounded-2xl p-6 shadow-md">
         <div className="flex flex-col md:flex-row items-start md:items-center gap-4 mb-6">
-          <div className="relative flex-1">
+          <div className="relative flex-1 w-full">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-medical-400" />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-medical-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-3 border border-medical-200 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent outline-none transition-all"
               placeholder="Tìm kiếm theo chẩn đoán, bác sĩ, loại khám..."
             />
           </div>
-          
-          <button className="btn-secondary inline-flex items-center gap-2">
+
+          <button className="btn-secondary inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-medical-200 bg-white text-medical-700 hover:bg-medical-50 transition-colors">
             <Filter className="w-4 h-4" />
             Bộ lọc
           </button>
         </div>
-
-        {/* Category Tabs */}
-        <div className="flex flex-wrap gap-2">
-          {categories.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => setSelectedCategory(category.id)}
-              className={`inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 ${
-                selectedCategory === category.id
-                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
-                  : 'bg-white text-medical-700 border border-medical-200 hover:bg-medical-50'
-              }`}
-            >
-              <category.icon className="w-4 h-4" />
-              {category.label}
-            </button>
-          ))}
-        </div>
       </div>
 
-      {/* Medical Records List */}
-      <div className="glass-effect rounded-2xl p-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="glass-effect rounded-2xl p-6 shadow-md">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-3">
           <h2 className="text-xl font-bold text-medical-900">
-            Hồ sơ y tế ({filteredRecords.length})
+            Hồ sơ bệnh án ({filteredRecords.length})
           </h2>
           <div className="flex items-center gap-2 text-sm text-medical-600">
             <Calendar className="w-4 h-4" />
@@ -257,24 +252,24 @@ const MedicalRecordsPage = () => {
           {filteredRecords.map((record) => {
             const TypeIcon = getTypeIcon(record.type);
             return (
-              <div key={record.id} className="border border-medical-200 rounded-xl p-6 hover:shadow-soft transition-all duration-200">
-                <div className="flex items-start gap-4">
-                  <div className="flex flex-col items-center">
+              <div key={record.id} className="border border-medical-200 rounded-xl p-6 bg-white hover:shadow-soft transition-all duration-200">
+                <div className="flex flex-col sm:flex-row items-start gap-4">
+                  <div className="flex flex-col items-center flex-shrink-0 mr-2">
                     <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-2">
                       <TypeIcon className="w-6 h-6 text-blue-600" />
                     </div>
                     <span className="text-xs font-medium text-medical-600">
-                      {record.id}
+                      HS{String(record.id).padStart(3, '0')}
                     </span>
                   </div>
-                  
-                  <div className="flex-1">
-                    <div className="flex items-start justify-between mb-3">
+
+                  <div className="flex-1 w-full">
+                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-3 gap-2">
                       <div>
                         <h3 className="text-lg font-semibold text-medical-900 mb-1">
                           {record.type}
                         </h3>
-                        <p className="text-medical-600 mb-1">
+                        <p className="text-medical-600 mb-1 text-sm">
                           Bác sĩ: {record.doctor} • {record.department}
                         </p>
                         <div className="flex items-center gap-2 text-sm text-medical-500">
@@ -282,157 +277,29 @@ const MedicalRecordsPage = () => {
                           <span>{format(record.date, 'dd/MM/yyyy HH:mm', { locale: vi })}</span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(record.status)}`}>
-                          {getStatusText(record.status)}
-                        </span>
-                        <AlertCircle className={`w-4 h-4 ${getPriorityColor(record.priority)}`} />
-                      </div>
                     </div>
 
-                    {/* Diagnosis */}
                     <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 mb-4">
                       <div className="flex items-center gap-2 mb-2">
                         <Heart className="w-5 h-5 text-blue-600" />
                         <h4 className="font-medium text-medical-900">Chẩn đoán</h4>
                       </div>
-                      <p className="text-medical-700">{record.diagnosis}</p>
-                      {record.notes && (
-                        <p className="text-sm text-medical-600 mt-2">{record.notes}</p>
-                      )}
+                      <p className="text-medical-700 text-sm line-clamp-2">{record.diagnosis}</p>
                     </div>
 
-                    {/* Symptoms */}
-                    {record.symptoms.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-medical-900 mb-2">Triệu chứng</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {record.symptoms.map((symptom, index) => (
-                            <span key={index} className="px-3 py-1 bg-yellow-100 text-yellow-700 rounded-full text-sm">
-                              {symptom}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Vital Signs */}
-                    {Object.keys(record.vitalSigns).length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-medical-900 mb-2">Sinh hiệu</h4>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                          {Object.entries(record.vitalSigns).map(([key, value]) => (
-                            <div key={key} className="bg-white rounded-lg border border-medical-200 p-3 text-center">
-                              <p className="text-xs text-medical-600 uppercase">{key}</p>
-                              <p className="font-semibold text-medical-900">{value}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Lab Results */}
-                    {record.results && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-medical-900 mb-2">Kết quả xét nghiệm</h4>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                          {Object.entries(record.results).map(([key, result]) => (
-                            <div key={key} className="bg-white rounded-lg border border-medical-200 p-3">
-                              <div className="flex items-center justify-between mb-1">
-                                <p className="text-sm font-medium text-medical-900 uppercase">{key}</p>
-                                {result.status === 'normal' ? (
-                                  <CheckCircle className="w-4 h-4 text-green-600" />
-                                ) : (
-                                  <AlertCircle className="w-4 h-4 text-red-600" />
-                                )}
-                              </div>
-                              <p className={`font-semibold ${result.status === 'normal' ? 'text-green-600' : 'text-red-600'}`}>
-                                {result.value} {result.unit}
-                              </p>
-                              <p className="text-xs text-medical-500">Bình thường: {result.range}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Prescription */}
-                    {record.prescription.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-medical-900 mb-2">Đơn thuốc</h4>
-                        <div className="space-y-2">
-                          {record.prescription.map((med, index) => (
-                            <div key={index} className="flex items-center gap-3 p-3 bg-green-50 rounded-lg">
-                              <Pill className="w-5 h-5 text-green-600" />
-                              <div className="flex-1">
-                                <p className="font-medium text-medical-900">{med.name}</p>
-                                <p className="text-sm text-medical-600">{med.dosage} • {med.duration}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Lab Tests */}
-                    {record.labTests.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-medical-900 mb-2">Xét nghiệm đã thực hiện</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {record.labTests.map((test, index) => (
-                            <span key={index} className="px-3 py-1 bg-teal-100 text-teal-700 rounded-full text-sm">
-                              {test}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Follow-up */}
-                    {record.followUp && (
-                      <div className="mb-4 p-3 bg-purple-50 rounded-lg">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="w-5 h-5 text-purple-600" />
-                          <span className="font-medium text-purple-900">Tái khám:</span>
-                          <span className="text-purple-700">
-                            {format(record.followUp, 'dd/MM/yyyy', { locale: vi })}
-                          </span>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Attachments */}
-                    {record.attachments.length > 0 && (
-                      <div className="mb-4">
-                        <h4 className="font-medium text-medical-900 mb-2">Tài liệu đính kèm</h4>
-                        <div className="flex flex-wrap gap-2">
-                          {record.attachments.map((file, index) => (
-                            <button key={index} className="flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm transition-colors">
-                              <FileText className="w-4 h-4 text-gray-600" />
-                              <span className="text-gray-700">{file}</span>
-                              <Download className="w-4 h-4 text-gray-600" />
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* Actions */}
-                    <div className="flex items-center justify-between pt-4 border-t border-medical-100">
-                      <div className="flex gap-2">
-                        <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                          Xem chi tiết
+                    <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-medical-100 mt-4 gap-3 sm:gap-0">
+                      <div className="flex gap-4">
+                        <button
+                          onClick={() => handleViewDetails(record)}
+                          className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
+                        >
+                          <Eye className="w-4 h-4" /> Xem chi tiết
                         </button>
-                        <button className="text-sm text-primary-600 hover:text-primary-700 font-medium">
-                          In hồ sơ
-                        </button>
-                      </div>
-                      <div className="flex gap-2">
-                        <button className="p-2 text-medical-600 hover:text-medical-900 hover:bg-medical-100 rounded-lg transition-colors">
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button className="p-2 text-medical-600 hover:text-medical-900 hover:bg-medical-100 rounded-lg transition-colors">
-                          <Download className="w-4 h-4" />
+                        <button
+                          onClick={() => handleExportPdf(record)}
+                          className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1 ml-4"
+                        >
+                          <Download className="w-4 h-4" /> Xuất PDF
                         </button>
                       </div>
                     </div>
@@ -447,16 +314,263 @@ const MedicalRecordsPage = () => {
           <div className="text-center py-12">
             <FileText className="w-16 h-16 text-medical-300 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-medical-900 mb-2">
-              Không tìm thấy hồ sơ y tế
+              Không tìm thấy hồ sơ bệnh án
             </h3>
             <p className="text-medical-600">
-              {searchTerm ? 'Thử thay đổi từ khóa tìm kiếm' : 'Chưa có hồ sơ y tế nào'}
+              {searchTerm ? 'Thử thay đổi từ khóa tìm kiếm' : 'Bạn chưa có hồ sơ bệnh án nào.'}
             </p>
           </div>
         )}
       </div>
+
+      {selectedRecordDetail && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          style={{ marginTop: 0 }}
+        >
+          <div className="bg-white rounded-xl p-6 w-full max-w-4xl relative shadow-lg max-h-[90vh] overflow-y-auto">
+            <button
+              className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
+              onClick={() => {
+                setSelectedRecordDetail(null);
+                setActiveTabDetail('summary');
+              }}
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <div className="flex border-b border-gray-200 mb-4 overflow-x-auto">
+              <TabButton icon={<Info className="w-5 h-5" />} label="Tổng quan" isActive={activeTabDetail === 'summary'} onClick={() => setActiveTabDetail('summary')} />
+              <TabButton icon={<Pill className="w-5 h-5" />} label="Đơn thuốc" isActive={activeTabDetail === 'prescriptions'} onClick={() => setActiveTabDetail('prescriptions')} />
+              <TabButton icon={<ListTodo className="w-5 h-5" />} label="Triệu chứng" isActive={activeTabDetail === 'symptoms'} onClick={() => setActiveTabDetail('symptoms')} />
+              <TabButton icon={<Microscope className="w-5 h-5" />} label="Kết quả xét nghiệm" isActive={activeTabDetail === 'testResults'} onClick={() => setActiveTabDetail('testResults')} />
+              <TabButton icon={<Stethoscope className="w-5 h-5" />} label="Bác sĩ điều trị" isActive={activeTabDetail === 'staff'} onClick={() => setActiveTabDetail('staff')} />
+            </div>
+
+            <div className="py-4">
+              {activeTabDetail === 'summary' && (
+                <div className="space-y-4 text-gray-700">
+                  <h2 className="text-2xl font-bold text-gray-800 mb-5 border-b pb-3 flex items-center gap-2">
+                    <FileText className="w-6 h-6 text-blue-600" /> Chi tiết Hồ sơ Bệnh án
+                  </h2>
+                  <DetailItem icon={<User className="w-5 h-5 text-blue-500" />} label="Bệnh nhân">
+                    <p>{selectedRecordDetail.patientName || 'N/A'}</p>
+                    <p className="text-sm text-gray-500">Ngày sinh: {selectedRecordDetail.patientDob ? format(parseISO(selectedRecordDetail.patientDob), 'dd/MM/yyyy', { locale: vi }) : 'N/A'}</p>
+                    <p className="text-sm text-gray-500">Địa chỉ: {selectedRecordDetail.patientAddress || 'N/A'}</p>
+                  </DetailItem>
+                  <DetailItem icon={<ClipboardCheck className="w-5 h-5 text-green-500" />} label="Chẩn đoán">
+                    <p className="whitespace-pre-wrap">{selectedRecordDetail.diagnosis || 'N/A'}</p>
+                  </DetailItem>
+                  <DetailItem icon={<ListTodo className="w-5 h-5 text-indigo-500" />} label="Phương pháp điều trị">
+                    <p className="whitespace-pre-wrap">{selectedRecordDetail.treatmentMethod || 'N/A'}</p>
+                  </DetailItem>
+                  <DetailItem icon={<Info className="w-5 h-5 text-orange-500" />} label="Yêu cầu xét nghiệm">
+                    <p>{selectedRecordDetail.requiresTest ? 'Có' : 'Không'}</p>
+                  </DetailItem>
+                </div>
+              )}
+
+              {activeTabDetail === 'prescriptions' && (
+                <div className="space-y-4">
+                  {selectedRecordDetail.prescriptions && selectedRecordDetail.prescriptions.length > 0 ? (
+                    selectedRecordDetail.prescriptions.map((prescription, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50 shadow-sm">
+                        <h4 className="font-semibold text-gray-900 mb-3 text-lg flex items-center gap-2 border-b pb-2">
+                          <CalendarDays className="w-5 h-5 text-emerald-600" /> Đơn thuốc ngày {
+                            prescription.prescriptionDate && isValid(parseISO(prescription.prescriptionDate))
+                              ? formatInTimeZone(parseISO(prescription.prescriptionDate), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy HH:mm', { locale: vi })
+                              : 'N/A'
+                          }
+                        </h4>
+                        <div className="space-y-3 pl-2 border-l-2 border-emerald-200 ml-1">
+                          {prescription.prescriptionDetails && prescription.prescriptionDetails.length > 0 ? (
+                            prescription.prescriptionDetails.map((detail, detIndex) => (
+                              <div key={detIndex} className="border-t border-gray-100 pt-3 mt-3 first:border-t-0 first:pt-0">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between group py-2">
+                                  <div className="text-sm text-gray-700 flex-1">
+                                    <p className="font-semibold text-base md:text-lg text-gray-900 mb-1 flex items-center gap-2">
+                                      <Pill className="w-5 h-5 text-purple-600" />
+                                      {detail.medicine?.name} (<span className="text-blue-600 font-normal">{detail.medicine?.category}</span>)
+                                    </p>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-1 gap-x-4 pl-7 text-gray-600">
+                                      <p>Liều lượng: <span className="font-medium">{detail.dosage}</span></p>
+                                      <p>Tần suất: <span className="font-medium">{detail.frequency}</span></p>
+                                      <p>Số lượng: <span className="font-medium">{detail.quantity} {detail.medicine?.unit || 'viên'}</span></p>
+                                      <p className="col-span-full">Giá: <span className="font-medium text-green-700">{detail.amount?.toLocaleString('vi-VN')} VNĐ</span></p>
+                                      {detail.medicine?.description && <p className="text-xs text-gray-500 col-span-full">Mô tả: {detail.medicine.description}</p>}
+                                      {detail.medicine?.contraindications && <p className="text-xs text-red-500 col-span-full">Chống chỉ định: {detail.medicine.contraindications}</p>}
+                                      {detail.medicine?.interactions && <p className="text-xs text-orange-500 col-span-full">Tương tác thuốc: {detail.medicine.interactions}</p>}
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          ) : (
+                            <p className="text-center text-gray-500 py-4 italic">Không có chi tiết đơn thuốc nào trong đơn này.</p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-500 py-4">Không có đơn thuốc nào.</p>
+                  )}
+                </div>
+              )}
+              {activeTabDetail === 'symptoms' && (
+                <div className="space-y-4">
+                  {selectedRecordDetail.symptoms && selectedRecordDetail.symptoms.length > 0 ? (
+                    <ul className="list-none pl-0 text-gray-700 space-y-2">
+                      {selectedRecordDetail.symptoms.map((symptom) => (
+                        <li key={symptom.id} className="flex items-center justify-between bg-white p-3 rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
+                          <span className="flex items-center gap-3 text-base">
+                            <ListTodo className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                            <span className="font-medium text-gray-800">{symptom.name}</span>
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-center text-gray-500 py-4 italic">Không có triệu chứng nào được ghi nhận.</p>
+                  )}
+                </div>
+              )}
+
+              {activeTabDetail === 'testResults' && (
+                <div className="space-y-4">
+                  {selectedRecordDetail.labTests && selectedRecordDetail.labTests.length > 0 ? (
+                    selectedRecordDetail.labTests.map((result, index) => (
+                      <div key={index} className="border border-gray-200 rounded-lg p-4 bg-gray-50 shadow-sm">
+                        <h4 className="font-semibold text-gray-900 mb-2 flex items-center gap-2 text-lg">
+                          <Microscope className="w-5 h-5 text-cyan-600" /> Kết quả xét nghiệm: {result.name || 'N/A'}
+                        </h4>
+                        <div className="space-y-2 text-sm text-gray-700 pl-7 border-l-2 border-cyan-200 ml-1 pt-1">
+                          <p>Mô tả: <span className="font-medium">{result.description || 'N/A'}</span></p>
+                          <p>Thực hiện bởi: <span className="font-medium">{result.staff?.fullName || 'N/A'}</span> (<span className="text-gray-600">{result.staff?.expertise || 'Kỹ thuật viên'}</span>)</p>
+                          <p>Ngày thực hiện: <span className="font-medium">{result.createdAt && isValid(parseISO(result.createdAt)) ? format(parseISO(result.createdAt), 'dd/MM/yyyy HH:mm', { locale: vi }) : 'N/A'}</span></p>
+                          {result.image ? (
+                            <div>
+                              <p className="font-medium mt-2">Hình ảnh:</p>
+                              <ResultImage
+                                  src={`${IMAGE_URL}/${result.image}`}
+                                  alt={`Kết quả ${result.name}`}
+                                  onViewFull={openFullScreenImage}
+                                />
+                            </div>
+                          ) : (
+                            <p className="font-medium mt-2 text-gray-500 italic">Không có hình ảnh kết quả xét nghiệm.</p>
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-center text-gray-500 py-4 italic">Không có kết quả xét nghiệm nào.</p>
+                  )}
+                </div>
+              )}
+              {fullScreenImage && (
+                <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[100] p-4">
+                  <div className="relative max-w-full max-h-full">
+                    <button
+                      className="absolute top-4 right-4 p-2 rounded-full bg-gray-800 bg-opacity-70 text-white hover:bg-opacity-100 transition-all duration-200"
+                      onClick={closeFullScreenImage}
+                      title="Đóng ảnh"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+                    <img
+                      src={fullScreenImage}
+                      alt="Full Screen Result"
+                      className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-xl"
+                    />
+                  </div>
+                </div>
+              )}
+              {activeTabDetail === 'staff' && (
+                <div className="space-y-4">
+                  {selectedRecordDetail.staff ? (
+                    <DetailItem icon={<Stethoscope className="w-5 h-5 text-purple-500" />} label="Bác sĩ điều trị">
+                      <p className="font-medium text-lg text-gray-900">{selectedRecordDetail.staff.fullName || 'N/A'}</p>
+                      <p className="text-sm text-gray-600">Chuyên môn: <span className="font-medium">{selectedRecordDetail.staff.expertise || 'N/A'}</span></p>
+                      <p className="text-sm text-gray-600">Email: <span className="font-medium">{selectedRecordDetail.staff.account?.email || 'N/A'}</span></p>
+                      <p className="text-sm text-gray-600">Số điện thoại: <span className="font-medium">{selectedRecordDetail.staff.account?.phoneNumber || 'N/A'}</span></p>
+                    </DetailItem>
+                  ) : (
+                    <p className="text-center text-gray-500 py-4 italic">Không có thông tin bác sĩ điều trị.</p>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end">
+              <button
+                onClick={() => {
+                  setSelectedRecordDetail(null);
+                  setActiveTabDetail('summary');
+                }}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md"
+              >
+                Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
+
+const TabButton = ({ icon, label, isActive, onClick }) => (
+  <button
+    className={`flex items-center gap-2 px-4 py-3 text-sm font-medium rounded-t-lg transition-colors duration-200
+      ${isActive ? 'bg-blue-50 text-blue-700 border-b-2 border-blue-600' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-800'}
+    `}
+    onClick={onClick}
+  >
+    {icon} {label}
+  </button>
+);
+
+const DetailItem = ({ icon, label, children }) => (
+  <div className="flex flex-col sm:flex-row sm:items-start gap-3 border-b border-gray-100 pb-3 last:border-b-0">
+    <div className="flex items-center gap-2 sm:w-40 flex-shrink-0">
+      {icon}
+      <strong className="font-semibold">{label}:</strong>
+    </div>
+    <div className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+      {children}
+    </div>
+  </div>
+);
+
+function ResultImage({ src, alt, onViewFull }) {
+  const [error, setError] = useState(false);
+
+  if (error) {
+    return (
+      <div className="mt-2 p-4 bg-gray-100 text-gray-500 italic rounded">
+        Không thể tải ảnh ({alt}).
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-2">
+      <img
+        src={src}
+        alt={alt}
+        crossorigin="anonymous"
+        className="max-w-full h-auto rounded-lg shadow-md border border-gray-200 object-cover max-h-32 w-48 cursor-pointer transform hover:scale-105 transition-transform duration-200"
+        onError={() => setError(true)}
+        onClick={() => onViewFull(src)}
+      />
+      <button
+        onClick={() => onViewFull(src)}
+        className="mt-2 px-3 py-1 text-sm bg-blue-100 text-blue-700 rounded-full hover:bg-blue-200 transition-colors flex items-center gap-1"
+      >
+        <Eye className="w-4 h-4" /> Xem ảnh
+      </button>
+    </div>
+  );
+}
 
 export default MedicalRecordsPage;

@@ -6,16 +6,17 @@ import {
   Calendar, 
   Users, 
   FileText, 
-  Settings, 
+  Pill, 
   TestTube, 
   Activity,
   Shield,
   UserCheck,
   Stethoscope,
-  ClipboardList,
+  CircleUserRound,
   BarChart3,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  CircleDollarSign
 } from 'lucide-react';
 import { FaRegUserCircle } from "react-icons/fa";
 
@@ -30,17 +31,18 @@ const Sidebar = () => {
       case 'Patient':
         return [
           { icon: Home, label: 'Trang chủ', path: '/patient/patient-dashboard' },
-          { icon: Calendar, label: 'Lịch khám', path: '/patient/appointments' },
-          { icon: FileText, label: 'Hồ sơ y tế', path: '/patient/medical-records' },
-          { icon: TestTube, label: 'Kết quả XN', path: '/patient/test-results' },
-          { icon: Activity, label: 'Sức khỏe', path: '/patient/health-tracking' },
+          { icon: Calendar, label: 'Lịch khám của tôi', path: '/patient/appointments' },
+          { icon: FileText, label: 'Hồ sơ bệnh án', path: '/patient/medical-records' },
+          { icon: CircleDollarSign, label: 'Hóa đơn thanh toán', path: '/patient/invoices' },
+          { icon: Pill, label: "Phân tích thuốc", path: '/patient/drug-analyzer'},
+          { icon: CircleUserRound, label: "Tài khoản của tôi", path: '/patient/my-account'}
         ];
       
       case 'Doctor':
         return [
           { icon: Home, label: 'Trang chủ', path: '/staff/doctor-dashboard' },
-          { icon: Calendar, label: 'Lịch làm việc', path: '/staff/schedule' },
-          { icon: FileText, label: 'Hồ sơ Bệnh nhân', path: '/staff/patient-medical-records' },
+          { icon: Calendar, label: 'Lịch hẹn của tôi', path: '/staff/schedule' },
+          { icon: FileText, label: 'Hồ sơ Bệnh nhân', path: '/staff/patient-medical-records' }
         ];
       
       case 'Receptionist':
@@ -48,7 +50,6 @@ const Sidebar = () => {
           { icon: Home, label: 'Trang chủ', path: '/staff/receptionist-dashboard' },
           { icon: Calendar, label: 'Lịch hẹn', path: '/staff/appointments' },
           { icon: Users, label: 'Bệnh nhân', path: '/staff/patients' },
-          { icon: FileText, label: 'Hồ sơ Bệnh nhân', path: '/staff/medical-records' },
           { icon: FileText, label: 'Thanh toán', path: '/staff/payments' }
         ];
       
@@ -86,7 +87,7 @@ const Sidebar = () => {
     }`}>
       <div className="p-4">
         {/* Collapse Toggle */}
-        <div className="flex justify-end mb-4">
+        <div className="flex justify-end mb-4 bg-gradient-to-r">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
             className="p-2 text-medical-600 hover:text-medical-900 hover:bg-white/50 rounded-lg transition-colors"

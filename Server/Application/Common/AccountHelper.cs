@@ -19,21 +19,21 @@ namespace Application.Common
             _contextAccessor = contextAccessor;
         }
 
-        public int GetAccountId()
+        public async Task<int> GetAccountId()
         {
             // ..\ClinicManagementSystem\Server\Infrastructure\Authentication\JwtTokenGenerator.cs
             var claim = _contextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier);
             if (claim is null)
                 throw new NotFoundException("Không tìm thấy claim AccountId");
-            return int.Parse(claim.Value);
+            return await Task.FromResult(int.Parse(claim.Value));
         }
 
-        public int GetRoleId()
+        public async Task<int> GetRoleId()
         {
-            var claim = _contextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.NameIdentifier);
+            var claim = _contextAccessor.HttpContext?.User?.FindFirst(ClaimTypes.Role);
             if (claim is null)
                 throw new NotFoundException("Không tìm thấy claim Role");
-            return int.Parse(claim.Value);
+            return await Task.FromResult(int.Parse(claim.Value));
         }
     }
 }

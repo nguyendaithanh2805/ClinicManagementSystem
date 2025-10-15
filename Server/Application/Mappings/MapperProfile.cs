@@ -19,6 +19,7 @@ namespace Application.Mappings
 
             CreateMap<Patient, PatientDto>().ReverseMap();
             CreateMap<PatientWithAccountDto, Patient>().ReverseMap();
+            CreateMap<PatientWithAccountDto, Account>().ReverseMap();
             CreateMap<Prescription, PrescriptionDto>().ReverseMap();
             CreateMap<PrescriptionDetail, PrescriptionDetailDto>().ReverseMap();
             CreateMap<PatientMedicalRecord, PatientMedicalRecordDto>().ReverseMap();

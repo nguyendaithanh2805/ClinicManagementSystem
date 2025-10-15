@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Application.Common;
 using Application.DTOs;
 using Application.Exceptions;
 using Application.Interfaces;
@@ -20,14 +21,18 @@ namespace Application.Services
         private readonly IUnitOfWork _unitOfWork;
         private readonly IRepository<Appointment> _appointmentRepository;
         private readonly IRepository<MedicalService> _medicalServiceRepository;
+        private readonly IAccountHelper _accountHelper;
+        private readonly IRepository<Patient> _patientRepository;
 
-        public InvoiceService(IRepository<Invoice> invoiceRepository, IMapper mapper, IUnitOfWork unitOfWork, IRepository<Appointment> appointmentRepository, IRepository<MedicalService> medicalServiceRepository)
+        public InvoiceService(IRepository<Invoice> invoiceRepository, IMapper mapper, IUnitOfWork unitOfWork, IRepository<Appointment> appointmentRepository, IRepository<MedicalService> medicalServiceRepository, IAccountHelper accountHelper, IRepository<Patient> patientRepository)
         {
             _invoiceRepository = invoiceRepository;
             _mapper = mapper;
             _unitOfWork = unitOfWork;
             _appointmentRepository = appointmentRepository;
             _medicalServiceRepository = medicalServiceRepository;
+            _accountHelper = accountHelper;
+            _patientRepository = patientRepository;
         }
 
         public async Task<InvoiceDto> AddAsync(InvoiceDto dto)
@@ -59,6 +64,21 @@ namespace Application.Services
                 .Include(i => i.Prescription)
                     .ThenInclude(p => p.PrescriptionDetails)
                     .ThenInclude(p => p.Medicine)
+                .ToListAsync());
+        }
+
+        public async Task<IEnumerable<InvoiceDto>> GetAllInvoiceByPatient()
+        {
+            var accountId = await _accountHelper.GetAccountId();
+            var patient = await _patientRepository.GetAsync(s => s.AccountId == accountId);
+
+            return _mapper.Map<IEnumerable<InvoiceDto>>(await _invoiceRepository.Query()
+                .Include(i => i.Appointment)
+                    .ThenInclude(a => a.MedicalService)
+                .Include(i => i.Prescription)
+                    .ThenInclude(p => p.PrescriptionDetails)
+                        .ThenInclude(pd => pd.Medicine)
+                .Where(i => i.Appointment.PatientId == patient.Id)
                 .ToListAsync());
         }
 

@@ -42,12 +42,14 @@ namespace Application.Services
 
         public async Task<AppointmentDto> AddAsync(AppointmentDto dto)
         {
-            var accountId = _accountHelper.GetAccountId();
+            var accountId = await _accountHelper.GetAccountId();
             var patient = await _patientRepository.GetAsync(p => p.AccountId == accountId);
             
             var appointment = await _appointmentRepository.GetAsync(a => a.PatientId == patient.Id && a.Status == AppointmentStatus.Pending);
-            if (appointment is not null)
-                throw new AlreadyExistsException("Bạn có một lịch hẹn đang chờ xác nhận");
+            if (appointment is not null && 
+                appointment.AppointmentDate == dto.AppointmentDate && 
+                appointment.AppointmentTime == dto.AppointmentTime)
+                throw new AlreadyExistsException("Bạn có một lịch hẹn tương tự đang chờ xác nhận");
 
             try
             {
@@ -87,6 +89,9 @@ namespace Application.Services
             if (appointment is null)
                 throw new NotFoundException($"Không tìm thấy lịch hẹn với ID {id}");
 
+            if (appointment.Status != AppointmentStatus.Pending)
+                throw new Exception("Chỉ cho phép hủy lịch hẹn với trạng thái chờ xác nhận");
+
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
@@ -107,6 +112,20 @@ namespace Application.Services
             }
         }
 
+        public async Task<IEnumerable<AppointmentDto>> GetAllAppointmentByPatient()
+        {
+            var accountId = await _accountHelper.GetAccountId();
+            var patient = await _patientRepository.GetAsync(s => s.AccountId == accountId);
+
+            return _mapper.Map<IEnumerable<AppointmentDto>>(
+                await _appointmentRepository.Query()
+                .Include(a => a.Patient)
+                .Include(a => a.Staff)
+                .Include(a => a.MedicalService)
+                .Where(a => a.PatientId == patient.Id)
+                .ToListAsync());
+        }
+
         public async Task<IEnumerable<AppointmentDto>> GetAllAsync()
         {
 
@@ -120,7 +139,7 @@ namespace Application.Services
 
         public async Task<IEnumerable<AppointmentDto>> GetByDoctorAsync()
         {
-            var accountId = _accountHelper.GetAccountId();
+            var accountId = await _accountHelper.GetAccountId();
             var staff = await _staffRepository.GetAsync(s => s.AccountId == accountId);
 
             return _mapper.Map<IEnumerable<AppointmentDto>>(
@@ -210,6 +229,15 @@ namespace Application.Services
                         AppointmentId = appointment.Id,
                     };
                     await _invoiceService.AddAsync(invoice);
+                }
+
+                // Lịch hẹn chuyển sang đã hủy và chưa thanh toán thì xóa hóa đơn tạm
+
+                if (dto.Status == AppointmentStatus.Cancelled)
+                {
+                    var invoice = await _invoiceRepository.Query().FirstOrDefaultAsync(i => i.AppointmentId == appointment.Id);
+                    if (invoice != null && invoice.Status == false)
+                        _invoiceRepository.Delete(invoice);
                 }
 
                 /*

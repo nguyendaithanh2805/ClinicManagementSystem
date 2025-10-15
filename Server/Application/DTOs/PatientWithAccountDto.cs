@@ -30,6 +30,7 @@ namespace Application.DTOs
 
         [Phone(ErrorMessage = "Số điện thoại không hợp lệ.")]
         [StringLength(15, ErrorMessage = "Số điện thoại không được quá 15 ký tự.")]
+        [RegularExpression(@"^\d{10,15}$", ErrorMessage = "Số điện thoại phải chứa từ 10 đến 15 chữ số.")]
         public string? PhoneNumber { get; set; }
 
         [EmailAddress(ErrorMessage = "Email không hợp lệ.")]

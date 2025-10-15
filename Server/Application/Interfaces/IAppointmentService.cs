@@ -10,5 +10,6 @@ namespace Application.Interfaces
     public interface IAppointmentService : IService<AppointmentDto>
     {
         Task<IEnumerable<AppointmentDto>> GetByDoctorAsync();
+        Task<IEnumerable<AppointmentDto>> GetAllAppointmentByPatient();
     }
 }

@@ -19,11 +19,11 @@ namespace Application.Services
         private readonly IMapper _mapper;
         private readonly IUnitOfWork _unitOfWork;
         private readonly IJwtTokenGenerator _jwtTokenGenerator;
-        private readonly IPasswordHasher<AccountDto> _passwordHasher;
+        private readonly IPasswordHasher<Account> _passwordHasher;
         private readonly IPatientService _patientService;
         private readonly IService<RoleDto> _roleService;
 
-        public AuthService(IRepository<Account> accountRepository, IMapper mapper, IUnitOfWork unitOfWork, IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher<AccountDto> passwordHasher, IPatientService patientService, IService<RoleDto> roleService)
+        public AuthService(IRepository<Account> accountRepository, IMapper mapper, IUnitOfWork unitOfWork, IJwtTokenGenerator jwtTokenGenerator, IPasswordHasher<Account> passwordHasher, IPatientService patientService, IService<RoleDto> roleService)
         {
             _accountRepository = accountRepository;
             _mapper = mapper;
@@ -39,8 +39,7 @@ namespace Application.Services
             var accountExisting = await _accountRepository.GetAsync(x => x.Username == dto.Username);
             if (accountExisting is not null)
                 throw new AlreadyExistsException("Tên đăng nhập đã tồn tại.");
-            dto.Password = _passwordHasher.HashPassword(dto, dto.Password);
-            
+
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
@@ -49,6 +48,8 @@ namespace Application.Services
                     dto.RoleId = 2;
 
                 var accountEntity = _mapper.Map<Account>(dto);
+                accountEntity.Password = _passwordHasher.HashPassword(accountEntity, dto.Password);
+
                 await _accountRepository.AddAsync(accountEntity);
                 await _unitOfWork.SaveChangeAsync();
 
@@ -121,7 +122,7 @@ namespace Application.Services
                 throw new NotFoundException($"Tài khoản không tồn tại.");
 
             // So sánh mật khẩu nhập với mật khẩu đã hash trong DB
-            var result = _passwordHasher.VerifyHashedPassword(_mapper.Map<AccountDto>(account), account.Password, accountReq.Password);
+            var result = _passwordHasher.VerifyHashedPassword(account, account.Password, accountReq.Password);
             if (result == PasswordVerificationResult.Failed)
                 throw new UnauthorizedAccessException("Mật khẩu không đúng.");
 

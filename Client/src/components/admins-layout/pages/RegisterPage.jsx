@@ -54,7 +54,7 @@ const RegisterPage = () => {
               <h2 className="text-2xl font-bold">Phòng khám Đa khoa</h2>
             </div>
             <p className="text-lg leading-relaxed">
-              Hãy tạo tài khoản để trải nghiệm dịch vụ đặt lịch và quản lý hồ sơ y tế trực tuyến.
+              Hãy tạo tài khoản để trải nghiệm dịch vụ đặt lịch và quản lý hồ sơ bệnh án trực tuyến.
             </p>
           </div>
         </div>

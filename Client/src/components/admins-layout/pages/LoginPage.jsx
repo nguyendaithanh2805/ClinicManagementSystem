@@ -76,7 +76,7 @@ const LoginPage = () => {
             </div>
             <p className="text-lg leading-relaxed">
               Hệ thống quản lý khám chữa bệnh hiện đại.  
-              Đặt lịch dễ dàng, quản lý hồ sơ y tế, kết nối nhanh với bác sĩ.
+              Đặt lịch dễ dàng, quản lý hồ sơ bệnh án, kết nối nhanh với bác sĩ.
             </p>
           </div>
         </div>

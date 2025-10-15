@@ -8,10 +8,11 @@ using Application.Exceptions;
 using Application.Interfaces;
 using AutoMapper;
 using Domain.Entities;
+using Microsoft.AspNetCore.Identity;
 
 namespace Application.Services
 {
-    public class AccountService :IAccounService
+    public class AccountService : IAccounService
     {
         private readonly IRepository<Account> _accountRepository;
         private readonly IMapper _mapper;
@@ -65,10 +66,10 @@ namespace Application.Services
             if (account is null)
                 throw new NotFoundException("Không tìm thấy tài khoản, không thể cập nhật.");
 
-            var updatedAccount = _mapper.Map<Account>(dto);
-            updatedAccount.Id = dto.Id;
+            account.PhoneNumber = dto.PhoneNumber;
+            account.Email = dto.Email;
 
-            _accountRepository.Update(updatedAccount);
+            _accountRepository.Update(account);
             return _mapper.Map<AccountDto>(await _accountRepository.GetByIdAsync(dto.Id));
         }
     }

@@ -1,4 +1,4 @@
-using System.Reflection.Metadata;
+﻿using System.Reflection.Metadata;
 using Application.Common.Settings;
 using System.Text;
 using Application.Interfaces;
@@ -18,6 +18,7 @@ using Microsoft.Extensions.Options;
 using Application.Common;
 using Microsoft.AspNetCore.Mvc;
 using Domain.Entities;
+using Api.ChatHub;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -27,9 +28,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("MyAllowSpecificOrigins", policy =>
     {
-        policy.WithOrigins("http://localhost:5173")
+        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
               .AllowAnyHeader()
-              .AllowAnyMethod();
+              .AllowAnyMethod()
+              .AllowCredentials();
     });
 });
 
@@ -47,6 +49,7 @@ var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {
+        // Cấu hình xác thực JWT cho API và SignalR
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuer = true,
@@ -56,6 +59,24 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = jwtSettings!.Issuer,
             ValidAudience = jwtSettings.Audience,
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtSettings.Key))
+        };
+
+        // Cho phép SignalR đọc JWT từ query string (vì WebSocket không có header)
+        options.Events = new JwtBearerEvents
+        {
+            OnMessageReceived = context =>
+            {
+                var accessToken = context.Request.Query["access_token"];
+
+                // Nếu request là tới ChatHub và có token trong query
+                var path = context.HttpContext.Request.Path;
+                if (!string.IsNullOrEmpty(accessToken) &&
+                    path.StartsWithSegments("/api/chatHub"))
+                {
+                    context.Token = accessToken; // Gán token vào pipeline
+                }
+                return Task.CompletedTask;
+            }
         };
     });
 
@@ -67,6 +88,8 @@ builder.Services.AddDbContext<ClinicContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DbConnection")));
 
 builder.Services.AddControllers();
+builder.Services.AddSignalR();
+
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
@@ -82,7 +105,7 @@ builder.Services.AddScoped(typeof(IRepository<>), typeof(Repository<>));
 // Service
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
-builder.Services.AddScoped<IPasswordHasher<AccountDto>, PasswordHasher<AccountDto>>();
+builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
 builder.Services.AddScoped<IPasswordHasher<PatientWithAccountDto>, PasswordHasher<PatientWithAccountDto>>();
 builder.Services.AddScoped<IPatientService, PatientService>();
 builder.Services.AddScoped<IAccountHelper, AccountHelper>();
@@ -100,6 +123,8 @@ builder.Services.AddScoped<IService<MedicineDto>, MedicineService>();
 builder.Services.AddScoped<ISymptomService, SymptomService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<ITestResultService, TestResultService>();
+builder.Services.AddScoped<IStaffService, StaffService>();
+builder.Services.AddHostedService<ChatCleanupService>();
 
 // Handle when validation returns an invalid format
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -129,15 +154,15 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-// Allow serve static file from wwwroot
-app.UseStaticFiles();
-
 app.UseHttpsRedirection();
+app.UseRouting();
 
 app.UseCors(MyAllowSpecificOrigins);
+app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
 
+app.MapHub<ChatHub>("/api/chatHub");
 app.Run();

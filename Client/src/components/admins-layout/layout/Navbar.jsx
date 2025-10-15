@@ -68,8 +68,8 @@ const Navbar = () => {
                   <div
                     className="w-full px-4 py-2 text-left text-sm text-medical-700 hover:bg-white/50 flex items-center gap-2"
                   >
-                    <User className="w-4 h-4" />
-                    Thông tin cá nhân
+                  <User className="w-4 h-4"/>
+                    <Link to="/patient/my-account">Thông tin cá nhân</Link>
                   </div>
                   <div className="w-full px-4 py-2 text-left text-sm text-medical-700 hover:bg-white/50 flex items-center gap-2">
                     <Settings className="w-4 h-4" />

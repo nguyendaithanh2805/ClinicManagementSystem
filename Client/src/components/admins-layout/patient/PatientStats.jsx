@@ -13,7 +13,7 @@ const PatientStats = () => {
     },
     {
       icon: FileText,
-      label: 'Hồ sơ y tế',
+      label: 'Hồ sơ bệnh án',
       value: '12',
       change: 'Cập nhật 2 ngày trước',
       color: 'text-green-600',

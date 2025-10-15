@@ -1,18 +1,18 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CreditCard, DollarSign, BriefcaseMedical, Filter, Search, Calendar, CheckCircle, XCircle, User, FileText, ChevronLeft, ChevronRight, X, Printer, Download } from 'lucide-react';
+import { CreditCard, DollarSign, BriefcaseMedical, Filter, Search, Calendar, CheckCircle, XCircle, Pill, FileText, ChevronLeft, ChevronRight, X, Printer, Download } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from "react-toastify";
 import api from "../../admins-layout/contexts/Api";
-import PrintableInvoice from './PrintableInvoice';
+import PrintableInvoice from '../../admins-layout/pages/PrintableInvoice';
 
 import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 
 const ITEMS_PER_PAGE = 5;
 
-const PaymentsPage = () => {
+const InvoicesPage = () => {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,17 +49,23 @@ const PaymentsPage = () => {
       </svg>
     );
 
+
   useEffect(() => {
     fetchInvoices();
-  }, []);
+  }, [user]);
 
   const fetchInvoices = async () => {
+    if (!user) {
+      toast.info('Vui lòng đăng nhập để xem hóa đơn của bạn.');
+      return;
+    }
+
     try {
-      const response = await api.get('/staff/invoices');
+      const response = await api.get('/patients/invoices/me');
       if (response.data.status) {
         setInvoices(response.data.data);
       } else {
-        toast.error(response.data.message || 'Không thể tải hóa đơn.');
+        toast.error(response.data.message || 'Không thể tải hóa đơn của bạn.');
         console.error(response.data.message);
       }
     } catch (error) {
@@ -87,36 +93,15 @@ const PaymentsPage = () => {
     }
   };
 
-  const handleUpdateInvoiceStatus = async (invoiceId, newStatus) => {
-    try {
-      const response = await api.patch(`/staff/invoices/${invoiceId}`, {
-        Id: invoiceId,
-        Status: newStatus,
-      });
-
-      if (response.data.status) {
-        toast.success(response.data.message || 'Cập nhật trạng thái hóa đơn thành công!');
-        fetchInvoices();
-        setSelectedInvoice(null);
-      } else {
-        toast.error(response.data.message || 'Không thể cập nhật trạng thái hóa đơn.');
-        console.error(response.data.message);
-      }
-    } catch (error) {
-      toast.error(error.response?.data?.message || 'Lỗi khi cập nhật hóa đơn.');
-      console.error('Error updating invoice status:', error);
-    }
-  };
-
   const filteredInvoices = invoices.filter(invoice => {
-    const patientName = invoice.appointment?.patient?.fullName || '';
     const medicalService = invoice.appointment?.medicalService?.name || '';
     const totalAmount = invoice.totalAmount ? invoice.totalAmount.toString() : '';
+    const invoiceId = invoice.id ? invoice.id.toString() : '';
 
     const matchesSearch = searchTerm === '' ||
-      patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       medicalService.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      totalAmount.includes(searchTerm);
+      totalAmount.includes(searchTerm) ||
+      invoiceId.includes(searchTerm);
 
     const matchesStatus = filterStatus === 'all' ||
       (filterStatus === 'paid' && invoice.status === true) ||
@@ -212,13 +197,10 @@ const PaymentsPage = () => {
           <div className="flex items-start justify-between mb-2">
             <div>
               <h3 className="font-semibold text-medical-900 mb-1">
-                {invoice.appointment?.patient?.fullName || 'Bệnh nhân không xác định'}
+                {invoice.appointment?.medicalService?.name || 'Dịch vụ không xác định'}
               </h3>
               <p className="text-sm text-medical-600 mb-1">
-                {invoice.appointment?.medicalService?.name || 'Dịch vụ không xác định'}
-              </p>
-              <p className="text-sm text-medical-500">
-                Mã hóa đơn: {invoice.id}
+                 Mã hóa đơn: {invoice.id}
               </p>
             </div>
             <div className="text-right">
@@ -238,26 +220,11 @@ const PaymentsPage = () => {
                 <span>{format(parseISO(invoice.paymentDate), 'HH:mm dd/MM/yyyy', { locale: vi })}</span>
               </div>
             )}
-            {invoice.appointment?.patient?.fullName && (
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                <span>Bệnh nhân: {invoice.appointment.patient.fullName}</span>
-              </div>
-            )}
-          </div>
-
-          {user?.role !== 'patient' && (
-            <div className="flex items-center justify-end gap-2 mt-4 pt-3 border-t border-medical-100">
-              {invoice.status === false && (
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleUpdateInvoiceStatus(invoice.id, true); }}
-                  className="text-sm text-green-600 hover:text-green-700 font-medium inline-flex items-center gap-1"
-                >
-                  <CheckCircle className="w-4 h-4" /> Xác nhận thanh toán
-                </button>
-              )}
+            <div className="flex items-center gap-2">
+                <BriefcaseMedical className="w-4 h-4" />
+                <span>Dịch vụ: {invoice.appointment?.medicalService?.name || 'N/A'}</span>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
@@ -265,18 +232,14 @@ const PaymentsPage = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
       <div className="glass-effect rounded-2xl p-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-medical-900 mb-2">
-              {user?.role === 'patient' ? 'Lịch sử thanh toán của tôi' : 'Quản lý hóa đơn'}
+              Lịch sử thanh toán của tôi
             </h1>
             <p className="text-medical-600">
-              {user?.role === 'patient'
-                ? 'Xem và quản lý các giao dịch thanh toán của bạn'
-                : 'Quản lý tất cả các hóa đơn của bệnh viện'
-              }
+              Xem và quản lý các giao dịch thanh toán của bạn
             </p>
           </div>
 
@@ -297,7 +260,6 @@ const PaymentsPage = () => {
         </div>
       </div>
 
-      {/* Search and Filters */}
       <div className="glass-effect rounded-2xl p-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <h2 className="text-xl font-bold text-medical-900">
@@ -310,17 +272,16 @@ const PaymentsPage = () => {
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="pl-10 pr-4 py-2 border border-medical-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm w-full"
-              placeholder="Tìm kiếm mã hóa đơn, bệnh nhân, dịch vụ..."
+              placeholder="Tìm kiếm mã hóa đơn, dịch vụ..."
             />
           </div>
         </div>
       </div>
 
-      {/* Payments List */}
       <div className="glass-effect rounded-2xl p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-medical-900">
-            Danh sách hóa đơn
+            Danh sách hóa đơn của tôi
           </h2>
           <div className="flex items-center gap-2 text-sm text-medical-600">
             <CreditCard className="w-4 h-4" />
@@ -337,13 +298,12 @@ const PaymentsPage = () => {
             <div className="text-center py-8">
               <FileText className="w-12 h-12 text-medical-300 mx-auto mb-4" />
               <p className="text-medical-600">
-                {searchTerm || filterStatus !== 'all' ? 'Không tìm thấy hóa đơn nào phù hợp' : 'Chưa có hóa đơn thanh toán nào'}
+                {searchTerm || filterStatus !== 'all' ? 'Không tìm thấy hóa đơn nào phù hợp' : 'Bạn chưa có hóa đơn thanh toán nào'}
               </p>
             </div>
           )}
         </div>
 
-        {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center mt-6 space-x-2">
             <button
@@ -375,13 +335,12 @@ const PaymentsPage = () => {
         )}
       </div>
 
-      {/* Invoice Detail Modal */}
       {selectedInvoice && (
         <div
           className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
           style={{ marginTop: 0 }}
         >
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg relative shadow-lg max-h-[90vh] flex flex-col"> {/* Added max-h and flex-col */}
+          <div className="bg-white rounded-xl p-6 w-full max-w-lg relative shadow-lg max-h-[90vh] flex flex-col">
             <button
               className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
               onClick={() => setSelectedInvoice(null)}
@@ -392,9 +351,7 @@ const PaymentsPage = () => {
               <FileText className="w-6 h-6 text-blue-600" /> Chi tiết hóa đơn
             </h2>
 
-            {/* Scrollable content for the modal */}
-            <div className="flex-1 overflow-y-auto space-y-4 text-gray-700 pr-2"> {/* Added overflow-y-auto and pr-2 for scrollbar */}
-              {/* Invoice ID */}
+            <div className="flex-1 overflow-y-auto space-y-4 text-gray-700 pr-2">
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <FileText className="w-5 h-5 text-blue-500 flex-shrink-0" />
                 <strong className="font-semibold w-32">Mã hóa đơn:</strong>
@@ -403,16 +360,6 @@ const PaymentsPage = () => {
                 </p>
               </div>
 
-              {/* Patient Name */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <User className="w-5 h-5 text-purple-500 flex-shrink-0" />
-                <strong className="font-semibold w-32">Bệnh nhân:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {selectedInvoice.appointment?.patient?.fullName || 'N/A'}
-                </p>
-              </div>
-
-              {/* Service */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <BriefcaseMedical className="w-5 h-5 text-green-500 flex-shrink-0" />
                 <strong className="font-semibold w-32">Dịch vụ:</strong>
@@ -429,7 +376,6 @@ const PaymentsPage = () => {
                 </p>
               </div>
 
-              {/* Payment Date */}
               {selectedInvoice.paymentDate && (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <Calendar className="w-5 h-5 text-indigo-500 flex-shrink-0" />
@@ -440,7 +386,6 @@ const PaymentsPage = () => {
                 </div>
               )}
 
-              {/* Total Amount */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <DollarSign className="w-5 h-5 text-emerald-500 flex-shrink-0" />
                 <strong className="font-semibold w-32">Tổng cộng:</strong>
@@ -449,7 +394,6 @@ const PaymentsPage = () => {
                 </p>
               </div>
 
-              {/* Status */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                 <span className={`p-1 rounded-full ${getStatusColor(selectedInvoice.status)} flex-shrink-0`}>
                   {selectedInvoice.status ? <CheckCircle className="w-5 h-5 text-green-700" /> : <XCircle className="w-5 h-5 text-yellow-700" />}
@@ -460,7 +404,6 @@ const PaymentsPage = () => {
                 </p>
               </div>
 
-              {/* Prescription Details - ONLY show if prescription exists */}
               {selectedInvoice.prescription && selectedInvoice.prescription.prescriptionDetails && selectedInvoice.prescription.prescriptionDetails.length > 0 && (
                 <div className="pt-4 border-t border-gray-200 mt-4">
                   <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
@@ -473,6 +416,7 @@ const PaymentsPage = () => {
                           <span className="font-medium text-gray-900 whitespace-nowrap flex items-center">
                             <Pill className="inline-block mr-1" /> {detail.medicine?.name || 'Thuốc không xác định'}
                           </span>
+
                           <span className="text-sm text-gray-600">x{detail.quantity}</span>
                         </div>
                         <p className="text-sm text-gray-600 italic">{formatCurrency(detail.medicine?.price, 'VND')} / {detail.medicine?.unit}</p>
@@ -487,19 +431,10 @@ const PaymentsPage = () => {
               )}
             </div>
 
-            {/* Action Buttons */}
-            <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
-              {user?.role !== 'patient' && selectedInvoice.status === false && (
-                <button
-                  onClick={() => handleUpdateInvoiceStatus(selectedInvoice.id, true)}
-                  className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-md order-2 sm:order-1"
-                >
-                  <CheckCircle className="w-5 h-5 mr-2" /> Xác nhận thanh toán
-                </button>
-              )}
+            <div className="mt-6 pt-4 border-t border-gray-200 flex justify-end">
               <button
                 onClick={handleOpenPdfPreview}
-                className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md order-1 sm:order-2"
+                className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md"
               >
                 <Printer className="w-5 h-5 mr-2" /> Xem trước & Xuất PDF
               </button>
@@ -508,11 +443,9 @@ const PaymentsPage = () => {
         </div>
       )}
 
-      {/* PDF Preview Modal */}
       {showPdfPreviewModal && selectedInvoice && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-xl shadow-2xl relative w-full h-full max-w-4xl max-h-[90vh] flex flex-col">
-            {/* Header của modal xem trước */}
             <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-600" />
@@ -534,8 +467,7 @@ const PaymentsPage = () => {
               </div>
             </div>
 
-            {/* Nội dung hóa đơn có thể cuộn */}
-            <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: '#f9fafb' }}> {/* Added overflow-y-auto */}
+            <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: '#f9fafb' }}>
               <div
                 ref={pdfContentRef}
                 className="bg-white p-8 rounded-lg shadow-md mx-auto"
@@ -551,4 +483,4 @@ const PaymentsPage = () => {
   );
 };
 
-export default PaymentsPage;
+export default InvoicesPage;

@@ -11,5 +11,9 @@ namespace Application.Interfaces
     {
         public Task<IEnumerable<PatientWithAccountDto>> GetAllWithAccountAsync();
         public Task<PatientWithAccountDto> AddPatientWithAccountAsync(PatientWithAccountDto dto);
+        public Task<IEnumerable<PatientMedicalRecordDto>> GetAllMedicalRecordByPatient();
+        public Task<PatientDto> GetPatientByIdIncludeAccount();
+        public Task UpdatePatientAccount(PatientWithAccountDto dto);
+        Task UpdatePasswordForPatientAccountAsync(ChangePasswordDto dto);
     }
 }

@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using Domain.Entities;
 
 namespace Application.DTOs
 {
@@ -23,5 +24,6 @@ namespace Application.DTOs
         public string? Address { get; set; }
         public string? Email { get; set; }
         public ICollection<AppointmentWithPatientDto>? Appointments { get; set; }
+        public AccountDto? Account { get; set; }
     }
 }

@@ -5,6 +5,8 @@ using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.Controllers
 {
@@ -100,6 +102,22 @@ namespace Api.Controllers
 
                 return Ok(new ApiResponse<AppointmentDto>(true, "Cập nhật lịch hẹn thành công",
                     await _appointmentService.Update(appointmentDto)));
+            }
+            catch (DbUpdateException ex)
+            {
+                if (ex.InnerException is SqlException sqlEx)
+                {
+                    switch (sqlEx.Number)
+                    {
+                        case 2627: // UNIQUE constraint
+                            return BadRequest(new ApiResponse<string>(false, "Dữ liệu bị trùng, vi phạm ràng buộc UNIQUE.", null));
+                        case 2601: // Duplicate key
+                            return BadRequest(new ApiResponse<string>(false, "Khóa trùng lặp, không thể thêm bản ghi.", null));
+                    }
+                }
+
+                // Các lỗi DbUpdate khác
+                return BadRequest(new ApiResponse<string>(false, "Lỗi cơ sở dữ liệu: " + ex.Message, null));
             }
             catch (NotFoundException ex)
             {
