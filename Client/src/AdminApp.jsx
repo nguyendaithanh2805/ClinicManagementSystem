@@ -28,6 +28,7 @@ import AppointmentsForPatientPage from './components/admins-layout/patient/Appoi
 import MyAccountPage from './components/admins-layout/patient/MyAccountPage';
 import InvoicesPage from './components/admins-layout/patient/InvoicesPage';
 import DrugAnalyzerPage from './components/admins-layout/patient/DrugAnalyzerPage';
+import PredictDiasease from './components/admins-layout/doctor/PredictDiasease';
 
 function App() {
   return (
@@ -84,6 +85,7 @@ function AppContent() {
               <Route path="doctor-dashboard" element={<DoctorDashboardContent />} />
               <Route path="schedule" element={ <AppointmentPageForDoctor /> } />
               <Route path="patient-medical-records" element={ <MedicalRecordPageForDoctor/> } />
+              <Route path="predict-diasease" element={ <PredictDiasease/> } />
              
               <Route path="lab-dashboard" element={<LabDashboardContent />} />
               <Route path="test-queue" element={<LabTechnicianPage />} />

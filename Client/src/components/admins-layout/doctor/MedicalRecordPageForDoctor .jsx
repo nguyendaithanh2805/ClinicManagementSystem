@@ -486,7 +486,7 @@ const handleDeleteSymptom = (symptomId) => {
         <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <ClipboardCheck className="w-4 h-4 text-gray-500" />
-            <span>Chẩn đoán: {record.diagnosis || 'N/A'}</span>
+            <span>Chẩn đoán: {record.diagnosis || 'Chưa có'}</span>
           </div>
           <div className="flex items-center gap-2">
             <ClipboardCheck className="w-4 h-4 text-gray-500" />
@@ -494,7 +494,7 @@ const handleDeleteSymptom = (symptomId) => {
           </div>
           <div className="flex items-center gap-2">
             <ListTodo className="w-4 h-4 text-gray-500" />
-            <span>Phương pháp điều trị: {record.treatmentMethod || 'N/A'}</span>
+            <span>Phương pháp điều trị: {record.treatmentMethod || 'Chưa có'}</span>
           </div>
         </div>
       </div>
