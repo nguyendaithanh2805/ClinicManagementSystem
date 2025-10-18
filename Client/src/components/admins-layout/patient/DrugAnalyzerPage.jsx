@@ -2,7 +2,7 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Upload, Pill, FileText, FlaskConical, Info, X, Loader2, AlertTriangle } from 'lucide-react'; // Thêm AlertTriangle cho disclaimer
 import { toast } from "react-toastify";
-import axios from 'axios'; // Import axios để gọi API
+import axios from 'axios';
 
 const DrugAnalyzerPage = () => {
   const [image, setImage] = useState(null);

@@ -16,7 +16,8 @@ import {
   BarChart3,
   ChevronLeft,
   ChevronRight,
-  CircleDollarSign
+  CircleDollarSign,
+  Brain
 } from 'lucide-react';
 import { FaRegUserCircle } from "react-icons/fa";
 
@@ -42,7 +43,8 @@ const Sidebar = () => {
         return [
           { icon: Home, label: 'Trang chủ', path: '/staff/doctor-dashboard' },
           { icon: Calendar, label: 'Lịch hẹn của tôi', path: '/staff/schedule' },
-          { icon: FileText, label: 'Hồ sơ Bệnh nhân', path: '/staff/patient-medical-records' }
+          { icon: FileText, label: 'Hồ sơ Bệnh nhân', path: '/staff/patient-medical-records' },
+          { icon: Brain, label: 'Chẩn đoán bệnh', path: '/staff/predict-diasease' }
         ];
       
       case 'Receptionist':
