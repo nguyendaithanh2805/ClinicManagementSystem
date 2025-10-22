@@ -9,8 +9,8 @@ const ITEMS_PER_PAGE = 5; // Number of appointments per page
 
 const AppointmentsPage = () => {
   const [appointments, setAppointments] = useState([]);
-  const [currentFilterStatus, setCurrentFilterStatus] = useState('all'); // all | 0 | 1 | 2 | 3 (matching backend status codes)
-  const [selectedAppointment, setSelectedAppointment] = useState(null); // To open detail/edit modal
+  const [currentFilterStatus, setCurrentFilterStatus] = useState('all');
+  const [selectedAppointment, setSelectedAppointment] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
 
   // States for editable appointment details (only staffId and status are editable now)
@@ -37,14 +37,14 @@ const AppointmentsPage = () => {
   const fetchAppointments = async () => {
     try {
       const response = await api.get('/staff/appointments');
-      if (response.data.status) {
+      if (response.data.status) {    
         setAppointments(response.data.data);
       } else {
         toast.error(response.data.message || 'Không thể tải lịch hẹn.');
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error('Lỗi khi kết nối đến máy chủ khi tải lịch hẹn.');
+      toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi tải lịch hẹn.');
       console.error('Lỗi khi lấy lịch hẹn:', error);
     }
   };
@@ -58,7 +58,7 @@ const AppointmentsPage = () => {
         console.error(response.data.message);
       }
     } catch (error) {
-      console.error('Lỗi khi lấy danh sách nhân viên:', error);
+      console.error(error.response.data.message || 'Lỗi khi lấy danh sách nhân viên:', error);
     }
   };
 
@@ -166,6 +166,9 @@ const AppointmentsPage = () => {
           <div>
             <h3 className="font-semibold text-gray-900 text-lg">
               {appointment.patient?.fullName || 'Chưa có bệnh nhân'}
+            </h3>
+             <h3 className="font-semibold text-gray-900 text-lg">
+              {appointment.Id}
             </h3>
             <p className="text-sm text-gray-600 flex items-center gap-1">
               <BriefcaseMedical className="w-4 h-4 inline-block text-gray-500" />

@@ -79,7 +79,7 @@ const LabTechnicianPage = () => {
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error('Lỗi khi kết nối đến máy chủ khi tải hồ sơ bệnh án.');
+      toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi tải hồ sơ bệnh án.');
       console.error('Lỗi khi lấy hồ sơ bệnh án:', error);
     }
   };
@@ -141,7 +141,7 @@ const LabTechnicianPage = () => {
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error('Lỗi khi kết nối đến máy chủ khi tải lên kết quả xét nghiệm.');
+      toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi tải lên kết quả xét nghiệm.');
       console.error('Lỗi khi tải lên kết quả xét nghiệm:', error);
     }
   };
@@ -184,7 +184,7 @@ const LabTechnicianPage = () => {
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error('Lỗi khi kết nối đến máy chủ khi cập nhật kết quả xét nghiệm.');
+      toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi cập nhật kết quả xét nghiệm.');
       console.error('Lỗi khi cập nhật kết quả xét nghiệm:', error);
     }
   };
@@ -201,7 +201,7 @@ const LabTechnicianPage = () => {
           toast.error('Xóa kết quả xét nghiệm thất bại.');
         }
       } catch (error) {
-        toast.error('Lỗi khi kết nối đến máy chủ khi xóa kết quả xét nghiệm.');
+        toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi xóa kết quả xét nghiệm.');
         console.error('Lỗi khi xóa kết quả xét nghiệm:', error);
       } finally {
         setShowConfirmModal(false);

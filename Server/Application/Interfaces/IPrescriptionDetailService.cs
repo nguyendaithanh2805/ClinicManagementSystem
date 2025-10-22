@@ -10,5 +10,6 @@ namespace Application.Interfaces
     public interface IPrescriptionDetailService : IService<PrescriptionDetailDto>
     {
         Task Delete(int prescriptionId, int medicineId);
+        Task<PrescriptionDetailDto> Update(PrescriptionDetailDto dto, int medicineId);
     }
 }

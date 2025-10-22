@@ -38,6 +38,8 @@ namespace Application.DTOs
         public PatientDto? Patient { get; set; }
         public StaffDto? Staff { get; set; }
         public MedicalServiceDto? MedicalService { get; set; }
+        //public virtual PatientMedicalRecordDto? PatientMedicalRecord { get; set; }
+
     }
 
 }

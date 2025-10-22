@@ -15,21 +15,32 @@ namespace Api.Controllers
     public class PrescriptionDetailController : ControllerBase
     {
         private readonly IPrescriptionDetailService _prescriptionDetailService;
+        private readonly IService<PrescriptionDto> _prescriptionService;
 
-        public PrescriptionDetailController(IPrescriptionDetailService prescriptionDetailService)
+        public PrescriptionDetailController(IPrescriptionDetailService prescriptionDetailService, IService<PrescriptionDto> prescriptionService)
         {
             _prescriptionDetailService = prescriptionDetailService;
+            _prescriptionService = prescriptionService;
         }
 
         [HttpPost]
         [Authorize(Roles = "Doctor")]
-        public async Task<IActionResult> AddAsync(PrescriptionDetailDto dto)
+        public async Task<IActionResult> AddAsync(List<PrescriptionDetailDto> dtos)
         {
             try
             {
+                foreach (var dto in dtos)
+                    await _prescriptionDetailService.AddAsync(dto);
                 return Created(string.Empty,
-                    new ApiResponse<PrescriptionDetailDto>(true, "Thêm đơn thuốc thành công",
-                    await _prescriptionDetailService.AddAsync(dto)));
+                    new ApiResponse<string>(true, "Thêm đơn thuốc thành công", null));
+            }
+            catch(NotFoundException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+            catch (AlreadyExistsException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
             }
             catch (Exception ex)
             {
@@ -48,11 +59,8 @@ namespace Api.Controllers
                 if (!ModelState.IsValid)
                     return BadRequest(ModelState);
 
-                if (prescriptionId != dto.PrescriptionId || medicineId != dto.MedicineId)
-                    return BadRequest("Id không khớp");
-
                 return Ok(new ApiResponse<PrescriptionDetailDto>(true, "Cập nhật đơn thuốc thành công",
-                    await _prescriptionDetailService.Update(dto)));
+                    await _prescriptionDetailService.Update(dto, medicineId)));
             }
             catch (NotFoundException ex)
             {
@@ -70,7 +78,25 @@ namespace Api.Controllers
         {
             try
             {
-                await _prescriptionDetailService.Delete(prescriptionId, medicineId );
+                await _prescriptionDetailService.Delete(prescriptionId, medicineId);
+                return NoContent();
+            }
+            catch (NotFoundException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+        }
+
+        [HttpDelete("{id:int}")]
+        public async Task<IActionResult> DeletePrescription([FromRoute] int id)
+        {
+            try
+            {
+                await _prescriptionService.Delete(id);
                 return NoContent();
             }
             catch (NotFoundException ex)

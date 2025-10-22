@@ -10,5 +10,6 @@ namespace Application.Interfaces
     public interface IMedicalRecordService : IService<PatientMedicalRecordDto>
     {
         Task<IEnumerable<PatientMedicalRecordDto>> GetAllByDoctorAsync();
+        Task UpdateStatus(int medicalRecordId);
     }
 }

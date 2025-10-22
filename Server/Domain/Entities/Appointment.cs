@@ -20,11 +20,10 @@ public partial class Appointment
 
     public AppointmentStatus Status { get; set; }
 
-    public virtual Invoice? Invoice { get; set; }
-
     public virtual MedicalService MedicalService { get; set; } = null!;
 
     public virtual Patient Patient { get; set; } = null!;
 
     public virtual Staff? Staff { get; set; }
+    public virtual PatientMedicalRecord PatientMedicalRecord { get; set; } = null!;
 }

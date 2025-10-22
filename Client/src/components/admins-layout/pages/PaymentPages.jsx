@@ -24,30 +24,30 @@ const PaymentsPage = () => {
   const pdfContentRef = useRef();
 
   const Pill = () => (
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        viewBox="0 0 64 32"
-        className="w-4 h-4 mr-1"
-      >
-        <g transform="rotate(45 32 16)">
-          {/* Nửa đỏ */}
-          <path d="M0,16a16,16 0 0,1 16,-16h16v32H16A16,16 0 0,1 0,16Z" fill="#ef4444" />
-          {/* Nửa vàng */}
-          <path d="M32,0h16a16,16 0 0,1 0,32H32V0Z" fill="#facc15" />
-          {/* Viền */}
-          <rect
-            x="0"
-            y="0"
-            width="64"
-            height="32"
-            rx="16"
-            fill="none"
-            stroke="#9ca3af"
-            strokeWidth="2"
-          />
-        </g>
-      </svg>
-    );
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 64 32"
+      className="w-4 h-4 mr-1"
+    >
+      <g transform="rotate(45 32 16)">
+        {/* Nửa đỏ */}
+        <path d="M0,16a16,16 0 0,1 16,-16h16v32H16A16,16 0 0,1 0,16Z" fill="#ef4444" />
+        {/* Nửa vàng */}
+        <path d="M32,0h16a16,16 0 0,1 0,32H32V0Z" fill="#facc15" />
+        {/* Viền */}
+        <rect
+          x="0"
+          y="0"
+          width="64"
+          height="32"
+          rx="16"
+          fill="none"
+          stroke="#9ca3af"
+          strokeWidth="2"
+        />
+      </g>
+    </svg>
+  );
 
   useEffect(() => {
     fetchInvoices();
@@ -63,7 +63,7 @@ const PaymentsPage = () => {
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error('Lỗi khi kết nối đến máy chủ khi tải hóa đơn.');
+      toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi tải hóa đơn.');
       console.error('Lỗi khi lấy hóa đơn:', error);
     }
   };
@@ -103,14 +103,14 @@ const PaymentsPage = () => {
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Lỗi khi cập nhật hóa đơn.');
+      toast.error(error.response.data.message || 'Lỗi khi cập nhật hóa đơn.');
       console.error('Error updating invoice status:', error);
     }
   };
 
   const filteredInvoices = invoices.filter(invoice => {
-    const patientName = invoice.appointment?.patient?.fullName || '';
-    const medicalService = invoice.appointment?.medicalService?.name || '';
+    const patientName = invoice.patientMedicalRecord?.patient?.fullName || '';
+    const medicalService = invoice.patientMedicalRecord?.appointment?.medicalService?.name || '';
     const totalAmount = invoice.totalAmount ? invoice.totalAmount.toString() : '';
 
     const matchesSearch = searchTerm === '' ||
@@ -212,10 +212,10 @@ const PaymentsPage = () => {
           <div className="flex items-start justify-between mb-2">
             <div>
               <h3 className="font-semibold text-medical-900 mb-1">
-                {invoice.appointment?.patient?.fullName || 'Bệnh nhân không xác định'}
+                {invoice.patientMedicalRecord?.patient?.fullName || 'Bệnh nhân không xác định'}
               </h3>
               <p className="text-sm text-medical-600 mb-1">
-                {invoice.appointment?.medicalService?.name || 'Dịch vụ không xác định'}
+                {invoice.patientMedicalRecord?.appointment?.medicalService?.name || 'Dịch vụ không xác định'}
               </p>
               <p className="text-sm text-medical-500">
                 Mã hóa đơn: {invoice.id}
@@ -238,10 +238,10 @@ const PaymentsPage = () => {
                 <span>{format(parseISO(invoice.paymentDate), 'HH:mm dd/MM/yyyy', { locale: vi })}</span>
               </div>
             )}
-            {invoice.appointment?.patient?.fullName && (
+            {invoice.patientMedicalRecord?.patient?.fullName && (
               <div className="flex items-center gap-2">
                 <User className="w-4 h-4" />
-                <span>Bệnh nhân: {invoice.appointment.patient.fullName}</span>
+                <span>Bệnh nhân: {invoice.patientMedicalRecord.patient.fullName}</span>
               </div>
             )}
           </div>
@@ -408,7 +408,7 @@ const PaymentsPage = () => {
                 <User className="w-5 h-5 text-purple-500 flex-shrink-0" />
                 <strong className="font-semibold w-32">Bệnh nhân:</strong>
                 <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {selectedInvoice.appointment?.patient?.fullName || 'N/A'}
+                  {selectedInvoice.patientMedicalRecord?.patient?.fullName || 'N/A'}
                 </p>
               </div>
 
@@ -417,7 +417,7 @@ const PaymentsPage = () => {
                 <BriefcaseMedical className="w-5 h-5 text-green-500 flex-shrink-0" />
                 <strong className="font-semibold w-32">Dịch vụ:</strong>
                 <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {selectedInvoice.appointment?.medicalService?.name || 'N/A'}
+                  {selectedInvoice.patientMedicalRecord?.appointment?.medicalService?.name || 'N/A'}
                 </p>
               </div>
 
@@ -425,7 +425,8 @@ const PaymentsPage = () => {
                 <DollarSign className="w-5 h-5 text-green-500 flex-shrink-0" />
                 <strong className="font-semibold w-32">Giá dịch vụ:</strong>
                 <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {formatCurrency(selectedInvoice.appointment?.medicalService?.cost, 'VND')}
+                  {/* SỬA Ở ĐÂY */}
+                  {formatCurrency(selectedInvoice.patientMedicalRecord?.appointment?.medicalService?.cost, 'VND')}
                 </p>
               </div>
 
@@ -460,31 +461,35 @@ const PaymentsPage = () => {
                 </p>
               </div>
 
-              {/* Prescription Details - ONLY show if prescription exists */}
-              {selectedInvoice.prescription && selectedInvoice.prescription.prescriptionDetails && selectedInvoice.prescription.prescriptionDetails.length > 0 && (
-                <div className="pt-4 border-t border-gray-200 mt-4">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
-                    <FileText className="w-5 h-5 text-orange-500" /> Chi tiết đơn thuốc
-                  </h3>
-                  <ul className="space-y-2">
-                    {selectedInvoice.prescription.prescriptionDetails.map((detail, index) => (
-                      <li key={index} className="flex flex-col border border-gray-100 rounded-lg p-3 bg-white shadow-sm">
-                        <div className="flex justify-between items-center mb-1">
-                          <span className="font-medium text-gray-900 whitespace-nowrap flex items-center">
-                            <Pill className="inline-block mr-1" /> {detail.medicine?.name || 'Thuốc không xác định'}
-                          </span>
-                          <span className="text-sm text-gray-600">x{detail.quantity}</span>
-                        </div>
-                        <p className="text-sm text-gray-600 italic">{formatCurrency(detail.medicine?.price, 'VND')} / {detail.medicine?.unit}</p>
-                        <p className="text-sm text-gray-600 italic">{detail.dosage} ({detail.frequency})</p>
-                        <p className="text-sm font-semibold text-gray-800 mt-1 self-end">
-                          {formatCurrency(detail.amount, 'VND')}
-                        </p>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
+              {/* Prescription Details */}
+              {selectedInvoice.patientMedicalRecord?.prescriptions &&
+                selectedInvoice.patientMedicalRecord.prescriptions.length > 0 &&
+                selectedInvoice.patientMedicalRecord.prescriptions[0].prescriptionDetails &&
+                selectedInvoice.patientMedicalRecord.prescriptions[0].prescriptionDetails.length > 0 && (
+                  <div className="pt-4 border-t border-gray-200 mt-4">
+                    <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                      <FileText className="w-5 h-5 text-orange-500" /> Chi tiết đơn thuốc
+                    </h3>
+                    <ul className="space-y-2">
+                      {/* SỬA Ở ĐÂY */}
+                      {selectedInvoice.patientMedicalRecord.prescriptions[0].prescriptionDetails.map((detail, index) => (
+                        <li key={index} className="flex flex-col border border-gray-100 rounded-lg p-3 bg-white shadow-sm">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="font-medium text-gray-900 whitespace-nowrap flex items-center">
+                              <Pill className="inline-block mr-1" /> {detail.medicine?.name || 'Thuốc không xác định'}
+                            </span>
+                            <span className="text-sm text-gray-600">x{detail.quantity}</span>
+                          </div>
+                          <p className="text-sm text-gray-600 italic">{formatCurrency(detail.medicine?.price, 'VND')} / {detail.medicine?.unit}</p>
+                          <p className="text-sm text-gray-600 italic">{detail.dosage} ({detail.frequency})</p>
+                          <p className="text-sm font-semibold text-gray-800 mt-1 self-end">
+                            {formatCurrency(detail.amount, 'VND')}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
             </div>
 
             {/* Action Buttons */}

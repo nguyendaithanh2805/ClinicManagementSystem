@@ -43,7 +43,7 @@ const AppointmentPageForDoctor = () => {
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error('Lỗi khi kết nối đến máy chủ khi tải lịch hẹn cá nhân.');
+      toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi tải lịch hẹn cá nhân.');
       console.error('Lỗi khi lấy lịch hẹn cá nhân:', error);
     }
   };
@@ -168,7 +168,7 @@ const AppointmentPageForDoctor = () => {
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Lỗi khi cập nhật lịch hẹn.');
+      toast.error(error.response.data.message || 'Lỗi khi cập nhật lịch hẹn.');
       console.error('Lỗi khi cập nhật lịch hẹn:', error);
     }
   };

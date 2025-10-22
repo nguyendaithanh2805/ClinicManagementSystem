@@ -28,10 +28,15 @@ namespace Infrastructure.Persistence
             => _dbSet.Remove(entity);
 
         public async Task<IEnumerable<T>> GetAllAsync()
-            => await _dbSet.ToListAsync();
+            => await _dbSet
+            .OrderByDescending(e => EF.Property<int>(e, "Id"))
+            .ToListAsync();
 
         public async Task<IEnumerable<T>> GetAllAsync(Expression<Func<T, bool>> expression)
-            => await _dbSet.Where(expression).ToListAsync();
+            => await _dbSet
+            .Where(expression)
+            .OrderByDescending(e => EF.Property<int>(e, "Id"))
+            .ToListAsync();
 
         public async Task<T> GetAsync(Expression<Func<T, bool>> expression)
             => await _dbSet.FirstOrDefaultAsync(expression);

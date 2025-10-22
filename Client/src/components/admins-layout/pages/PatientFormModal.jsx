@@ -93,7 +93,7 @@ const PatientFormModal = ({
         toast.error(response.data.message);
       }
     } catch (error) {
-      console.error("Lỗi khi lưu bệnh nhân:", error);
+      console.error(error.response.data.message || "Lỗi khi lưu bệnh nhân:", error);
       toast.error(error.response?.data?.message || "Không thể kết nối server");
     } finally {
       setLoading(false);

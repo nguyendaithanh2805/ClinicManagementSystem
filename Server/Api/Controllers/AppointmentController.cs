@@ -119,6 +119,10 @@ namespace Api.Controllers
                 // Các lỗi DbUpdate khác
                 return BadRequest(new ApiResponse<string>(false, "Lỗi cơ sở dữ liệu: " + ex.Message, null));
             }
+            catch (ErrorException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
             catch (NotFoundException ex)
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));

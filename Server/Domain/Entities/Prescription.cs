@@ -11,8 +11,6 @@ public partial class Prescription
 
     public DateTime PrescriptionDate { get; set; }
 
-    public virtual Invoice? Invoice { get; set; }
-
     public virtual PatientMedicalRecord PatientMedicalRecord { get; set; } = null!;
 
     public virtual ICollection<PrescriptionDetail> PrescriptionDetails { get; set; } = new List<PrescriptionDetail>();

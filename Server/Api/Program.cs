@@ -119,6 +119,7 @@ builder.Services.AddScoped<IInvoiceService, InvoiceService>();
 builder.Services.AddScoped<IAppointmentService, AppointmentService>();
 builder.Services.AddScoped<IMedicalRecordService, MedicalRecordService>();
 builder.Services.AddScoped<IPrescriptionDetailService, PrescriptionDetailService>();
+builder.Services.AddScoped<IService<PrescriptionDto>, PrescriptionService>();
 builder.Services.AddScoped<IService<MedicineDto>, MedicineService>();
 builder.Services.AddScoped<ISymptomService, SymptomService>();
 builder.Services.AddScoped<IFileStorageService, FileStorageService>();

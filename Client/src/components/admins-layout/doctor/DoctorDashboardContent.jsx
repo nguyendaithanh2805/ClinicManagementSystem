@@ -61,7 +61,7 @@ const DoctorDashboard = () => {
         toast.error(response.data.message || 'Không thể tải lịch hẹn hôm nay.');
       }
     } catch (error) {
-      toast.error('Lỗi khi tải lịch hẹn hôm nay.');
+      toast.error(error.response.data.message || 'Lỗi khi tải lịch hẹn hôm nay.');
       console.error('Lỗi khi lấy lịch hẹn hôm nay:', error);
     }
   };
@@ -79,7 +79,7 @@ const DoctorDashboard = () => {
         toast.error(response.data.message || 'Không thể tải hồ sơ bệnh án gần đây.');
       }
     } catch (error) {
-      toast.error('Lỗi khi tải hồ sơ bệnh án gần đây.');
+      toast.error(error.response.data.message || 'Lỗi khi tải hồ sơ bệnh án gần đây.');
       console.error('Lỗi khi lấy hồ sơ bệnh án gần đây:', error);
     }
   };
@@ -103,7 +103,7 @@ const DoctorDashboard = () => {
       }
 
     } catch (error) {
-      console.error('Lỗi khi lấy thống kê dashboard:', error);
+      console.error(error.response.data.message || 'Lỗi khi lấy thống kê dashboard:', error);
     }
   };
 

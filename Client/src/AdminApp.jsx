@@ -21,7 +21,7 @@ import { setupAxiosInterceptors } from "./components/admins-layout/contexts/Api"
 import React, { useEffect } from 'react';
 import LoadingSpinner from "./components/admins-layout/LoadingSpinner";
 import AppointmentPageForDoctor from './components/admins-layout/doctor/AppointmentPageForDoctor';
-import MedicalRecordPageForDoctor from './components/admins-layout/doctor/MedicalRecordPageForDoctor ';
+import MedicalRecordPageForDoctor from './components/admins-layout/doctor/MedicalRecord/MedicalRecordPageForDoctor ';
 import DoctorDashboardContent from './components/admins-layout/doctor/DoctorDashboardContent';
 import LabTechnicianPage from './components/admins-layout/lab/LabTechnicianPage';
 import AppointmentsForPatientPage from './components/admins-layout/patient/AppointmentsForPatientPage';

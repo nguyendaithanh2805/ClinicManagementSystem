@@ -55,7 +55,7 @@ namespace Application.Services
                 await _accountService.GetByUsername(dto.Username!);
                 var account = new Account
                 {
-                    Username = dto.Username!,
+                    Username = "Bệnh nhân chưa có tên",
                     Password = _passwordHasher.HashPassword(dto, dto.Password),
                     RoleId = 2,
                     PhoneNumber = dto.PhoneNumber,

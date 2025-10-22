@@ -43,7 +43,7 @@ const PatientsPage = () => {
         toast.error(response.data.message);
       }
     } catch (error) {
-      console.error("Lỗi khi fetch patients:", error.message);
+      console.error(error.response.data.message || "Lỗi khi fetch patients:", error.message);
       toast.error("Lỗi kết nối server khi tải bệnh nhân.");
     } finally {
       setLoading(false);

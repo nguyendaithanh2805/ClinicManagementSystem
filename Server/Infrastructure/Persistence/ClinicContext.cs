@@ -80,19 +80,14 @@ public partial class ClinicContext : DbContext
         {
             entity.ToTable("Invoice");
 
-            entity.HasIndex(e => e.AppointmentId, "UQ__Invoice__8ECDFCC31E0AE998").IsUnique();
 
             entity.Property(e => e.PaymentDate).HasColumnType("datetime");
             entity.Property(e => e.TotalAmount).HasColumnType("decimal(15, 0)");
 
-            entity.HasOne(d => d.Appointment).WithOne(p => p.Invoice)
-                .HasForeignKey<Invoice>(d => d.AppointmentId)
+            entity.HasOne(d => d.PatientMedicalRecord).WithOne(p => p.Invoice)
+                .HasForeignKey<Invoice>(d => d.PatientMedicalRecordId)
                 .OnDelete(DeleteBehavior.Cascade)
-                .HasConstraintName("FK_Invoice_Appoinment");
-
-            entity.HasOne(d => d.Prescription).WithOne(p => p.Invoice)
-                .HasForeignKey<Invoice>(d => d.PrescriptionId)
-                .HasConstraintName("FK_Invoice_Prescription");
+                .HasConstraintName("FK_Invoice_PatientMedicalRecord");
         });
 
         modelBuilder.Entity<MedicalService>(entity =>
@@ -152,6 +147,11 @@ public partial class ClinicContext : DbContext
                 .HasForeignKey(d => d.StaffId)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_PatientMedicalRecord_Staff");
+
+            entity.HasOne(d => d.Appointment).WithOne(p => p.PatientMedicalRecord)
+                .HasForeignKey<PatientMedicalRecord>(d => d.AppointmentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_PatientMedicalRecord_Appointment");
         });
 
         modelBuilder.Entity<Prescription>(entity =>

@@ -24,6 +24,6 @@ namespace Application.DTOs
         public string? Address { get; set; }
         public string? Email { get; set; }
         public ICollection<AppointmentWithPatientDto>? Appointments { get; set; }
-        public AccountDto? Account { get; set; }
+        public virtual AccountDto? Account { get; set; }
     }
 }

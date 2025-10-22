@@ -88,6 +88,25 @@ namespace Api.Controllers
             }
         }
 
+        [HttpPut("update-status/{medicalRecordId:int}")]
+        [Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> UpdateStatus([FromRoute] int medicalRecordId)
+        {
+            try
+            {
+                await _medicalRecordService.UpdateStatus(medicalRecordId);
+                return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Cập nhật trạng thái thành công", null));
+            }
+            catch (NotFoundException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+        }
+
         //[HttpPost]
         //[Authorize(Roles = "Doctor")]
         //public async Task<IActionResult> Add([FromBody] PatientMedicalRecordDto dto)

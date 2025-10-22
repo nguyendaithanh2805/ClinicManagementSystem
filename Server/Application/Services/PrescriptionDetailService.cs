@@ -9,6 +9,7 @@ using Application.Interfaces;
 using AutoMapper;
 using Domain.Entities;
 using Domain.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace Application.Services
 {
@@ -38,19 +39,13 @@ namespace Application.Services
         }
 
         /// <summary>
-        /// Thêm chi tiết toa thuốc và cập nhật hóa đơn liên quan.
+        /// Thêm mới chi tiết đơn thuốc cho bệnh nhân.
         /// </summary>
-        /// /// <remarks>
-        /// Quy trình:
-        /// 1. Kiểm tra thuốc tồn tại.
-        /// 2. Tạo mới Prescription (toa thuốc).
-        /// 3. Lưu Prescription và lấy Id.
-        /// 4. Tính toán thành tiền (Amount = Quantity * Price).
-        /// 5. Thêm PrescriptionDetail.
-        /// 6. Truy vấn hóa đơn (Invoice) thông qua quan hệ Patient → Appointment → PatientMedicalRecord → Invoice.
-        /// 7. Cộng dồn TotalAmount của Invoice.
-        /// 8. Lưu thay đổi bằng UnitOfWork (Commit).
-        /// Nếu có lỗi sẽ rollback.
+        /// <remarks>
+        /// - Nếu hồ sơ bệnh án chưa có đơn thuốc, hoặc đơn thuốc cũ khác ngày hiện tại (tái khám) → tạo mới đơn thuốc.  
+        /// - Nếu đã có đơn thuốc trong cùng ngày → chỉ thêm chi tiết đơn thuốc mới và cập nhật lại thời gian kê đơn.  
+        /// - Tự động tính toán tổng tiền của chi tiết đơn  
+        /// - Không cho phép thêm nếu lịch hẹn (hồ sơ bệnh án) đã hoàn thành.
         /// </remarks>
         public async Task<PrescriptionDetailDto> AddAsync(PrescriptionDetailDto dto)
         {
@@ -58,44 +53,48 @@ namespace Application.Services
             if (medicine is null)
                 throw new NotFoundException($"Không tìm thấy thuốc với ID {dto.MedicineId}");
 
+            var medicalRecord = await _patientMedicalRecordRepository.GetByIdAsync((int)dto.PatientMedicalRecordId!);
+            if (medicalRecord is not null)
+                if (medicalRecord.Status == true)
+                    throw new AlreadyExistsException("Lịch hẹn đã hoàn thành không thể thao tác");
+
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById("SE Asia Standard Time");
-                var prescription = new Prescription
-                {
-                    PrescriptionDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone),
-                    PatientMedicalRecordId = (int)dto.PatientMedicalRecordId!
-                };
-                await _prescriptionRepository.AddAsync(prescription);
-                await _unitOfWork.SaveChangeAsync();
+                // Tìm xem hồ sơ bệnh án ngày hôm nay của bệnh nhân đã có đơn thuốc nào hay chưa,
+                // Nếu chưa có thì tạo mới
+                // Nếu đã có thì thôi, chỉ tạo chi tiết đơn thuốc và update lại tgian tạo đơn
+                var todayPrescription = await _prescriptionRepository.Query()
+                    .FirstOrDefaultAsync(p => 
+                        p.PatientMedicalRecordId == dto.PatientMedicalRecordId &&
+                        p.PrescriptionDate.Date == DateTime.UtcNow.Date);
 
-                dto.PrescriptionId = prescription.Id;
+                if (todayPrescription is null)
+                {
+                    todayPrescription = new Prescription
+                    {
+                        PrescriptionDate = DateTime.UtcNow,
+                        PatientMedicalRecordId = (int)dto.PatientMedicalRecordId!
+                    };
+                    await _prescriptionRepository.AddAsync(todayPrescription);
+                    await _unitOfWork.SaveChangeAsync();
+                } else
+                {
+                    var prescriptionDetail = await _prescriptionDetailRepository.GetAsync(pd => 
+                        pd.MedicineId == dto.MedicineId 
+                        && pd.PrescriptionId == todayPrescription.Id);
+                    if (prescriptionDetail is not null)
+                        throw new AlreadyExistsException($"Thuốc {medicine.Name} đã được kê đơn, vui lòng xóa đơn đã kê.");
+
+                    todayPrescription.PrescriptionDate = DateTime.UtcNow;
+                    _prescriptionRepository.Update(todayPrescription);
+                }
+
+                // Thêm chi tiết đơn thuốc với prescriptionId hiện tại (1-N)
+                dto.PrescriptionId = todayPrescription.Id;
                 dto.Amount = dto.Quantity * medicine.Price;
                 await _prescriptionDetailRepository.AddAsync(_mapper.Map<PrescriptionDetail>(dto));
-
-                // Lấy invoice tương ứng với Prescription hiện tại:
-                // - Join từ Patient → Appointment → PatientMedicalRecord → Invoice
-                // - Chỉ lấy các Appointment đã Confirmed
-                // - Ràng buộc đúng PatientMedicalRecord của Prescription
-                // - Dùng FirstOrDefault() để lấy 1 hóa đơn
-                /*SELECT i.Id FROM Patient p
-                INNER JOIN Appointment a ON p.Id = a.PatientId
-                INNER JOIN PatientMedicalRecord pmr ON p.Id = pmr.PatientId
-                INNER JOIN Invoice i ON a.Id = i.AppointmentId
-                WHERE a.Status = 1 AND pmr.Id = 1*/
-                var invoice = (
-                    from p in _patientRepository.Query()
-                    join a in _appointmentRepository.Query() on p.Id equals a.PatientId
-                    join pmr in _patientMedicalRecordRepository.Query() on p.Id equals pmr.PatientId
-                    join i in _invoiceRepository.Query() on a.Id equals i.AppointmentId
-                    where a.Status == AppointmentStatus.Confirmed && pmr.Id == prescription.PatientMedicalRecordId
-                    select i
-                    ).Distinct().FirstOrDefault();
-
-                invoice!.TotalAmount += dto.Amount;
-                _invoiceRepository.Update(invoice!);
                 
                 await _unitOfWork.CommitAsync();
             } catch
@@ -119,10 +118,10 @@ namespace Application.Services
                 await _unitOfWork.BeginTransactionAsync();
                 _prescriptionDetailRepository.Delete(prescriptionDetail);
 
-                var prescription = await _prescriptionRepository.GetByIdAsync(prescriptionId);
-                if (prescriptionDetail is null)
-                    throw new NotFoundException($"Không tìm thấy đơn thuốc với ID {prescriptionId}");
-                _prescriptionRepository.Delete(prescription);
+                //var prescription = await _prescriptionRepository.GetByIdAsync(prescriptionId);
+                //if (prescriptionDetail is null)
+                //    throw new NotFoundException($"Không tìm thấy đơn thuốc với ID {prescriptionId}");
+                //_prescriptionRepository.Delete(prescription);
 
                 await _unitOfWork.CommitAsync();
             }
@@ -148,9 +147,11 @@ namespace Application.Services
             throw new NotImplementedException();
         }
 
-        public async Task<PrescriptionDetailDto> Update(PrescriptionDetailDto dto)
+        public async Task<PrescriptionDetailDto> Update(PrescriptionDetailDto dto, int medicineId)
         {
-            var prescriptionDetail = await _prescriptionDetailRepository.GetAsync(p => p.PrescriptionId == dto.PrescriptionId && p.MedicineId == dto.MedicineId);
+            var prescriptionDetail = await _prescriptionDetailRepository.GetAsync(p => p.PrescriptionId == dto.PrescriptionId && p.MedicineId == medicineId);
+            if (prescriptionDetail is null)
+                throw new NotFoundException($"Không tìm thấy chi tiết đơn thuốc với PrescriptionId {dto.PrescriptionId} và MedicineId {medicineId}");
             var presciption = await _prescriptionRepository.GetByIdAsync(dto.PrescriptionId);
             var medicine = await _medicineRepository.GetByIdAsync(dto.MedicineId);
             try
@@ -158,6 +159,7 @@ namespace Application.Services
                 presciption.PrescriptionDate = DateTime.UtcNow;
                 _prescriptionRepository.Update(presciption);
 
+                prescriptionDetail.MedicineId = dto.MedicineId;
                 prescriptionDetail.Quantity = dto.Quantity;
                 prescriptionDetail.Dosage = dto.Dosage;
                 prescriptionDetail.Frequency = dto.Frequency;
@@ -172,6 +174,11 @@ namespace Application.Services
                 throw;
             }
             return dto;
+        }
+
+        public Task<PrescriptionDetailDto> Update(PrescriptionDetailDto dto)
+        {
+            throw new NotImplementedException();
         }
     }
 }

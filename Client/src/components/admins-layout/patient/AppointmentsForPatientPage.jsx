@@ -24,7 +24,7 @@ const AppointmentsForPatientPage = () => {
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error('Lỗi khi kết nối đến máy chủ khi tải lịch hẹn.');
+      toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi tải lịch hẹn.');
       console.error('Lỗi khi lấy lịch hẹn:', error);
     }
   };
@@ -91,7 +91,7 @@ const AppointmentsForPatientPage = () => {
         toast.error('Không thể xóa lịch hẹn.');
       }
     } catch (error) {
-      toast.error('Lỗi khi kết nối đến máy chủ để hủy lịch hẹn.');
+      toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ để hủy lịch hẹn.');
       console.error('Lỗi khi hủy lịch hẹn:', error);
     }
   };

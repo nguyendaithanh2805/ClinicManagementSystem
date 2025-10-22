@@ -13,7 +13,8 @@ namespace Application.Mappings
     {
         public MapperProfile()
         {
-            CreateMap<Account, AccountDto>().ReverseMap();
+            CreateMap<Account, AccountDto>();
+            CreateMap<AccountDto, Account>();
             CreateMap<Appointment, AppointmentDto>().ReverseMap();
             CreateMap<Appointment, AppointmentWithPatientDto>();
 
