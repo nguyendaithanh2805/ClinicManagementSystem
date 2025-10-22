@@ -22,6 +22,7 @@ namespace Application.DTOs
 
         [Required(ErrorMessage = "MedicalServiceId là bắt buộc.")]
         public int MedicalServiceId { get; set; }
+        public int? PatientMedicalRecordId { get; set; }
 
         [Required(ErrorMessage = "Ngày hẹn là bắt buộc.")]
         [DataType(DataType.Date, ErrorMessage = "Ngày hẹn phải là ngày hợp lệ.")]
@@ -33,6 +34,7 @@ namespace Application.DTOs
 
         [Required(ErrorMessage = "Trạng thái là bắt buộc.")]
         public AppointmentStatus Status { get; set; }
+        public bool IsRevisit { get; set; }
         public string? FullName { get; set; }
         public string? phoneNumber { get; set; }
         public PatientDto? Patient { get; set; }

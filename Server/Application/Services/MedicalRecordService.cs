@@ -21,28 +21,18 @@ namespace Application.Services
         private readonly IMapper _mapper;
         private readonly IAccountHelper _accountHelper;
         private readonly IRepository<Staff> _staffRepository;
-        private readonly IRepository<Medicine> _medicineRepository;
-        private readonly IRepository<Patient> _patientRepository;
-        private readonly IRepository<Appointment> _appointmentRepository;
-        private readonly IRepository<Invoice> _invoiceRepository;
-        private readonly IRepository<Prescription> _prescriptionRepository;
-        private readonly IRepository<PrescriptionDetail> _prescriptionDetailRepository;
         private readonly IInvoiceService _invoiceService;
+        private readonly IRepository<Appointment> _appointmentRepository;
 
-        public MedicalRecordService(IRepository<PatientMedicalRecord> patientMedicalRecordRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Staff> staffRepository, IRepository<Medicine> medicineRepository, IRepository<Patient> patientRepository, IRepository<Appointment> appointmentRepository, IRepository<Invoice> invoiceRepository, IRepository<Prescription> prescriptionRepository, IRepository<PrescriptionDetail> prescriptionDetailRepository, IInvoiceService invoiceService)
+        public MedicalRecordService(IRepository<PatientMedicalRecord> patientMedicalRecordRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Staff> staffRepository, IInvoiceService invoiceService, IRepository<Appointment> appointmentRepository)
         {
             _patientMedicalRecordRepository = patientMedicalRecordRepository;
             _unitOfWork = unitOfWork;
             _mapper = mapper;
             _accountHelper = accountHelper;
             _staffRepository = staffRepository;
-            _medicineRepository = medicineRepository;
-            _patientRepository = patientRepository;
-            _appointmentRepository = appointmentRepository;
-            _invoiceRepository = invoiceRepository;
-            _prescriptionRepository = prescriptionRepository;
-            _prescriptionDetailRepository = prescriptionDetailRepository;
             _invoiceService = invoiceService;
+            _appointmentRepository = appointmentRepository;
         }
 
         public async Task<PatientMedicalRecordDto> AddAsync(PatientMedicalRecordDto dto)
@@ -58,20 +48,23 @@ namespace Application.Services
             throw new NotImplementedException();
         }
 
-        public async Task<IEnumerable<PatientMedicalRecordDto>> GetAllAsync()
+        public async Task<IEnumerable<PatientMedicalRecordDto>> GetAllForLabTechnicianAsync()
         {
             var medicalRecord = await _patientMedicalRecordRepository.Query()
-                .Include(p => p.Patient)
-                    .ThenInclude(pt => pt.Appointments)
+                .Include(pmr => pmr.Appointments)
                         .ThenInclude(a => a.MedicalService)
-                .Include(p => p.Prescriptions)
+                .Include(pmr => pmr.Prescriptions)
                     .ThenInclude(pr => pr.PrescriptionDetails)
                         .ThenInclude(pd => pd.Medicine)
-                .Include(p => p.Staff)
-                .Include(p => p.Symptoms)
-                .Include(p => p.TestResults)
-                    .ThenInclude(t => t.Staff)
-                .Where(p => p.RequiresTest == true)
+                .Include(pmr => pmr.Staff)
+                    .ThenInclude(s => s.Account)
+                .Include(pmr => pmr.Patient)
+                    .ThenInclude(s => s.Account)
+                .Include(pmr => pmr.Symptoms)
+                .Include(pmr => pmr.TestResults)
+                    .ThenInclude(t => t.Staff) // Nhân viên xét nghiệm
+                        .ThenInclude(s => s.Account)
+                .Where(pmr => pmr.RequiresTest == true)
                 .OrderByDescending(pmr => pmr.Id)
                 .ToListAsync();
             return _mapper.Map<IEnumerable<PatientMedicalRecordDto>>(medicalRecord);
@@ -83,17 +76,18 @@ namespace Application.Services
             var staff = await _staffRepository.GetAsync(s => s.AccountId == accountId);
 
             var medicalRecord = await _patientMedicalRecordRepository.Query()
-                .Include(p => p.Patient)
-                    .ThenInclude(pt => pt.Appointments)
+               .Include(pmr => pmr.Appointments)
                         .ThenInclude(a => a.MedicalService)
-                .Include(p => p.Prescriptions)
+                .Include(pmr => pmr.Prescriptions)
                     .ThenInclude(pr => pr.PrescriptionDetails)
                         .ThenInclude(pd => pd.Medicine)
-                .Include(p => p.Staff)
+                .Include(pmr => pmr.Staff)
                     .ThenInclude(s => s.Account)
-                .Include(p => p.Symptoms)
-                .Include(p => p.TestResults)
-                    .ThenInclude(t => t.Staff)
+                .Include(pmr => pmr.Patient)
+                    .ThenInclude(p => p.Account)
+                .Include(pmr => pmr.Symptoms)
+                .Include(pmr => pmr.TestResults)
+                    .ThenInclude(t => t.Staff) // Nhân viên xét nghiệm
                         .ThenInclude(s => s.Account)
                 .Where(p => p.StaffId == staff.Id)
                 .ToListAsync();
@@ -124,7 +118,7 @@ namespace Application.Services
         /// <summary>
         /// Cập nhật trạng thái hoàn thành cho hồ sơ bệnh án và cập nhật tổng tiền thuốc vào hóa đơn tương ứng.
         /// </summary>
-        public async Task UpdateStatus(int medicalRecordId)
+        public async Task ConfirmCompleted(int medicalRecordId)
         {
             try
             {
@@ -133,6 +127,11 @@ namespace Application.Services
                 var medicalRecord = await _patientMedicalRecordRepository.GetByIdAsync(medicalRecordId);
                 if (medicalRecord is null)
                     throw new NotFoundException($"Không tìm thấy Hồ sơ Bệnh án với ID {medicalRecordId}");
+
+                // Chưa nhập thông tin ở tab tổng quan nên ko callback ở fe đc
+                var appointment = await _appointmentRepository.GetAsync(a => a.PatientMedicalRecordId == medicalRecordId);
+                if (appointment.Status != AppointmentStatus.InProgress)
+                    throw new Exception("Vui lòng nhập thông tin khám bệnh cho trang tổng quan");
 
                 medicalRecord.Status = true;
                 _patientMedicalRecordRepository.Update(medicalRecord);
@@ -209,6 +208,71 @@ namespace Application.Services
                 await _unitOfWork.RollbackAsync();
                 throw;
             }
+        }
+
+        // Xác nhận tái khám, lúc này lịch hẹn chuyển về trạng thái đã xác nhận và tiếp tục cho đến khi BS xác nhận hoàn thành thì thôi
+        public async Task ConfirmIsRevisit(int medicalRecordId, ConfirmIsRevisitAppointment confirmIsRevisitAppointment)
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var medicalRecord = await _patientMedicalRecordRepository.GetByIdAsync(medicalRecordId);
+                if (medicalRecord is null)
+                    throw new NotFoundException($"Không tìm thấy Hồ sơ Bệnh án với ID {medicalRecordId}");
+
+                var appointmentCheck = await _appointmentRepository.GetAsync(a => a.PatientMedicalRecordId == medicalRecordId && a.IsRevisit == true);
+                if (appointmentCheck is not null)
+                    throw new NotFoundException($"Bệnh nhân đã có lịch tái khám với hồ sơ bệnh án này, vui lòng tiến hành khám bệnh");
+
+                // Tìm lịch hẹn của bệnh nhân và chuyển nó thành trạng thái tái khám
+                var appointment = await _appointmentRepository.GetAsync(a => a.PatientMedicalRecordId == medicalRecordId);
+                if (appointment is null)
+                    throw new NotFoundException($"Không tìm thấy lịch hẹn với ID {medicalRecordId}");
+
+                appointment.IsRevisit = true;
+                appointment.Status = AppointmentStatus.Confirmed;
+                appointment.AppointmentDate = confirmIsRevisitAppointment.AppointmentDate;
+                appointment.AppointmentTime = confirmIsRevisitAppointment.AppointmentTime;
+                _appointmentRepository.Update(appointment);
+
+                // Tạo hóa đơn
+                var invoiceDto = new InvoiceDto
+                {
+                    PatientMedicalRecordId = medicalRecordId,
+                };
+                await _invoiceService.AddAsync(invoiceDto);
+
+                await _unitOfWork.CommitAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
+        }
+
+        public Task<IEnumerable<PatientMedicalRecordDto>> GetAllAsync()
+        {
+            throw new NotImplementedException();
+        }
+
+        // Khi lịch hẹn chuyển sang trạng thái đang khám thì nó cũng phải đưa tái khám về false để nếu muốn tái khám nữa thì mới được
+        public async Task ConfirmInProgress(int medicalRecordId)
+        {
+            var medicalRecord = await _patientMedicalRecordRepository.GetByIdAsync(medicalRecordId);
+            if (medicalRecord is null)
+                throw new NotFoundException($"Không tìm thấy Hồ sơ Bệnh án với ID {medicalRecordId}");
+
+            // Tìm lịch hẹn của bệnh nhân và chuyển nó thành trạng thái đang khám
+            var appointment = await _appointmentRepository.GetAsync(a => a.PatientMedicalRecordId == medicalRecordId);
+            if (appointment is null)
+                throw new NotFoundException($"Không tìm thấy lịch hẹn với ID {medicalRecordId}");
+
+            appointment.IsRevisit = false;
+            appointment.Status = AppointmentStatus.InProgress;
+            _appointmentRepository.Update(appointment);
+            await _unitOfWork.SaveChangeAsync();
         }
     }
 }

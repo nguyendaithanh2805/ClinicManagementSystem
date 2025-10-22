@@ -10,7 +10,10 @@ namespace Domain.Enums
     {
         Pending = 0,      // Chờ xác nhận
         Confirmed = 1,    // Đã xác nhận
-        Cancelled = 2,    // Đã hủy
-        Completed = 3     // Đã hoàn thành
+        CheckedIn = 2,    // Bệnh nhân đã đến
+        InProgress = 3,   // Đang khám
+        Completed = 4,    // Đã hoàn tất (ko thể dùng lại HSBA)
+        Cancelled = 5,    // Đã hủy
+        NoShow = 6        // Không đến
     }
 }

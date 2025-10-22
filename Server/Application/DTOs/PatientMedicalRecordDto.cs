@@ -15,7 +15,6 @@ namespace Application.DTOs
         public int PatientId { get; set; }
 
         public int StaffId { get; set; }
-        public int AppointmentId { get; set; }
 
         [StringLength(500, ErrorMessage = "Chẩn đoán không được vượt quá 500 ký tự.")]
         public string? Diagnosis { get; set; }
@@ -36,7 +35,7 @@ namespace Application.DTOs
 
         public virtual ICollection<TestResultDto>? TestResults { get; set; }
         //public virtual InvoiceDto? InvoiceDto { get; set; }
-        public virtual AppointmentDto? Appointment { get; set; }
+        public virtual ICollection<AppointmentDto>? Appointments { get; set; }
 
     }
 }

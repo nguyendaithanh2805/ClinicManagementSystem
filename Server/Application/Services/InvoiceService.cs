@@ -53,39 +53,42 @@ namespace Application.Services
             where pmr.Id = 1*/
             var medicalService = await (
                 from pmr in _medicalRecordRepository.Query()
-                join a in _appointmentRepository.Query() on pmr.AppointmentId equals a.Id
+                join a in _appointmentRepository.Query() on pmr.Id equals a.PatientMedicalRecordId
                 join m in _medicalServiceRepository.Query() on a.MedicalServiceId equals m.Id
                 where(pmr.Id == dto.PatientMedicalRecordId)
                 select m
-                )
-                .FirstOrDefaultAsync();
+                ).FirstOrDefaultAsync();
 
-            // Lấy chi tiết đơn thuốc để tính giá tiền
+            // Lấy chi tiết đơn thuốc chưa thanh toán để tính giá tiền
             /*
-                select pd.* from PrescriptionDetail pd
-                INNER JOIN Prescription p ON pd.PrescriptionId = p.Id
-                INNER JOIN PatientMedicalRecord pmr ON p.PatientMedicalRecordId = pmr.Id
-                where pmr.Id = 1
+             select DISTINCT i.* from Invoice i
+	        INNER JOIN PatientMedicalRecord pmr ON i.PatientMedicalRecordId = pmr.Id
+	        INNER JOIN Prescription p ON pmr.Id = p.PatientMedicalRecordId
+	        INNER JOIN PrescriptionDetail pd ON p.Id = pd.PrescriptionId
+	        where pmr.Id = 3 AND i.Status = 0
              */
-
             var prescriptionDetails = await (
-                from pd in _prescriptionDetailRepository.Query()
-                join p in _prescriptionRepository.Query() on pd.PrescriptionId equals p.Id
-                join pmr in _medicalRecordRepository.Query() on p.PatientMedicalRecordId equals pmr.Id
-                where pmr.Id == dto.PatientMedicalRecordId
+                from i in _invoiceRepository.Query()
+                join pmr in _medicalRecordRepository.Query() on i.PatientMedicalRecordId equals pmr.Id
+                join p in _prescriptionRepository.Query() on pmr.Id equals p.PatientMedicalRecordId
+                join pd in _prescriptionDetailRepository.Query() on p.Id equals pd.PrescriptionId
+                where pmr.Id == dto.PatientMedicalRecordId && i.Status == false
                 select pd
-            ).ToListAsync();
+            ).Distinct()
+            .ToListAsync();
 
+            // Tạo hóa đơn
             dto.Status = false; // Chưa thanh toán
             dto.PaymentDate = DateTime.UtcNow;
 
             if (medicalService is not null)
                 dto.TotalAmount = medicalService.Cost;
+
             if (prescriptionDetails is not null)
-                    dto.TotalAmount += prescriptionDetails.Sum(pd => pd.Amount);
+                dto.TotalAmount += prescriptionDetails.Sum(pd => pd.Amount);
 
             await _invoiceRepository.AddAsync(
-                _mapper.Map<Invoice>(dto));
+                _mapper.Map<Invoice>(dto));  
             return dto;
         }
 
@@ -102,7 +105,7 @@ namespace Application.Services
                     .ThenInclude(pmr => pmr.Patient)
                         .ThenInclude(p => p.Account)
                 .Include(i => i.PatientMedicalRecord)
-                    .ThenInclude(pmr => pmr.Appointment)
+                    .ThenInclude(pmr => pmr.Appointments)
                         .ThenInclude(a => a.MedicalService)
                             .ThenInclude(m => m.Specialty)
                 .Include(i => i.PatientMedicalRecord)
@@ -120,7 +123,7 @@ namespace Application.Services
 
             return _mapper.Map<IEnumerable<InvoiceDto>>(await _invoiceRepository.Query()
                 .Include(i => i.PatientMedicalRecord)
-                    .ThenInclude(pmr => pmr.Appointment)
+                    .ThenInclude(pmr => pmr.Appointments)
                         .ThenInclude(a => a.MedicalService)
                             .ThenInclude(m => m.Specialty)
                 .Include(i => i.PatientMedicalRecord)

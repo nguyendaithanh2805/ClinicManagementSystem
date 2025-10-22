@@ -22,11 +22,11 @@ namespace Api.Controllers
 
         [HttpGet]
         [Authorize(Roles = "Doctor, LabTechnician")]
-        public async Task<IActionResult> GetAll()
+        public async Task<IActionResult> GetAllForLabTechnicianAsync()
         {
             try
             {
-                return Ok(new ApiResponse<IEnumerable<PatientMedicalRecordDto>>(true, "Lấy dữ liệu thành công", await _medicalRecordService.GetAllAsync()));
+                return Ok(new ApiResponse<IEnumerable<PatientMedicalRecordDto>>(true, "Lấy dữ liệu thành công", await _medicalRecordService.GetAllForLabTechnicianAsync()));
             }
             catch (Exception ex)
             {
@@ -88,14 +88,52 @@ namespace Api.Controllers
             }
         }
 
-        [HttpPut("update-status/{medicalRecordId:int}")]
+        [HttpPut("confirm-completed/{medicalRecordId:int}")]
         [Authorize(Roles = "Doctor")]
-        public async Task<IActionResult> UpdateStatus([FromRoute] int medicalRecordId)
+        public async Task<IActionResult> ConfirmCompleted([FromRoute] int medicalRecordId)
         {
             try
             {
-                await _medicalRecordService.UpdateStatus(medicalRecordId);
-                return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Cập nhật trạng thái thành công", null));
+                await _medicalRecordService.ConfirmCompleted(medicalRecordId);
+                return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Xác nhận hoàn thành thành công", null));
+            }
+            catch (NotFoundException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+        }
+
+        [HttpPut("confirm-revisit/{medicalRecordId:int}")]
+        [Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> ConfirmRevist([FromRoute] int medicalRecordId, [FromBody] ConfirmIsRevisitAppointment revisitAppointment)
+        {
+            try
+            {
+                await _medicalRecordService.ConfirmIsRevisit(medicalRecordId, revisitAppointment);
+                return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Xác nhận tái khám thành công", null));
+            }
+            catch (NotFoundException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+        }
+
+        [HttpPut("confirm-inprogress/{medicalRecordId:int}")]
+        [Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> ConfirmInProgress([FromRoute] int medicalRecordId)
+        {
+            try
+            {
+                await _medicalRecordService.ConfirmInProgress(medicalRecordId);
+                return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Xác nhận đang khám", null));
             }
             catch (NotFoundException ex)
             {

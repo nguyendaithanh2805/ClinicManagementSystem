@@ -59,16 +59,17 @@ namespace Application.Services
 
                 dto.PatientId = patient.Id;
                 dto.Status = AppointmentStatus.Pending;
+                dto.IsRevisit = false; // Mặc định là không tái khám
                 await _appointmentRepository.AddAsync(
                     _mapper.Map<Appointment>(dto));
 
-                if (dto.FullName != null)
+                if (dto.FullName is not null)
                 {
                     patient.FullName = dto.FullName;
                     _patientRepository.Update(patient);
                 }
 
-                if (dto.phoneNumber != null)
+                if (dto.phoneNumber is not null)
                 {
                     var account = await _accountRepository.GetByIdAsync(accountId);
                     account.PhoneNumber = dto.phoneNumber;
@@ -168,6 +169,8 @@ namespace Application.Services
         public async Task<AppointmentDto> Update(AppointmentDto dto)
         {
             var appointment = await _appointmentRepository.GetByIdAsync(dto.Id);
+            if (appointment is null)
+                throw new ErrorException("Không tìm thấy lịch hẹn, không thể cập nhật");
 
             if (appointment.Status == AppointmentStatus.Pending 
                 && dto.Status == AppointmentStatus.Completed)
@@ -181,8 +184,6 @@ namespace Application.Services
                 && dto.StaffId != appointment.StaffId)
                 throw new ErrorException("Lịch hẹn này đã được xác nhận, vì vậy không thể thay đổi Bác sĩ khám");
 
-            if (appointment is null)
-                throw new ErrorException("Không tìm thấy lịch hẹn, không thể cập nhật");
 
             if (appointment.Status == AppointmentStatus.Completed)
                 throw new ErrorException("Lịch hẹn này đã hoàn thành, không thể thay đổi trạng thái");
@@ -203,26 +204,21 @@ namespace Application.Services
                 && dto.StaffId is null)
                 throw new ErrorException("Vui lòng phân công bác sĩ cho lịch hẹn này");
 
-            var medicalRecordCheckStatus = await _medicalRecordRepository.GetAsync(pmr => pmr.AppointmentId == appointment.Id);
-            if (dto.Status == AppointmentStatus.Completed && medicalRecordCheckStatus.Status == false)
-                throw new ErrorException("Bác sĩ chưa đánh dấu hoàn thành Hồ sơ bệnh án cho lịch hẹn này");
-
             try
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                /* Chỉ tạo Hồ sơ Bệnh án khi trạng thái cũ là 'Chờ xác nhận' và trạng thái mới là 'Đã xác nhận'
+                /* Chỉ tạo Hồ sơ Bệnh án khi trạng thái cũ là 'Đã xác nhận' và trạng thái mới là 'Bệnh nhân đã đến'
                  *
                  * Mục đích của việc này là để khi Update lại Bác sĩ nếu phân công nhầm nhưng lịch hẹn đã xác nhận rồi thì nó không tạo Hồ sơ Bệnh án nữa
                 */
-                if (appointment.Status == AppointmentStatus.Pending &&
-                    dto.Status == AppointmentStatus.Confirmed)
+                if (appointment.Status == AppointmentStatus.Confirmed &&
+                    dto.Status == AppointmentStatus.CheckedIn)
                 {
                     var medicalRecord = new PatientMedicalRecordDto
                     {
                         PatientId = dto.PatientId,
                         StaffId = (int)dto.StaffId!, // Nếu đã xác nhận thì chắc chắn có StaffId
-                        AppointmentId = appointment.Id,
                         RequiresTest = false
                     };
                     await _medicalRecordService.AddAsync(medicalRecord);
@@ -239,29 +235,29 @@ namespace Application.Services
                 //    await _invoiceService.AddAsync(invoice);
                 //}
 
-                // Lịch hẹn bị hủy -> Xóa hồ sơ bệnh án
+                //// Trong quá trình khám (Bệnh nhân đã đến), nếu lỡ xảy ra gì đó mà muốn hủy khám -> Xóa hồ sơ bệnh án
 
-                if (dto.Status == AppointmentStatus.Cancelled)
-                {
-                    var medicalRecord = await _medicalRecordRepository.GetAsync(i => i.AppointmentId == appointment.Id);
-                    if (medicalRecord != null)
-                        _medicalRecordRepository.Delete(medicalRecord);
-                }
+                //if (dto.Status == AppointmentStatus.Cancelled
+                //    && appointment.Status == AppointmentStatus.CheckedIn)
+                //{
+                //    var medicalRecord = await _medicalRecordRepository.GetByIdAsync((int)appointment.PatientMedicalRecordId!);
+                //    if (medicalRecord != null)
+                //        _medicalRecordRepository.Delete(medicalRecord);
+                //}
 
                 /*
-                 * Bác sĩ truyền từ form khác Bác sĩ đã được phân công của lịch (tức là phân công nhầm Bác sĩ cho lịch hẹn)
-                 * Nếu trạng thái lịch hẹn ko phải là 'Đã hủy' hoặc 'Đã hoàn thành' thì cho Update trạng thái.
-                 * 
+                    * Bác sĩ truyền từ FE khác với Bác sĩ đã được phân công của lịch (tức là repcep phân công nhầm Bác sĩ cho lịch hẹn)
+                    * Nếu trạng thái lịch hẹn ko phải là 'Đã hủy' hoặc 'Đã hoàn thành' thì cho Update trạng thái.
+                    * 
                 */
-                if (dto.StaffId != appointment.StaffId &&
-                dto.Status != AppointmentStatus.Cancelled &&
-                dto.Status != AppointmentStatus.Completed)
+                if (dto.Status != AppointmentStatus.Cancelled 
+                    || dto.Status != AppointmentStatus.Completed
+                    || dto.Status != AppointmentStatus.NoShow)
                 {
                     appointment.StaffId = dto.StaffId;
                     appointment.Status = dto.Status;
                     _appointmentRepository.Update(appointment);
                 }
-
                 await _unitOfWork.CommitAsync();
             }
             catch

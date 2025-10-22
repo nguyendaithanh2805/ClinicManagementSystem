@@ -39,7 +39,7 @@ namespace Application.Services
         {
             return _mapper.Map<IEnumerable<StaffDto>>(
                 await _staffRepository.Query()
-                .Where(s => s.SpecialtyId != null) // Chỉ lấy những nhân viên đã có chuyên khoa
+                .Where(s => s.SpecialtyId != null && s.Account.RoleId == 3) // Chỉ lấy những bác sĩ đã có chuyên khoa
                 .ToListAsync());
         }
 
