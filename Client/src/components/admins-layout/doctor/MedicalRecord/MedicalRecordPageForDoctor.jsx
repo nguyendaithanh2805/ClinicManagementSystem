@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Search } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Search, CalendarDays } from 'lucide-react'; // (MỚI) Thêm CalendarDays
 import { format, parseISO, isValid } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from "react-toastify";
@@ -9,6 +9,8 @@ import ConfirmationModal from "../../ConfirmationModal";
 import MedicalRecordCard from './MedicalRecordCard';
 import MedicalRecordDetailModal from './MedicalRecordDetailModal';
 import AddPrescriptionModal from './AddPrescriptionModal';
+import RevisitModal from './RevisitModal'; // (MỚI) Import modal tái khám
+import { useLocation, useNavigate } from 'react-router-dom';
 
 const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 const ITEMS_PER_PAGE = 5;
@@ -55,14 +57,33 @@ const MedicalRecordPageForDoctor = () => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmModalMessage, setConfirmModalMessage] = useState('');
   const [confirmModalAction, setConfirmModalAction] = useState(null);
+
+  // (MỚI) State cho modal tái khám
+  const [showRevisitModal, setShowRevisitModal] = useState(false);
+  const [recordToRevisit, setRecordToRevisit] = useState(null);
   // --- HẾT PHẦN STATE VÀ REFS ---
 
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  // --- TOÀN BỘ USEEFFECT ---
+  // --- (Các useEffect giữ nguyên) ---
   useEffect(() => {
     fetchMedicalRecords();
     fetchMedicines();
   }, []);
+
+  // useEffect này dùng để "nhận" ID từ trang Lịch Hẹn
+  useEffect(() => {
+    // Kiểm tra xem có state openRecordId được gửi đến không
+    if (location.state?.openRecordId) {
+      // Nếu có, set searchTerm bằng ID đó (chuyển sang String)
+      setSearchTerm(String(location.state.openRecordId));
+      
+      // Xóa state khỏi location để khi người dùng
+      // refresh trang, nó không tự động tìm kiếm lại ID đó.
+      navigate(location.pathname, { replace: true, state: {} });
+    }
+  }, [location, navigate]);
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -105,10 +126,17 @@ const MedicalRecordPageForDoctor = () => {
 
   useEffect(() => {
     if (searchTerm) {
-      const lowercasedSearchTerm = searchTerm.toLowerCase();
-      const results = medicalRecords.filter(record =>
-        record.patient?.fullName.toLowerCase().includes(lowercasedSearchTerm)
-      );
+      const lowercasedSearchTerm = searchTerm.toLowerCase().trim(); // Thêm .trim()
+      const results = medicalRecords.filter(record => {
+        // (CẬP NHẬT LOGIC)
+        // 1. Kiểm tra Tên Bệnh nhân
+        const nameMatches = record.patient?.fullName.toLowerCase().includes(lowercasedSearchTerm);
+        // 2. Kiểm tra ID Hồ sơ
+        const idMatches = String(record.id).includes(lowercasedSearchTerm);
+        
+        // Trả về true nếu 1 trong 2 khớp
+        return nameMatches || idMatches;
+      });
       setFilteredMedicalRecords(results);
     } else {
       setFilteredMedicalRecords(medicalRecords);
@@ -134,6 +162,33 @@ const MedicalRecordPageForDoctor = () => {
     }
   };
 
+  const getAppointmentStatusText = (status) => {
+    switch (status) {
+      case 0: return 'Chờ xác nhận';
+      case 1: return 'Đã xác nhận';
+      case 2: return 'Bệnh nhân đã đến';
+      case 3: return 'Đang khám';
+      case 4: return 'Đã hoàn thành';
+      case 5: return 'Đã hủy';
+      case 6: return 'Không đến';
+      default: return 'Không xác định';
+    }
+  };
+
+  const getAppointmentStatusColorClass = (status) => {
+    switch (status) {
+      case 0: return 'bg-yellow-100 text-yellow-700 border-yellow-200'; // Pending
+      case 1: return 'bg-green-100 text-green-700 border-green-200';   // Confirmed
+      case 2: return 'bg-cyan-100 text-cyan-700 border-cyan-200';     // CheckedIn
+      case 3: return 'bg-indigo-100 text-indigo-700 border-indigo-200'; // InProgress
+      case 4: return 'bg-blue-100 text-blue-700 border-blue-200';      // Completed
+      case 5: return 'bg-red-100 text-red-700 border-red-200';        // Cancelled
+      case 6: return 'bg-gray-100 text-gray-700 border-gray-200';      // NoShow
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+
   const openFullScreenImage = (imageUrl) => {
     setFullScreenImage(imageUrl);
   };
@@ -146,6 +201,7 @@ const MedicalRecordPageForDoctor = () => {
     try {
       const response = await api.get('/staff/medical-records/me');
       if (response.data.status) {
+        console.log(response.data.data)
         const sortedRecords = response.data.data.sort((a, b) => b.id - a.id);
         setMedicalRecords(sortedRecords);
         if (selectedRecord) {
@@ -173,6 +229,7 @@ const MedicalRecordPageForDoctor = () => {
     }
   };
 
+  // (Các hàm xử lý edit/update record giữ nguyên)
   const handleEditRecordClick = () => {
     setIsEditingRecord(true);
     setEditedRecord({ ...selectedRecord });
@@ -206,6 +263,7 @@ const MedicalRecordPageForDoctor = () => {
     }
   };
 
+  // (Các hàm xử lý prescription giữ nguyên)
   // --- Xử lý lưu nhiều chi tiết cùng lúc bằng cách gửi body là list cho backend tự xử ---
   const handleCreatePrescription = async (detailsList) => {
     if (detailsList.length === 0) {
@@ -238,7 +296,8 @@ const MedicalRecordPageForDoctor = () => {
     } catch (error) {
       toast.error(error.response.data.message || 'Có lỗi xảy ra khi lưu đơn thuốc. Vui lòng thử lại.');
       console.error("Lỗi khi tạo đơn thuốc:", error.response.data.message);
-      setShowAddPrescriptionModal(true); // Hiển thị lại modal nếu có lỗi
+      fetchMedicalRecords();
+      setShowAddPrescriptionModal(true);
     }
   };
 
@@ -318,6 +377,7 @@ const MedicalRecordPageForDoctor = () => {
     setShowConfirmModal(true);
   };
 
+  // (Các hàm xử lý search/select medicine giữ nguyên)
   const handleMedicineSearch = (e, context) => {
     const value = e.target.value;
     let setSearchTermFn = () => {};
@@ -371,6 +431,7 @@ const MedicalRecordPageForDoctor = () => {
     }
   };
 
+  // (Các hàm xử lý symptom giữ nguyên)
   const handleAddSymptom = async () => {
     if (!selectedRecord || !newSymptomName.trim()) {
       toast.warn('Vui lòng nhập tên triệu chứng.');
@@ -414,11 +475,12 @@ const MedicalRecordPageForDoctor = () => {
     setShowConfirmModal(true);
   };
 
+  // (Hàm handleMarkAsComplete giữ nguyên)
   const handleMarkAsComplete = async (id) => {
     setConfirmModalMessage('Bạn có chắc chắn xác nhận hoàn thành khám cho hồ sơ này không?');
     setConfirmModalAction(() => async () => {
     try {
-      const response = await api.put(`/staff/medical-records/update-status/${id}`);
+      const response = await api.put(`/staff/medical-records/confirm-completed/${id}`);
       if (response.data.status) {
         toast.success(response.data.message || 'Đã cập nhật trạng thái hồ sơ!');
         toast.success('Đã cập nhật tổng tiền thuốc vào hóa đơn');
@@ -435,6 +497,52 @@ const MedicalRecordPageForDoctor = () => {
     setShowConfirmModal(true);
   };
 
+  const handleConfirmInProgress = async (recordId) => {
+    try {
+      const response = await api.put(`/staff/medical-records/confirm-inprogress/${recordId}`);
+      if (response.data.status) {
+        toast.info(response.data.message || "Xác nhận đang khám");
+        fetchMedicalRecords();
+      }
+    } catch (error) {
+      toast.error(error.response.data.message || `Lỗi khi cập nhật trạng thái hồ sơ #${recordId}.`);
+      console.error("Lỗi khi gọi API confirm-inprogress:", error);
+    }
+  };
+  
+  // Hàm handleMarkAsRevisit
+  const handleMarkAsRevisit = (id) => {
+    const record = medicalRecords.find(r => r.id === id);
+    if (record) {
+      setRecordToRevisit(record);
+      setShowRevisitModal(true);
+    }
+  };
+
+  // Hàm xử lý submit từ RevisitModal
+  const handleConfirmRevisit = async (payload) => {
+    if (!recordToRevisit) return;
+
+    try {
+      const response = await api.put(`/staff/medical-records/confirm-revisit/${recordToRevisit.id}`, payload);
+      if (response.data.status) {
+        toast.success(response.data.message || 'Đã tạo lịch hẹn tái khám thành công!');
+        fetchMedicalRecords(); // Tải lại danh sách
+        setShowRevisitModal(false); // Đóng modal
+        setRecordToRevisit(null);
+
+        navigate('/staff/schedule', {
+          state: { filterStatus: '1' } // Truyền '1' cho "Đã xác nhận"
+        });
+      } else {
+        toast.error(response.data.message || 'Tạo lịch hẹn tái khám thất bại.');
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Lỗi khi kết nối đến máy chủ.');
+    }
+  };
+
+  // (Các hàm phân trang giữ nguyên)
   const totalPages = Math.ceil(filteredMedicalRecords.length / ITEMS_PER_PAGE);
   const paginatedRecords = filteredMedicalRecords.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
@@ -450,8 +558,9 @@ const MedicalRecordPageForDoctor = () => {
   // --- PHẦN RENDER---
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
+      {/* ... (Phần tiêu đề và ô tìm kiếm giữ nguyên) ... */}
       <div>
-        <h1 className="text-2xl font-bold text-gray-900">Quản lý Hồ sơ Bệnh án</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Quản lý Hồ sơ bệnh án</h1>
         <p className="text-gray-500">Xem và quản lý chi tiết hồ sơ bệnh án của bệnh nhân.</p>
       </div>
       
@@ -460,9 +569,9 @@ const MedicalRecordPageForDoctor = () => {
         <Search className="w-5 h-5 text-gray-500 mr-3" />
         <input
           type="text"
-          placeholder="Tìm kiếm hồ sơ bệnh án theo tên bệnh nhân..."
+          placeholder="Tìm theo Tên Bệnh nhân hoặc Mã Hồ sơ..."
           className="flex-1 border-none focus:ring-0 outline-none text-gray-800 placeholder-gray-500"
-          value={searchTerm}
+          value={searchTerm} 
           onChange={(e) => setSearchTerm(e.target.value)}
         />
         {searchTerm && (
@@ -479,7 +588,7 @@ const MedicalRecordPageForDoctor = () => {
       {/* Danh sách hồ sơ */}
       <div className="bg-white rounded-xl shadow-sm p-5 mt-6">
         <h3 className="text-xl font-semibold text-gray-800 mb-5">
-          Danh sách Hồ sơ Bệnh án
+          Danh sách Hồ sơ bệnh án
         </h3>
         <div className="space-y-4">
           {paginatedRecords.length > 0 ? (
@@ -494,8 +603,11 @@ const MedicalRecordPageForDoctor = () => {
                   setSelectedPrescriptionDetail(null);
                 }}
                 onMarkAsComplete={handleMarkAsComplete}
+                onMarkAsRevisit={handleMarkAsRevisit}
                 getStatusColorClass={getStatusColorClass}
                 getStatusText={getStatusText}
+                getAppointmentStatusText={getAppointmentStatusText}
+                getAppointmentStatusColorClass={getAppointmentStatusColorClass}
               />
             ))
           ) : (
@@ -505,7 +617,7 @@ const MedicalRecordPageForDoctor = () => {
           )}
         </div>
 
-        {/* Phân trang */}
+        {/* Phân trang (Giữ nguyên) */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center mt-6 space-x-2">
             <button
@@ -519,7 +631,7 @@ const MedicalRecordPageForDoctor = () => {
               <button
                 key={page}
                 onClick={() => handlePageChange(page)}
-                className={`px-4 py-2 rounded-full text-sm font-medium
+                className={`px-4 py-2 rounded-full sm:text-base font-medium
                   ${currentPage === page ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
                 `}
               >
@@ -537,13 +649,16 @@ const MedicalRecordPageForDoctor = () => {
         )}
       </div>
 
-      {/* Medical Record Detail Modal (NEW) */}
+      {/* (CẬP NHẬT) Medical Record Detail Modal (NEW) */}
       {selectedRecord && (
         <MedicalRecordDetailModal
           record={selectedRecord}
           isCompleted={selectedRecord.status === true}
           isEditing={isEditingRecord}
           editedRecord={editedRecord}
+          getAppointmentStatusText={getAppointmentStatusText}
+          getAppointmentStatusColorClass={getAppointmentStatusColorClass}
+          onInteractionStart={handleConfirmInProgress}
           onClose={() => {
             setSelectedRecord(null);
             setIsEditingRecord(false);
@@ -587,12 +702,16 @@ const MedicalRecordPageForDoctor = () => {
           viLocale={vi}
           formatDbUtcToVnTime={formatDbUtcToVnTime}
           imageUrl={IMAGE_URL}
+          // (MỚI) Truyền 2 hàm helper cho tab Lịch hẹn
+          getStatusText={getStatusText}
+          getStatusColorClass={getStatusColorClass}
         />
       )}
 
-      {/* Add Prescription Detail Modal (NEW) */}
-      {showAddPrescriptionModal && (
+      {/* Add Prescription Detail Modal (Giữ nguyên) */}
+      {showAddPrescriptionModal && selectedRecord && (
         <AddPrescriptionModal
+          onFirstInputChange={() => handleConfirmInProgress(selectedRecord.id)}
           onClose={() => setShowAddPrescriptionModal(false)}
           onSavePrescription={handleCreatePrescription}
           onClearForm={clearNewPrescriptionForm}
@@ -610,7 +729,7 @@ const MedicalRecordPageForDoctor = () => {
         />
       )}
 
-      {/* Full Screen Image Viewer */}
+      {/* Full Screen Image Viewer (Giữ nguyên) */}
       {fullScreenImage && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-[100] p-4">
           <div className="relative max-w-full max-h-full">
@@ -630,12 +749,23 @@ const MedicalRecordPageForDoctor = () => {
         </div>
       )}
 
-      {/* Confirmation Modal Render */}
+      {/* Confirmation Modal Render (Giữ nguyên) */}
       {showConfirmModal && (
         <ConfirmationModal
           message={confirmModalMessage}
           onConfirm={confirmModalAction}
           onCancel={() => setShowConfirmModal(false)}
+        />
+      )}
+
+      {/* (MỚI) Revisit Modal Render */}
+      {showRevisitModal && recordToRevisit && (
+        <RevisitModal
+          onClose={() => {
+            setShowRevisitModal(false);
+            setRecordToRevisit(null);
+          }}
+          onSubmit={handleConfirmRevisit}
         />
       )}
     </div>

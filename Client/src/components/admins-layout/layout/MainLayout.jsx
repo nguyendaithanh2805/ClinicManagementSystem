@@ -7,11 +7,11 @@ import ChatPanel from '../ChatPanel';
 
 const MainLayout = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-slate-50 to-blue-50 overflow-hidden">
       <Navbar />
-      <div className="flex">
+      <div className="flex flex-1 overflow-hidden">
         <Sidebar />
-        <main className="flex-1 p-6">
+        <main className="flex-1 p-6 overflow-y-auto">
           <Outlet />
         </main>
       </div>

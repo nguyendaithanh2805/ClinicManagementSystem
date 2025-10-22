@@ -42,7 +42,7 @@ const Sidebar = () => {
       case 'Doctor':
         return [
           { icon: Home, label: 'Trang chủ', path: '/staff/doctor-dashboard' },
-          { icon: Calendar, label: 'Lịch hẹn của tôi', path: '/staff/schedule' },
+          { icon: Calendar, label: 'Lịch hẹn', path: '/staff/schedule' },
           { icon: FileText, label: 'Hồ sơ Bệnh nhân', path: '/staff/patient-medical-records' },
           { icon: Brain, label: 'Chẩn đoán bệnh', path: '/staff/predict-diasease' }
         ];
