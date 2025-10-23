@@ -73,6 +73,7 @@ public partial class ClinicContext : DbContext
 
             entity.HasOne(d => d.PatientMedicalRecord).WithMany(p => p.Appointments)
                 .HasForeignKey(d => d.PatientMedicalRecordId)
+                .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_Appointment_PatientMedicalRecord");
 
             entity.HasOne(d => d.Staff).WithMany(p => p.Appointments)

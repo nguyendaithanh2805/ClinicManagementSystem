@@ -43,10 +43,10 @@ namespace Application.Services
 
         public async Task<InvoiceDto> AddAsync(InvoiceDto dto)
         {
-            var patientMedicalRecord = await _appointmentRepository.GetByIdAsync(dto.PatientMedicalRecordId);
+            var patientMedicalRecord = await _medicalRecordRepository.GetByIdAsync(dto.PatientMedicalRecordId);
             if (patientMedicalRecord is null)
                 throw new NotFoundException($"Hồ sơ bệnh án với ID {dto.Id} không tồn tại");
-
+            
             /*SELECT m.Cost FROM PatientMedicalRecord pmr
             INNER JOIN Appointment a ON pmr.AppointmentId = a.Id
             INNER JOIN MedicalService m ON a.MedicalServiceId = m.Id
@@ -59,27 +59,32 @@ namespace Application.Services
                 select m
                 ).FirstOrDefaultAsync();
 
-            // Lấy chi tiết đơn thuốc chưa thanh toán để tính giá tiền
+            // Lấy chi tiết đơn thuốc theo HSBA chưa hoàn thành A(Xem dưới A)
             /*
-             select DISTINCT i.* from Invoice i
-	        INNER JOIN PatientMedicalRecord pmr ON i.PatientMedicalRecordId = pmr.Id
-	        INNER JOIN Prescription p ON pmr.Id = p.PatientMedicalRecordId
-	        INNER JOIN PrescriptionDetail pd ON p.Id = pd.PrescriptionId
-	        where pmr.Id = 3 AND i.Status = 0
+             select DISTINCT pd.* from PrescriptionDetail pd
+            INNER JOIN Prescription p ON pd.PrescriptionId = p.Id
+            INNER JOIN PatientMedicalRecord pmr ON p.PatientMedicalRecordId = pmr.Id
+            where pmr.Id = 4 AND pmr.Status = 0
              */
             var prescriptionDetails = await (
-                from i in _invoiceRepository.Query()
-                join pmr in _medicalRecordRepository.Query() on i.PatientMedicalRecordId equals pmr.Id
-                join p in _prescriptionRepository.Query() on pmr.Id equals p.PatientMedicalRecordId
-                join pd in _prescriptionDetailRepository.Query() on p.Id equals pd.PrescriptionId
-                where pmr.Id == dto.PatientMedicalRecordId && i.Status == false
+                from pd in _prescriptionDetailRepository.Query()
+                join p in _prescriptionRepository.Query() on pd.PrescriptionId equals p.Id
+                join pmr in _medicalRecordRepository.Query() on p.PatientMedicalRecordId equals pmr.Id
+                where pmr.Id == dto.PatientMedicalRecordId && pmr.Status == false
                 select pd
             ).Distinct()
             .ToListAsync();
 
+            // A. Ở đây sẽ check xem bệnh nhân ở lần khám trước đã thanh toán chưa, chưa thanh toán thì không cho tái khám, bắt đi thanh toán
+            // Tìm xem có hóa đơn nào được tạo bởi hồ sơ bệnh án mà chưa thanh toán ko
+            var invoice = await _invoiceRepository.GetAsync(i => 
+                i.PatientMedicalRecordId == dto.PatientMedicalRecordId
+                && i.Status == false);
+            if (invoice is not null)
+                throw new ErrorException("Bệnh nhân chưa thanh toán hóa đơn cho lần khám này, vui lòng liên hệ Lễ tân để xác nhận thanh toán");
+            
             // Tạo hóa đơn
             dto.Status = false; // Chưa thanh toán
-            dto.PaymentDate = DateTime.UtcNow;
 
             if (medicalService is not null)
                 dto.TotalAmount = medicalService.Cost;
@@ -149,6 +154,18 @@ namespace Application.Services
             var invoice = await _invoiceRepository.GetByIdAsync(dto.Id);
             if (invoice is null)
                 throw new NotFoundException($"Hóa đơn với ID {dto.Id} không tồn tại");
+
+            //// Tìm hồ sơ bệnh án cần tái khám đang được invoice chuẩn bị thanh toán
+            //var pmr = await _medicalRecordRepository.GetAsync(pmr => 
+            //    pmr.Id == invoice.PatientMedicalRecordId
+            //    && dto.Status == true
+            //    && pmr.Appointment.IsRevisit == true);
+
+            //// Đánh dấu hoàn thành khám
+            //if (pmr is not null)
+            //{
+            //    pmr.Status = true;
+            //}
 
             invoice.Status = dto.Status;
             invoice.PaymentDate = DateTime.UtcNow;

@@ -1,9 +1,20 @@
 ﻿-- 1. CREATE DATABASE
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'ClinicDB')
-    CREATE DATABASE ClinicDB;
+USE master;
 GO
+
+IF DB_ID('ClinicDB') IS NOT NULL
+BEGIN
+    ALTER DATABASE ClinicDB SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+    DROP DATABASE ClinicDB;
+END;
+GO
+
+CREATE DATABASE ClinicDB;
+GO
+
 USE ClinicDB;
 GO
+
 
 -- 2. CREATE TABLE
 CREATE TABLE MedicalService (
@@ -56,11 +67,11 @@ CREATE TABLE Appointment (
 	PatientId				INT		NOT NULL,
 	StaffId					INT		NULL, ---- Vừa đặt lịch chưa cần bác sĩ
 	MedicalServiceId		INT		NOT NULL,
-	PatientMedicalRecordId	INT		NULL, ---- Bệnh nhân chưa đến thì không cần tạo hồ sơ bệnh án
+	PatientMedicalRecordId	INT		NULL,
 	AppointmentDate			Date	NOT NULL,
 	AppointmentTime			Time	NOT NULL,
 	Status					INT		NOT NULL,
-	IsRevisit				BIT		NOT NULL, -- 0: Không tái khám, 1: Cần tái khám
+	Revisit					INT		NOT NULL, -- 0: Không tái khám, 1: Cần tái khám, 2: Hoàn thành tái khám
 	CONSTRAINT PK_Appointment PRIMARY KEY (Id)
 );
 GO
@@ -317,162 +328,4 @@ VALUES
     (N'Amoxicillin 500mg', N'Kháng sinh', N'Kháng sinh nhóm Penicillin', N'Viên', N'Dị ứng Penicillin', N'Thuốc Gout (Allopurinol)', 2500.00), -- ID 2
     (N'Omeprazole 20mg', N'Dạ dày', N'Ức chế bơm proton, giảm tiết acid', N'Viên', N'Người mẫn cảm với Omeprazole', N'Diazepam, Warfarin', 3000.00), -- ID 3
     (N'Loratadine 10mg', N'Dị ứng', N'Kháng Histamin H1', N'Viên', N'Quá mẫn với thành phần', N'Cimetidin, Ketoconazol', 2000.00); -- ID 4
-GO
-
--------------------------------------------------
--- KỊCH BẢN MẪU (Giả sử hôm nay là 2025-10-22)
--------------------------------------------------
-
--- === KỊCH BẢN 1: ĐÃ HOÀN THÀNH (Status 4) ===
--- Bệnh nhân: Trần Văn An (Patient ID 1)
--- Bác sĩ: Nguyễn Thị Bình (Staff ID 1)
--- Ngày khám: 2025-10-10
--- Ghi chú: Có xét nghiệm, có đơn thuốc, đã thanh toán.
-
--- Hồ sơ bệnh án
-SET IDENTITY_INSERT PatientMedicalRecord ON;
-INSERT INTO PatientMedicalRecord (Id, PatientId, StaffId, Diagnosis, TreatmentMethod, RequiresTest, CreateAt, Status)
-VALUES (1, 1, 1, N'Viêm dạ dày cấp', N'Uống thuốc giảm acid và thay đổi chế độ ăn', 1, '2025-10-10 09:00:00', 1); -- PMR ID 1, Status 1 = Đã hoàn thành
-SET IDENTITY_INSERT PatientMedicalRecord OFF;
-GO
-
--- Lịch hẹn tương ứng
-INSERT INTO Appointment (PatientId, StaffId, MedicalServiceId, PatientMedicalRecordId, AppointmentDate, AppointmentTime, Status, IsRevisit)
-VALUES (1, 1, 1, 1, '2025-10-10', '09:00:00', 4, 0); -- Appointment ID 1, Status 4 = Completed
-
--- Triệu chứng
-INSERT INTO Symptom (PatientMedicalRecordId, Name)
-VALUES (1, N'Đau thượng vị'), (1, N'Ợ nóng');
-GO
-
--- Kết quả xét nghiệm
-INSERT INTO TestResult (PatientMedicalRecordId, StaffId, Name, Image, Description, CreatedAt)
-VALUES (1, 4, N'Xét nghiệm máu', N'test_results/blood_test_01.jpg', N'Chỉ số acid Uric hơi cao', '2025-10-10 10:00:00'); -- Staff ID 4 = LabTech
-GO
-
--- Đơn thuốc
-SET IDENTITY_INSERT Prescription ON;
-INSERT INTO Prescription (Id, PatientMedicalRecordId, PrescriptionDate)
-VALUES (1, 1, '2025-10-10 09:30:00'); -- Prescription ID 1
-SET IDENTITY_INSERT Prescription OFF;
-GO
-
--- Chi tiết đơn thuốc
-INSERT INTO PrescriptionDetail (PrescriptionId, MedicineId, Quantity, Dosage, Frequency, Amount)
-VALUES (1, 3, 20, N'1 viên', N'Uống trước ăn sáng 30 phút', 60000); -- Omeprazole (Medicine ID 3)
-GO
-
--- Hóa đơn
-INSERT INTO Invoice (PatientMedicalRecordId, PaymentDate, TotalAmount, Status)
--- Total = Khám (200k) + Thuốc (60k) + XN (350k) = 610k (Giả định dịch vụ XN đã được thêm vào)
-VALUES (1, '2025-10-10 11:00:00', 610000, 1); -- Status 1 = Đã thanh toán
-GO
-
--------------------------------------------------
-
--- === KỊCH BẢN 2: ĐANG KHÁM (Status 3) ===
--- Bệnh nhân: Nguyễn Thị Bích (Patient ID 2)
--- Bác sĩ: Phạm Văn Cường (Staff ID 2)
--- Ngày khám: 2025-10-22 (Hôm nay)
--- Ghi chú: Đã tạo hồ sơ, có triệu chứng, chưa có đơn thuốc/XN/hoá đơn.
-
--- Hồ sơ bệnh án
-SET IDENTITY_INSERT PatientMedicalRecord ON;
-INSERT INTO PatientMedicalRecord (Id, PatientId, StaffId, Diagnosis, TreatmentMethod, RequiresTest, CreateAt, Status)
-VALUES (2, 2, 2, NULL, NULL, 0, '2025-10-22 08:30:00', 0); -- PMR ID 2, Status 0 = Chưa hoàn thành
-SET IDENTITY_INSERT PatientMedicalRecord OFF;
-GO
-
--- Lịch hẹn tương ứng
-INSERT INTO Appointment (PatientId, StaffId, MedicalServiceId, PatientMedicalRecordId, AppointmentDate, AppointmentTime, Status, IsRevisit)
-VALUES (2, 2, 2, 2, '2025-10-22', '08:30:00', 3, 0); -- Appointment ID 2, Status 3 = InProgress
-
--- Triệu chứng
-INSERT INTO Symptom (PatientMedicalRecordId, Name)
-VALUES (2, N'Phát ban đỏ'), (2, N'Ngứa');
-GO
-
--------------------------------------------------
-
--- === KỊCH BẢN 3: BỆNH NHÂN ĐÃ ĐẾN (Status 2) ===
--- Bệnh nhân: Lê Minh Cường (Patient ID 3)
--- Bác sĩ dự kiến: Nguyễn Thị Bình (Staff ID 1)
--- Ngày hẹn: 2025-10-22 (Hôm nay)
--- Ghi chú: Đã check-in, đang chờ khám. Chưa có hồ sơ bệnh án.
-
--- Hồ sơ bệnh án
-SET IDENTITY_INSERT PatientMedicalRecord ON;
-INSERT INTO PatientMedicalRecord (Id, PatientId, StaffId, Diagnosis, TreatmentMethod, RequiresTest, CreateAt, Status)
-VALUES (3, 3, 1, NULL, NULL, 0, '2025-10-22 08:30:00', 0); -- PMR ID 2, Status 0 = Chưa hoàn thành
-SET IDENTITY_INSERT PatientMedicalRecord OFF;
-GO
-
--- Lịch hẹn tương ứng
-INSERT INTO Appointment (PatientId, StaffId, MedicalServiceId, PatientMedicalRecordId, AppointmentDate, AppointmentTime, Status, IsRevisit)
-VALUES (3, 1, 1, 3, '2025-10-22', '09:30:00', 2, 0); -- Appointment ID 3, Status 2 = CheckedIn
-GO
-
--------------------------------------------------
-
--- === KỊCH BẢN 4: ĐÃ XÁC NHẬN (Status 1) ===
--- Bệnh nhân: Phạm Thu Duyên (Patient ID 4)
--- Bác sĩ: Nguyễn Thị Bình (Staff ID 1)
--- Ngày hẹn: 2025-10-23 (Ngày mai)
--- Ghi chú: Lịch hẹn đã được xác nhận.
-
--- Lịch hẹn tương ứng
-INSERT INTO Appointment (PatientId, StaffId, MedicalServiceId, PatientMedicalRecordId, AppointmentDate, AppointmentTime, Status, IsRevisit)
-VALUES (4, 1, 1, NULL, '2025-10-23', '10:00:00', 1, 0); -- Appointment ID 4, Status 1 = Confirmed
-GO
-
--------------------------------------------------
-
--- === KỊCH BẢN 5: CHỜ XÁC NHẬN (Status 0) ===
--- Bệnh nhân: Võ Hùng Em (Patient ID 5)
--- Bác sĩ: Chưa phân công (Staff ID = NULL)
--- Ngày hẹn: 2025-10-24
--- Ghi chú: Lịch mới đặt, chờ lễ tân xử lý.
-
--- Lịch hẹn tương ứng
-INSERT INTO Appointment (PatientId, StaffId, MedicalServiceId, PatientMedicalRecordId, AppointmentDate, AppointmentTime, Status, IsRevisit)
-VALUES (5, NULL, 2, NULL, '2025-10-24', '14:00:00', 0, 0); -- Appointment ID 5, Status 0 = Pending
-GO
-
--------------------------------------------------
-
--- === KỊCH BẢN 6: ĐÃ HỦY (Status 5) ===
--- Bệnh nhân: Trần Văn An (Patient ID 1)
--- Bác sĩ: Phạm Văn Cường (Staff ID 2)
--- Ngày hẹn: 2025-10-15 (Đã qua)
--- Ghi chú: Bệnh nhân đã hủy lịch hẹn này.
-
--- Lịch hẹn tương ứng
-INSERT INTO Appointment (PatientId, StaffId, MedicalServiceId, PatientMedicalRecordId, AppointmentDate, AppointmentTime, Status, IsRevisit)
-VALUES (1, 2, 2, NULL, '2025-10-15', '11:00:00', 5, 0); -- Appointment ID 6, Status 5 = Cancelled
-GO
-
--------------------------------------------------
-
--- === KỊCH BẢN 7: KHÔNG ĐẾN (Status 6) ===
--- Bệnh nhân: Nguyễn Thị Bích (Patient ID 2)
--- Bác sĩ: Nguyễn Thị Bình (Staff ID 1)
--- Ngày hẹn: 2025-10-05 (Đã qua)
--- Ghi chú: Bệnh nhân đã bỏ lỡ lịch hẹn này.
-
--- Lịch hẹn tương ứng
-INSERT INTO Appointment (PatientId, StaffId, MedicalServiceId, PatientMedicalRecordId, AppointmentDate, AppointmentTime, Status, IsRevisit)
-VALUES (2, 1, 1, NULL, '2025-10-05', '15:00:00', 6, 0); -- Appointment ID 7, Status 6 = NoShow
-GO
-
--------------------------------------------------
-
--- === KỊCH BẢN 8: TÁI KHÁM (Status 1, IsRevisit = 1) ===
--- Bệnh nhân: Trần Văn An (Patient ID 1) - Liên quan đến Kịch bản 1
--- Bác sĩ: Nguyễn Thị Bình (Staff ID 1)
--- Ngày hẹn: 2025-10-25
--- Ghi chú: Lịch hẹn tái khám đã được xác nhận.
-
--- Lịch hẹn tương ứng
-INSERT INTO Appointment (PatientId, StaffId, MedicalServiceId, PatientMedicalRecordId, AppointmentDate, AppointmentTime, Status, IsRevisit)
-VALUES (1, 1, 1, NULL, '2025-10-25', '09:00:00', 1, 1); -- Appointment ID 8, Status 1 = Confirmed, IsRevisit = 1
 GO

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Search, CalendarDays } from 'lucide-react'; // (MỚI) Thêm CalendarDays
+import { X, ChevronLeft, ChevronRight, Search, CircleCheckBig, UserCheck  } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from "react-toastify";
@@ -188,6 +188,44 @@ const MedicalRecordPageForDoctor = () => {
     }
   };
 
+  const getAppointmentStatusIcon = (status) => {
+  switch (status) {
+    case 0: return <AlertTriangle className="w-4 h-4 text-yellow-500" />; // Chờ xác nhận
+    case 1: return <CheckCircle className="w-4 h-4 text-green-500" />;   // Đã xác nhận
+    case 2: return <UserCheck className="w-4 h-4 text-cyan-500" />;     // Bệnh nhân đã đến
+    case 3: return <Stethoscope className="w-4 h-4 text-indigo-500" />; // Đang khám
+    case 4: return <CircleCheckBig className="w-4 h-4 text-blue-500" />;    // Đã hoàn thành
+    case 5: return <XCircle className="w-4 h-4 text-red-500" />;        // Đã hủy
+    case 6: return <UserX className="w-4 h-4 text-gray-500" />;         // Không đến
+    default: return <Info className="w-4 h-4 text-gray-500" />;         // Không xác định
+  }
+};
+
+  // <summary>
+  /// Trả về chuỗi mô tả trạng thái TÁI KHÁM.
+  /// </summary>
+  /// <param name="revisitStatus">Mã trạng thái (0, 1, 2).</param>
+  /// <returns>Chuỗi mô tả.</returns>
+  const getRevisitStatusText = (revisitStatus) => {
+    switch (revisitStatus) {
+      case 1: return 'Tái khám';
+      case 2: return 'Hoàn thành tái khám';
+      default: return 'Không';
+    }
+  };
+
+  /// <summary>
+  /// Trả về các lớp CSS Tailwind cho badge TÁI KHÁM.
+  /// </summary>
+  /// <param name="revisitStatus">Mã trạng thái (0, 1, 2).</param>
+  /// <returns>Chuỗi các lớp CSS.</returns>
+  const getRevisitStatusColorClass = (revisitStatus) => {
+    switch (revisitStatus) {
+      case 1: return 'bg-purple-100 text-purple-700 border-purple-200'; // Cần tái khám
+      case 2: return 'bg-green-100 text-green-700 border-green-200';   // Đã hoàn thành
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';   // Không
+    }
+  };
 
   const openFullScreenImage = (imageUrl) => {
     setFullScreenImage(imageUrl);
@@ -201,7 +239,6 @@ const MedicalRecordPageForDoctor = () => {
     try {
       const response = await api.get('/staff/medical-records/me');
       if (response.data.status) {
-        console.log(response.data.data)
         const sortedRecords = response.data.data.sort((a, b) => b.id - a.id);
         setMedicalRecords(sortedRecords);
         if (selectedRecord) {
@@ -475,7 +512,7 @@ const MedicalRecordPageForDoctor = () => {
     setShowConfirmModal(true);
   };
 
-  // (Hàm handleMarkAsComplete giữ nguyên)
+  // hoàn thành khám HSBA
   const handleMarkAsComplete = async (id) => {
     setConfirmModalMessage('Bạn có chắc chắn xác nhận hoàn thành khám cho hồ sơ này không?');
     setConfirmModalAction(() => async () => {
@@ -483,7 +520,11 @@ const MedicalRecordPageForDoctor = () => {
       const response = await api.put(`/staff/medical-records/confirm-completed/${id}`);
       if (response.data.status) {
         toast.success(response.data.message || 'Đã cập nhật trạng thái hồ sơ!');
-        toast.success('Đã cập nhật tổng tiền thuốc vào hóa đơn');
+
+        setTimeout(() => {
+          toast.info('Đã tạo hóa đơn cho bệnh nhân');
+        }, 1000)
+
         fetchMedicalRecords();
       } else {
         toast.error(response.data.message || 'Cập nhật trạng thái thất bại.');
@@ -491,6 +532,33 @@ const MedicalRecordPageForDoctor = () => {
     } catch (error) {
       toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ.');
     } finally {
+        setShowConfirmModal(false);
+      }
+    });
+    setShowConfirmModal(true);
+  };
+
+  // Hàm xử lý xác nhận HOÀN THÀNH TÁI KHÁM
+  const handleConfirmCompletedRevisit = (id) => {
+    setConfirmModalMessage('Bạn có chắc chắn xác nhận HOÀN THÀNH TÁI KHÁM cho hồ sơ bệnh án này không?');
+    setConfirmModalAction(() => async () => {
+      try {
+        const response = await api.put(`/staff/medical-records/confirm-completed-revisit/${id}`);
+        
+        if (response.data.status) {
+          toast.success(response.data.message || 'Đã cập nhật trạng thái hoàn thành tái khám!');
+          
+          setTimeout(() => {
+            toast.info('Đã tạo hóa đơn (tái khám) cho bệnh nhân');
+          }, 1000);
+
+          fetchMedicalRecords();
+        } else {
+          toast.error(response.data.message || 'Cập nhật trạng thái thất bại.');
+        }
+      } catch (error) {
+        toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ.');
+      } finally {
         setShowConfirmModal(false);
       }
     });
@@ -527,6 +595,16 @@ const MedicalRecordPageForDoctor = () => {
       const response = await api.put(`/staff/medical-records/confirm-revisit/${recordToRevisit.id}`, payload);
       if (response.data.status) {
         toast.success(response.data.message || 'Đã tạo lịch hẹn tái khám thành công!');
+
+        setTimeout(() => {
+          toast.info(
+            <span>
+              Lịch hẹn tái khám cho bệnh nhân này đã được tạo ở trạng thái{' '}
+              <b style={{ color: 'green' }}>Đã xác nhận</b>.
+            </span>
+          );
+        }, 2000)
+        
         fetchMedicalRecords(); // Tải lại danh sách
         setShowRevisitModal(false); // Đóng modal
         setRecordToRevisit(null);
@@ -604,10 +682,13 @@ const MedicalRecordPageForDoctor = () => {
                 }}
                 onMarkAsComplete={handleMarkAsComplete}
                 onMarkAsRevisit={handleMarkAsRevisit}
+                onConfirmCompletedRevisit={handleConfirmCompletedRevisit}
                 getStatusColorClass={getStatusColorClass}
                 getStatusText={getStatusText}
                 getAppointmentStatusText={getAppointmentStatusText}
                 getAppointmentStatusColorClass={getAppointmentStatusColorClass}
+                getRevisitStatusText={getRevisitStatusText}
+                getRevisitStatusColorClass={getRevisitStatusColorClass}
               />
             ))
           ) : (
@@ -659,6 +740,8 @@ const MedicalRecordPageForDoctor = () => {
           getAppointmentStatusText={getAppointmentStatusText}
           getAppointmentStatusColorClass={getAppointmentStatusColorClass}
           onInteractionStart={handleConfirmInProgress}
+          onConfirmCompletedRevisit={handleConfirmCompletedRevisit}
+          getAppointmentStatusIcon={getAppointmentStatusIcon}
           onClose={() => {
             setSelectedRecord(null);
             setIsEditingRecord(false);

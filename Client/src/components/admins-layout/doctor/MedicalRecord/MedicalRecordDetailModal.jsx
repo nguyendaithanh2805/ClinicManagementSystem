@@ -1,10 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
-  FileText, Pill, User, Stethoscope, ListTodo, ClipboardCheck, CircleCheckBig,
-  Microscope, Eye, X, Info, ChevronLeft, ChevronRight, Edit, Plus, Trash2, Save, XCircle, Search, CalendarDays, Clock // (MỚI) Thêm CalendarDays, Clock
+  FileText, Pill, User, Stethoscope, ListTodo, ClipboardCheck,
+  Microscope, Eye, X, Info, Edit, Plus, Trash2, Save, XCircle, Search, CalendarDays, Clock 
 } from 'lucide-react';
-
-// ... (Component TabButton và DetailItem giữ nguyên) ...
 // Helper component for Tab Buttons
 const TabButton = ({ icon, label, isActive, onClick }) => (
   <button
@@ -29,7 +27,7 @@ const DetailItem = ({ icon, label, children }) => (
     </div>
   </div>
 );
-// ... (Component ResultImage giữ nguyên) ...
+
 // Helper component for Result Image
 function ResultImage({ src, alt, onViewFull, imageUrl }) {
   const [error, setError] = useState(false);
@@ -87,7 +85,7 @@ const MedicalRecordDetailModal = ({
   onSelectPrescriptionDetail,
   onDeletePrescriptionDetail,
   onUpdatePrescriptionDetail,
-  editPrescriptionSearchRef,
+  getAppointmentStatusIcon,
   getAppointmentStatusText,
   getAppointmentStatusColorClass,
   onInteractionStart,
@@ -98,9 +96,6 @@ const MedicalRecordDetailModal = ({
   viLocale,
   formatDbUtcToVnTime,
   imageUrl,
-  // (MỚI) Thêm 2 props helper từ component cha
-  getStatusText,
-  getStatusColorClass 
 }) => {
   // --- STATE CỤC BỘ MỚI CHO TÌM KIẾM/LỌC ĐƠN THUỐC ---
   const [prescriptionSearchTerm, setPrescriptionSearchTerm] = useState('');
@@ -139,6 +134,21 @@ const MedicalRecordDetailModal = ({
     apt => apt.patientMedicalRecordId === record.id
   );
 
+  const linkedAppointmentStatus = linkedAppointment?.status;
+
+  // (MỚI) Tạo biến điều kiện tổng hợp để vô hiệu hóa
+  // Giao diện sẽ chỉ đọc nếu HSBA đã hoàn thành HOẶC LH chỉ mới ở trạng thái "Đã xác nhận" (1)
+  const isReadOnly = isCompleted || !linkedAppointment || linkedAppointmentStatus === 1;
+  const readOnlyReason = isCompleted
+      ? "Hồ sơ đã hoàn thành."
+      : (!linkedAppointment
+        ? "Không tìm thấy lịch hẹn liên kết."
+        : (linkedAppointmentStatus === 1
+            ? "Lịch hẹn chưa chuyển sang trạng thái khám."
+            : ""
+          )
+        );
+
   return (
     <div
       className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
@@ -152,37 +162,40 @@ const MedicalRecordDetailModal = ({
           <X className="w-5 h-5" />
         </button>
 
-        {/* (CẬP NHẬT) Thêm Tab Lịch hẹn */}
         <div className="flex border-b border-gray-200 mb-4 overflow-x-auto">
           <TabButton icon={<Info className="w-5 h-5" />} label="Tổng quan" isActive={activeTab === 'summary'} onClick={() => onTabChange('summary')} />
           <TabButton icon={<Pill className="w-5 h-5" />} label="Đơn thuốc" isActive={activeTab === 'prescriptions'} onClick={() => onTabChange('prescriptions')} />
           <TabButton icon={<ListTodo className="w-5 h-5" />} label="Triệu chứng" isActive={activeTab === 'symptoms'} onClick={() => onTabChange('symptoms')} />
-          {/* (MỚI) Tab Lịch hẹn */}
           <TabButton icon={<Microscope className="w-5 h-5" />} label="Kết quả XN" isActive={activeTab === 'testResults'} onClick={() => onTabChange('testResults')} />
           <TabButton icon={<Stethoscope className="w-5 h-5" />} label="Thông tin BS" isActive={activeTab === 'staff'} onClick={() => onTabChange('staff')} />
-          <TabButton icon={<CalendarDays className="w-5 h-5" />} label="Lịch hẹn" isActive={activeTab === 'appointments'} onClick={() => onTabChange('appointments')} />
+          <TabButton icon={<CalendarDays className="w-4 h-4" />} label="Lịch hẹn" isActive={activeTab === 'appointments'} onClick={() => onTabChange('appointments')} />
         </div>
 
         {/* Tab Content */}
         <div className="py-4">
           {activeTab === 'summary' && (
-            // ... (Nội dung tab 'summary' giữ nguyên) ...
             <div className="space-y-4 text-gray-700">
               <h2 className="text-2xl font-bold text-gray-800 mb-5 border-b pb-3 flex items-center gap-3">
                 <FileText className="w-6 h-6 text-blue-600" />
                 <span>Chi tiết Hồ sơ Bệnh án</span>
 
-                {linkedAppointment && getAppointmentStatusText && getAppointmentStatusColorClass && (
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getAppointmentStatusColorClass(linkedAppointment.status)}`}>
-                    {getAppointmentStatusText(linkedAppointment.status)}
-                  </span>
+                {linkedAppointment && getAppointmentStatusText && getAppointmentStatusColorClass ? (
+                    <span className={`px-2.5 py-0.5 rounded text-xs font-medium border ${getAppointmentStatusColorClass(linkedAppointment.status)} bg-opacity-80`}>
+                    Trạng thái: {getAppointmentStatusText(linkedAppointment.status)}
+                    </span>
+                ) : (
+                    <span className="px-2.5 py-0.5 rounded text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200">
+                        Trạng thái: K.liên kết
+                    </span>
                 )}
+
                 {!isEditing && (
                   <button
                     onClick={onEdit}
                     className="ml-auto px-3 py-1 text-sm rounded-full bg-yellow-100 text-yellow-700 hover:bg-yellow-200 flex items-center gap-1
                                   disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-yellow-100"
-                    disabled={isCompleted}
+                    disabled={isReadOnly}
+                    title={isReadOnly ? readOnlyReason : "Chỉnh sửa hồ sơ"}
                   >
                     <Edit className="w-4 h-4" /> Chỉnh sửa hồ sơ
                   </button>
@@ -201,11 +214,13 @@ const MedicalRecordDetailModal = ({
                       onEditedRecordChange({ ...editedRecord, diagnosis: e.target.value });
                       triggerInProgressConfirmation();
                     }}
+                    disabled={isReadOnly}
+                    placeholder={isReadOnly ? "Không thể chỉnh sửa" : "Nhập chẩn đoán..."}
                     className="form-textarea mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 p-2"
                     rows="3"
                   />
                 ) : (
-                  <p className="whitespace-pre-wrap">{record.diagnosis || 'N/A'}</p>
+                  <p className="whitespace-pre-wrap">{record.diagnosis || 'Không có'}</p>
                 )}
               </DetailItem>
               <DetailItem icon={<ListTodo className="w-5 h-5 text-indigo-500" />} label="Phương pháp điều trị">
@@ -216,11 +231,13 @@ const MedicalRecordDetailModal = ({
                       onEditedRecordChange({ ...editedRecord, treatmentMethod: e.target.value });
                       triggerInProgressConfirmation();
                     }}
+                    disabled={isReadOnly}
+                    placeholder={isReadOnly ? "Không thể chỉnh sửa" : "Nhập phương pháp điều trị..."}
                     className="form-textarea mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50 p-2"
                     rows="3"
                   />
                 ) : (
-                  <p className="whitespace-pre-wrap">{record.treatmentMethod || 'N/A'}</p>
+                  <p className="whitespace-pre-wrap">{record.treatmentMethod || 'Không có'}</p>
                 )}
               </DetailItem>
               <DetailItem icon={<Info className="w-5 h-5 text-orange-500" />} label="Yêu cầu xét nghiệm">
@@ -233,6 +250,7 @@ const MedicalRecordDetailModal = ({
                         onEditedRecordChange({ ...editedRecord, requiresTest: e.target.checked });
                         triggerInProgressConfirmation();
                       }}
+                      disabled={isReadOnly}
                       className="form-checkbox h-5 w-5 text-blue-600 rounded"
                     />
                     <span className="text-gray-700">Có yêu cầu xét nghiệm</span>
@@ -251,6 +269,7 @@ const MedicalRecordDetailModal = ({
                   </button>
                   <button
                     onClick={onSaveEdit}
+                    disabled={isReadOnly}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2"
                   >
                     <Save className="w-5 h-5" /> Lưu thay đổi
@@ -261,16 +280,16 @@ const MedicalRecordDetailModal = ({
           )}
 
           {activeTab === 'prescriptions' && (
-            // ... (Nội dung tab 'prescriptions' giữ nguyên) ...
              <div className="space-y-4">
                <div className="flex justify-end mb-4">
                  <button
                    onClick={onShowAddPrescriptionModal}
                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 shadow-md
                                   disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
-                   disabled={isCompleted}
+                   disabled={isReadOnly}
+                   title={isReadOnly ? readOnlyReason : "Thêm đơn thuốc mới"}
                  >
-                   <Plus className="w-5 h-5" /> Thêm Đơn thuốc
+                   <Plus className="w-5 h-5" /> Thêm đơn thuốc
                  </button>
                </div>
                
@@ -372,7 +391,7 @@ const MedicalRecordDetailModal = ({
                            onClick={() => onDeletePrescription(prescription.id)}
                            className="ml-auto p-1.5 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-red-100"
                            title="Xóa đơn thuốc"
-                           disabled={isCompleted}
+                           disabled={isReadOnly}
                          >
                            <Trash2 className="w-4 h-4" />
                          </button>
@@ -404,9 +423,9 @@ const MedicalRecordDetailModal = ({
                                      <input
                                        type="number"
                                        value={selectedPrescriptionDetail.quantity}
-                                       onChange={(e) => { // Hoặc dùng onInput
+                                       onChange={(e) => {
                                         onSelectPrescriptionDetail({ ...selectedPrescriptionDetail, quantity: e.target.value });
-                                        triggerInProgressConfirmation(); // Gọi khi thay đổi
+                                        triggerInProgressConfirmation();
                                       }}
                                        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2"
                                      />
@@ -446,7 +465,7 @@ const MedicalRecordDetailModal = ({
                                        onClick={() => onUpdatePrescriptionDetail(prescription.id, detail.medicineId)}
                                        className="px-3 py-1 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm flex items-center gap-1
                                                       disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-blue-600"
-                                       disabled={isCompleted}
+                                       disabled={isReadOnly}
                                      >
                                        <Save className="w-4 h-4" /> Lưu
                                      </button>
@@ -476,7 +495,7 @@ const MedicalRecordDetailModal = ({
                                        className="p-1.5 rounded-full bg-yellow-100 text-yellow-700 hover:bg-yellow-200 transition-colors
                                                       disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-yellow-100"
                                        title="Chỉnh sửa chi tiết đơn thuốc"
-                                       disabled={isCompleted}
+                                       disabled={isReadOnly}
                                      >
                                        <Edit className="w-4 h-4" />
                                      </button>
@@ -485,7 +504,7 @@ const MedicalRecordDetailModal = ({
                                        className="p-1.5 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition-colors
                                                       disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-red-100"
                                        title="Xóa chi tiết đơn thuốc"
-                                       disabled={isCompleted}
+                                       disabled={isReadOnly}
                                      >
                                        <Trash2 className="w-4 h-4" />
                                      </button>
@@ -516,7 +535,6 @@ const MedicalRecordDetailModal = ({
           )}
 
           {activeTab === 'symptoms' && (
-            // ... (Nội dung tab 'symptoms' giữ nguyên) ...
              <div className="space-y-4">
                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                  <input
@@ -534,13 +552,13 @@ const MedicalRecordDetailModal = ({
                    placeholder={isCompleted ? "Hồ sơ đã hoàn thành, không thể thêm." : "Thêm triệu chứng mới..."}
                    className="flex-1 p-2 border border-gray-300 rounded-md shadow-sm transition-colors flex items-center gap-2 shadow-md w-full
                                   disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
-                   disabled={isCompleted}
+                   disabled={isReadOnly}
                  />
                  <button
                    onClick={onAddSymptom}
                    className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 shadow-md flex-shrink-0
                                   disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-green-600"
-                   disabled={isCompleted}
+                   disabled={isReadOnly}
                  >
                    <Plus className="w-5 h-5" /> Thêm
                  </button>
@@ -559,7 +577,7 @@ const MedicalRecordDetailModal = ({
                          className="p-1.5 rounded-full bg-red-100 text-red-700 hover:bg-red-200 transition-colors opacity-0 group-hover:opacity-100
                                        disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-red-100"
                          title="Xóa triệu chứng"
-                         disabled={isCompleted}
+                         disabled={isReadOnly}
                        >
                          <Trash2 className="w-4 h-4" />
                        </button>
@@ -572,59 +590,7 @@ const MedicalRecordDetailModal = ({
              </div>
           )}
 
-          {/* (MỚI) Nội dung tab Lịch hẹn */}
-          {activeTab === 'appointments' && (
-            <div className="space-y-4">
-              {record.appointments && record.appointments.length > 0 ? (
-                record.appointments
-                  .sort((a, b) => parseISO(b.appointmentDate).getTime() - parseISO(a.appointmentDate).getTime() || a.appointmentTime.localeCompare(b.appointmentTime)) // Sắp xếp mới nhất trước
-                  .map((apt) => (
-                  <div key={apt.id} className="border border-gray-200 rounded-lg p-4 bg-gray-50 shadow-sm">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2">
-                      <h4 className="font-semibold text-gray-900 text-lg flex items-center gap-2">
-                        <Stethoscope className="w-5 h-5 text-blue-600" />
-                        {apt.medicalService?.name || 'Lịch hẹn'}
-                      </h4>
-                      {/* Dùng helper props từ cha */}
-                      <span className={`mt-2 sm:mt-0 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColorClass(apt.status)}`}>
-                        {getStatusText(apt.status)}
-                      </span>
-                    </div>
-                    <div className="space-y-1 text-sm text-gray-700 pl-7">
-                      <p className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-gray-500" />
-                        <strong>Bệnh nhân:</strong> {apt.patient?.fullName || 'N/A'}
-                      </p>
-                      <p className="flex items-center gap-2">
-                        <CalendarDays className="w-4 h-4 text-gray-500" />
-                        <strong>Ngày:</strong> {format(parseISO(apt.appointmentDate), 'dd/MM/yyyy')}
-                      </p>
-                       <p className="flex items-center gap-2">
-                         <Clock className="w-4 h-4 text-gray-500" />
-                        <strong>Giờ:</strong> {apt.appointmentTime}
-                      </p>
-                      <p className="flex items-center gap-2">
-                        <Info className="w-4 h-4 text-gray-500" />
-                        <strong>Tái khám:</strong> {apt.isRevisit ? <span className="font-medium text-green-600">Có</span> : 'Không'}
-                      </p>
-                      {/* Chỉ hiển thị bác sĩ nếu *không phải* là bác sĩ đang xem hồ sơ */}
-                      {apt.staff && apt.staff.id !== record.staff.id && (
-                         <p className="flex items-center gap-2">
-                           <Stethoscope className="w-4 h-4 text-purple-500" />
-                           <strong>Bác sĩ khác:</strong> {apt.staff.fullName}
-                         </p>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <p className="text-center text-gray-500 py-4 italic">Không có lịch hẹn nào liên quan đến hồ sơ bệnh án này.</p>
-              )}
-            </div>
-          )}
-
           {activeTab === 'testResults' && (
-            // ... (Nội dung tab 'testResults' giữ nguyên) ...
              <div className="space-y-4">
                {record.testResults && record.testResults.length > 0 ? (
                  record.testResults.map((result, index) => (
@@ -659,7 +625,6 @@ const MedicalRecordDetailModal = ({
           )}
           
           {activeTab === 'staff' && (
-            // ... (Nội dung tab 'staff' giữ nguyên) ...
              <div className="space-y-4">
                {/* === Thông tin Bác sĩ điều trị === */}
                {record.staff ? (
@@ -693,6 +658,101 @@ const MedicalRecordDetailModal = ({
                    );
                  }
                })()}
+             </div>
+          )}
+
+          {activeTab === 'appointments' && (
+             <div className="space-y-4">
+              {record.appointments && record.appointments.length > 0 ? (
+                record.appointments
+                  .sort(
+                    (a, b) =>
+                      parseISO(b.appointmentDate).getTime() -
+                        parseISO(a.appointmentDate).getTime() ||
+                      a.appointmentTime.localeCompare(b.appointmentTime)
+                  )
+                  .map((apt) => (
+                    <div
+                      key={apt.id}
+                      className="border border-gray-100 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+                        <h4 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+                          {getAppointmentStatusIcon ? (
+                            getAppointmentStatusIcon(apt.status)
+                          ) : (
+                            <CalendarDays className="w-4 h-4 text-blue-600" />
+                          )}
+                          <span>{apt.medicalService?.name || 'Lịch hẹn'}</span>
+                          <span className="text-gray-400 font-normal text-xs">
+                            (Mã: {apt.id})
+                          </span>
+                        </h4>
+                        {getAppointmentStatusText && getAppointmentStatusColorClass && (
+                          <span
+                            className={`px-2.5 py-0.5 rounded-lg text-xs font-medium border shadow-sm ${getAppointmentStatusColorClass(
+                              apt.status
+                            )} bg-opacity-90`}
+                          >
+                            {getAppointmentStatusText(apt.status)}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Details */}
+                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                        <p className="flex items-center gap-2 text-gray-700 sm:col-span-2">
+                          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium text-gray-600 w-20">Bệnh nhân:</span>
+                          <span className="text-gray-900 font-semibold">
+                            {record.patient?.fullName || 'N/A'}
+                          </span>
+                        </p>
+
+                        <p className="flex items-center gap-2 text-gray-700">
+                          <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium text-gray-600 w-20">Ngày:</span>
+                          <span className="text-gray-900">
+                            {format(parseISO(apt.appointmentDate), 'dd/MM/yyyy')}
+                          </span>
+                        </p>
+
+                        <p className="flex items-center gap-2 text-gray-700">
+                          <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium text-gray-600 w-20">Giờ:</span>
+                          <span className="text-gray-900">
+                            {apt.appointmentTime.substring(0, 5)}
+                          </span>
+                        </p>
+
+                        {apt.staff && (
+                          <p className="flex items-center gap-2 text-gray-700">
+                            <Stethoscope className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                            <span className="font-medium text-gray-600 w-20">Bác sĩ:</span>
+                            <span className="text-gray-900 font-medium">
+                              {apt.staff.fullName}
+                            </span>
+                          </p>
+                        )}
+
+                        <p className="flex items-center gap-2 text-gray-700">
+                          <Info className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium text-gray-600 w-20">Tái khám:</span>
+                          {apt.isRevisit ? (
+                            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-purple-100 text-purple-700 border border-purple-200">
+                              Có
+                            </span>
+                          ) : (
+                            <span className="text-gray-900">Không</span>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+               ) : (
+                 <p className="text-center text-sm text-gray-500 py-4 italic">Không có lịch hẹn nào liên kết với hồ sơ bệnh án này.</p>
+               )}
              </div>
           )}
         </div>

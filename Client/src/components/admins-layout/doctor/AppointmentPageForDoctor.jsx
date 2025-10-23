@@ -93,6 +93,32 @@ const AppointmentPageForDoctor = () => {
     }
   };
 
+  // <summary>
+  /// Trả về chuỗi mô tả trạng thái TÁI KHÁM.
+  /// </summary>
+  /// <param name="revisitStatus">Mã trạng thái (0, 1, 2).</param>
+  /// <returns>Chuỗi mô tả.</returns>
+  const getRevisitStatusText = (revisitStatus) => {
+    switch (revisitStatus) {
+      case 1: return 'Tái khám';
+      case 2: return 'Hoàn thành tái khám';
+      default: return 'Không';
+    }
+  };
+
+  /// <summary>
+  /// Trả về các lớp CSS Tailwind cho badge TÁI KHÁM.
+  /// </summary>
+  /// <param name="revisitStatus">Mã trạng thái (0, 1, 2).</param>
+  /// <returns>Chuỗi các lớp CSS.</returns>
+  const getRevisitStatusColorClass = (revisitStatus) => {
+    switch (revisitStatus) {
+      case 1: return 'bg-purple-100 text-purple-700 border-purple-200'; // Cần tái khám
+      case 2: return 'bg-green-100 text-green-700 border-green-200';   // Đã hoàn thành
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';   // Không
+    }
+  };
+
   // --- Calendar Logic (Giữ nguyên) ---
   const daysOfWeek = eachDayOfInterval({
     start: currentWeekStart,
@@ -159,33 +185,6 @@ const AppointmentPageForDoctor = () => {
      }
   };
 
-  const handleUpdateAppointment = async (newStatus = null) => {
-    if (!selectedAppointment) return;
-
-    const statusToUpdate = newStatus !== null ? newStatus : editedStatus;
-
-    const updatedData = {
-      id: selectedAppointment.id,
-      status: statusToUpdate,
-    };
-
-    try {
-      const response = await api.patch(`/staff/appointments/${selectedAppointment.id}`, updatedData);
-      if (response.data.status) {
-        toast.success(`${response.data.message}`);
-        fetchMyAppointments();
-        setSelectedAppointment(null);
-        setShowDailyAppointmentsModal(false);
-      } else {
-        toast.error(response.data.message);
-        console.error(response.data.message);
-      }
-    } catch (error) {
-      toast.error(error.response.data.message || 'Lỗi khi cập nhật lịch hẹn.');
-      console.error('Lỗi khi cập nhật lịch hẹn:', error);
-    }
-  };
-
   // Hàm xử lý chuyển trang
   const navigateToMedicalRecord = (recordId, e) => {
     if (e) e.stopPropagation(); // Ngăn modal mở lên
@@ -201,23 +200,38 @@ const AppointmentPageForDoctor = () => {
   };
 
   // (CẬP NHẬT) AppointmentCard
-  const AppointmentCard = ({ appointment, onClick }) => (
+  const AppointmentCard = (
+    { 
+      appointment, 
+      onClick 
+    }) => (
     <div
       onClick={onClick}
       className="border border-gray-200 rounded-xl p-4 hover:shadow-lg hover:border-blue-300 cursor-pointer transition-all duration-200 bg-white flex flex-col sm:flex-row items-start sm:items-center gap-4"
     >
-      <div className="flex-shrink-0">
-        <div className="w-14 h-14 bg-blue-50 rounded-lg flex items-center justify-center">
-          <CalendarIcon className="w-6 h-6 text-blue-600" />
-        </div>
+      <div className="flex-shrink-0 flex flex-col items-center w-20">
+          <div className="w-14 h-14 bg-blue-50 rounded-lg flex items-center justify-center">
+            <CalendarIcon className="w-6 h-6 text-blue-600" />
+          </div>
+          {/* Mã LH hiển thị ở đây */}
+          <span className="mt-1.5 inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-blue-200">
+            Mã LH: {appointment.id}
+          </span>
       </div>
 
       <div className="flex-1 w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2">
           <div>
-            <h3 className="font-semibold text-gray-900 text-lg">
-              {appointment.patient?.fullName || 'Chưa có bệnh nhân'}
-            </h3>
+            <div className="flex items-baseline gap-2 mb-1">
+              <h3 className="font-semibold text-gray-900 text-lg leading-tight">
+                {appointment.patient?.fullName || 'Bệnh nhân chưa có tên'}
+              </h3>
+              {(appointment.revisit === 1 || appointment.revisit === 2) && (
+                <span className={`px-2 py-0.5 rounded text-xs font-medium border self-center ${getRevisitStatusColorClass(appointment.revisit)}`}>
+                  {getRevisitStatusText(appointment.revisit)}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-600 flex items-center gap-1">
               <BriefcaseMedical className="w-4 h-4 inline-block text-gray-500" />
               {appointment.medicalService?.name || 'Chưa có dịch vụ'}
@@ -248,7 +262,6 @@ const AppointmentPageForDoctor = () => {
             <CalendarIcon className="w-4 h-4 text-gray-500" />
             <span>{format(new Date(appointment.appointmentDate), 'dd/MM/yyyy')}</span>
           </div>
-          {/* Staff is current user, no need to display staff name unless it's for verification */}
         </div>
       </div>
     </div>
@@ -256,7 +269,6 @@ const AppointmentPageForDoctor = () => {
 
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
-      {/* ... (Phần tiêu đề và Lịch tuần giữ nguyên) ... */}
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Lịch hẹn cá nhân</h1>
         <p className="text-gray-500">Quản lý các cuộc hẹn của bạn</p>
@@ -310,8 +322,6 @@ const AppointmentPageForDoctor = () => {
         </div>
       </div>
 
-      {/* ... (Phần danh sách lịch hẹn và phân trang giữ nguyên) ... */}
-       {/* Appointment List Section (now independent of calendar day selection) */}
       <div className="bg-white rounded-xl shadow-sm p-5 mt-6">
         <div className="flex flex-wrap items-center justify-between mb-5 gap-3">
           <h3 className="text-xl font-semibold text-gray-800">
@@ -412,7 +422,6 @@ const AppointmentPageForDoctor = () => {
               <Edit className="w-6 h-6 text-blue-600" /> Chi tiết lịch hẹn
             </h2>
 
-            {/* ... (Nội dung chi tiết modal giữ nguyên) ... */}
             <div className="space-y-4 text-gray-700">
               {/* Patient Name - Read-only */}
               <div className="flex flex-col sm:flex-row sm:items-center gap-3">
@@ -494,12 +503,11 @@ const AppointmentPageForDoctor = () => {
           </div>
         </div>
       )}
-
-      {/* ... (Phần DailyAppointmentsModal giữ nguyên) ... */}
+      
       {/* Daily Appointments Modal */}
       {showDailyAppointmentsModal && selectedDateForCalendar && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-10 p-4"
           style={{ marginTop: 0 }}
         >
           <div className="bg-white rounded-xl p-6 w-full max-w-2xl relative shadow-lg max-h-[90vh] overflow-y-auto">
@@ -516,15 +524,13 @@ const AppointmentPageForDoctor = () => {
             <div className="space-y-4">
               {myAppointments
                 .filter(apt =>
-                  (apt.status === 1 || apt.status === 3) && // Only show Confirmed and Completed in daily modal
+                  (apt.status === 1 || apt.status === 3) && 
                   isSameDay(parseISO(apt.appointmentDate), selectedDateForCalendar)
                 )
-                .sort((a, b) => a.appointmentTime.localeCompare(b.appointmentTime)) // Sort by time
+                .sort((a, b) => a.appointmentTime.localeCompare(b.appointmentTime))
                 .map(apt => (
                   <AppointmentCard key={apt.id} appointment={apt} onClick={() => {
                     setSelectedAppointment(apt);
-                    // No need to close daily modal if we want to allow quick edits from here
-                    // setShowDailyAppointmentsModal(false);
                   }} />
                 ))
               }

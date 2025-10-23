@@ -431,12 +431,20 @@ const PaymentsPage = () => {
               </div>
 
               {/* Payment Date */}
-              {selectedInvoice.paymentDate && (
+              {selectedInvoice.paymentDate ? (
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
                   <Calendar className="w-5 h-5 text-indigo-500 flex-shrink-0" />
                   <strong className="font-semibold w-32">Ngày thanh toán:</strong>
                   <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
                     {format(parseISO(selectedInvoice.paymentDate), 'HH:mm dd/MM/yyyy', { locale: vi })}
+                  </p>
+                </div>
+                ) : (
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <Calendar className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Ngày thanh toán:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400">
+                    Chưa có
                   </p>
                 </div>
               )}

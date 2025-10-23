@@ -1,9 +1,10 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Calendar, User, Phone, CheckCircle, AlertCircle, Loader2 } from 'lucide-react';
-import { decodeJwt } from '../../../utils/jwtHelper';
+import { ArrowLeft, Calendar, User, Phone, CheckCircle, AlertCircle, Loader2, Edit2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import api from "../../admins-layout/contexts/Api";
+import { format } from 'date-fns';
+import ServiceSelectionModal from './ServiceSelectionModal';
 
 // Component Spinner để hiển thị khi tải
 const LoadingSpinner = () => (
@@ -15,14 +16,13 @@ const LoadingSpinner = () => (
 );
 
 const AppointmentBooking = () => {
-  // Nhận dữ liệu từ state của Service.jsx
   const location = useLocation();
-  const { medicalServiceId } = location.state || {};
+  const { medicalServiceId: initialMedicalServiceId } = location.state || {};
 
   // === KHAI BÁO STATE ===
   const [formData, setFormData] = useState({
     patientId: "",
-    medicalServiceId: medicalServiceId || "",
+    medicalServiceId: initialMedicalServiceId || "",
     appointmentDate: "",
     appointmentTime: "",
     fullName: "",
@@ -32,15 +32,18 @@ const AppointmentBooking = () => {
   const [specialties, setSpecialties] = useState([]);
   const [selectedSpecialtyId, setSelectedSpecialtyId] = useState();
   const [medicalServices, setMedicalServices] = useState([]);
-
-  // State mới để lưu thông tin bệnh nhân
   const [patientData, setPatientData] = useState(null);
   const [isLoadingPatient, setIsLoadingPatient] = useState(true);
   const [patientError, setPatientError] = useState(null);
 
   const [loading, setLoading] = useState(false); // Loading khi submit form
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
 
   const API_BASE_URL = import.meta.env.VITE_API_URL;
+  // Tính ngày hiện tại để dùng cho thuộc tính 'min'
+    const today = new Date();
+    // Định dạng thành YYYY-MM-DD
+    const minDate = format(today, 'yyyy-MM-dd');
 
   // === LOGIC TẢI DỮ LIỆU ===
 
@@ -104,8 +107,9 @@ const AppointmentBooking = () => {
         const result = await res.json();
         if (res.ok && result.data) {
           setMedicalServices(result.data);
-          if (medicalServiceId) { // Sửa lỗi 'serviceId' is not defined
-            const selected = result.data.find(s => s.id === medicalServiceId);
+          // If an initial service ID was passed, find its specialty
+          if (initialMedicalServiceId) {
+            const selected = result.data.find(s => s.id === initialMedicalServiceId);
             if (selected) {
               setSelectedSpecialtyId(selected.specialtyId);
             }
@@ -116,24 +120,21 @@ const AppointmentBooking = () => {
       }
     };
     fetchMedicalServices();
-  }, [API_BASE_URL, medicalServiceId]); // Thêm dependency
-
-  // 5. Cập nhật chuyên khoa khi dịch vụ được chọn (từ props)
-  useEffect(() => {
-    if (medicalServiceId && medicalServices.length > 0) { // Đảm bảo medicalServices đã tải
-      setFormData(prev => ({
-        ...prev,
-        medicalServiceId: medicalServiceId
-      }));
-
-      const selectedMedicalService = medicalServices.find(s => s.id === medicalServiceId);
-      if (selectedMedicalService)
-        setSelectedSpecialtyId(selectedMedicalService.specialtyId);
-    }
-  }, [medicalServiceId, medicalServices]);
+  }, [API_BASE_URL, initialMedicalServiceId]);
 
   // === LOGIC XỬ LÝ FORM ===
+  const openServiceSelectionModal = () => {
+      setIsServiceModalOpen(true);
+  };
 
+   const handleSelectService = (selectedId) => {
+       const selectedService = medicalServices.find(s => s.id === selectedId);
+       if (selectedService) {
+           setFormData(prev => ({ ...prev, medicalServiceId: selectedId }));
+           setSelectedSpecialtyId(selectedService.specialtyId);
+       }
+       setIsServiceModalOpen(false); // Close the modal
+   };
   // Cờ điều kiện (MỚI)
   const isNameUpdateRequired = useMemo(() => {
     // CẬP NHẬT: Sửa lại chuỗi theo code mới của bạn
@@ -143,19 +144,6 @@ const AppointmentBooking = () => {
   const isPhoneUpdateRequired = useMemo(() => {
     return !patientData?.account?.phoneNumber; // Check rỗng hoặc null
   }, [patientData]);
-
-
-  // Khi chọn dịch vụ, tự động chọn chuyên khoa
-  const handleMedicalServiceChange = (e) => {
-    const medicalServiceId = Number(e.target.value);
-    const selectedMedicalService = medicalServices.find(s => s.id === medicalServiceId);
-
-    setFormData(prev => ({ ...prev, medicalServiceId }));
-    if (selectedMedicalService)
-      setSelectedSpecialtyId(selectedMedicalService.specialtyId);
-    else
-      setSelectedSpecialtyId(null);
-  };
   
   // Cập nhật formData chung
   const handleChange = (e) => {
@@ -203,9 +191,10 @@ const AppointmentBooking = () => {
 
   // === RENDER GIAO DIỆN ===
 
-  const selectedServiceCost = useMemo(() => {
+  // Get selected service details (name and cost)
+  const selectedServiceDetails = useMemo(() => {
     if (!formData.medicalServiceId) return null;
-    return medicalServices.find(s => s.id === formData.medicalServiceId)?.cost;
+    return medicalServices.find(s => s.id === formData.medicalServiceId);
   }, [formData.medicalServiceId, medicalServices]);
 
   const specialtyName = useMemo(() => {
@@ -291,61 +280,90 @@ const AppointmentBooking = () => {
                 <div>
                   <label className={labelStyle}>Chuyên khoa</label>
                   <p className="w-full px-4 py-3 border border-gray-300 rounded-lg bg-gray-100 text-gray-700 shadow-sm">
-                    {specialtyName}
+                    {formData.medicalServiceId ? specialtyName : "Vui lòng chọn dịch vụ khám"}
                   </p>
                 </div>
 
-                {/* Dịch vụ khám (Giao diện mới) */}
+                {/* --- Dịch vụ khám (Display + Select Button) --- */}
                 <div>
-                  <label htmlFor="medicalServiceId" className={labelStyle}>Dịch vụ khám</label>
-                  <select
-                    id="medicalServiceId"
-                    name="medicalServiceId"
-                    value={formData.medicalServiceId}
-                    onChange={handleMedicalServiceChange}
-                    className={inputStyle}
-                    required
-                  >
-                    <option value="">-- Chọn dịch vụ --</option>
-                    {medicalServices.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                  <label htmlFor="medicalServiceBtn" className={labelStyle}>Dịch vụ khám <span className="text-red-500">*</span></label>
+                  {/* Display selected service name + button */}
+                  <div className="flex items-center justify-between border border-gray-300 rounded-lg bg-gray-50 px-4 py-2 shadow-sm">
+                    <span className="text-gray-800 font-medium text-sm">
+                       {selectedServiceDetails?.name || '-- Chọn dịch vụ --'}
+                    </span>
+                    <button
+                        type="button" // Important: prevent form submission
+                        id="medicalServiceBtn"
+                        onClick={openServiceSelectionModal}
+                        className="ml-2 px-2 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded hover:bg-blue-200 flex items-center gap-1"
+                    >
+                        <Edit2 className="w-3 h-3"/> Chọn
+                    </button>
+                  </div>
                   
-                  {/* Hiển thị giá (Giao diện mới) */}
-                  {selectedServiceCost && (
+                  {/* Hiển thị giá */}
+                  {selectedServiceDetails && (
                     <p className="mt-2 text-sm text-gray-700">
                       {/* Đổi màu giá về primary-700 */}
-                      Chi phí khám: <span className="font-semibold text-primary-700">{selectedServiceCost.toLocaleString()} VND</span>
+                        Chi phí khám: <span className="font-semibold text-primary-700">{selectedServiceDetails.cost?.toLocaleString('vi-VN')} VND</span>
                     </p>
                   )}
                 </div>
 
-                {/* Ngày & Giờ (Giao diện mới) */}
+                {/* Ngày & Giờ */}
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div>
-                    <label htmlFor="appointmentDate" className={labelStyle}>Ngày khám</label>
-                    <input type="date" name="appointmentDate" id="appointmentDate" value={formData.appointmentDate} onChange={handleChange}
-                      className={inputStyle} required />
-                  </div>
-                  <div>
-                    <label htmlFor="appointmentTime" className={labelStyle}>Giờ khám</label>
-                    <select name="appointmentTime" id="appointmentTime" value={formData.appointmentTime} onChange={handleChange}
-                      className={inputStyle} required>
-                      <option value="">-- Chọn giờ --</option>
-                      <option value="08:00:00">08:00 Sáng</option>
-                      <option value="09:00:00">09:00 Sáng</option>
-                      <option value="10:00:00">10:00 Sáng</option>
-                      <option value="11:00:00">11:00 Sáng</option>
-                      <option value="14:00:00">14:00 Chiều</option>
-                      <option value="15:00:00">15:00 Chiều</option>
-                      <option value="16:00:00">16:00 Chiều</option>
-                    </select>
-                  </div>
+                    <div>
+                        <label htmlFor="appointmentDate" className={labelStyle}>Ngày khám</label>
+                        <input
+                            type="date"
+                            name="appointmentDate"
+                            id="appointmentDate"
+                            value={formData.appointmentDate}
+                            onChange={handleChange}
+                            min={minDate}
+                            className={inputStyle}
+                            required />
+                    </div>
+                    <div>
+                        <label htmlFor="appointmentTime" className={labelStyle}>Giờ khám</label>
+                        <select
+                            name="appointmentTime"
+                            id="appointmentTime"
+                            value={formData.appointmentTime}
+                            onChange={handleChange}
+                            className={inputStyle}
+                            required
+                          >
+                            <option value="" disabled>-- Chọn giờ khám --</option>
+                            {/* Buổi Sáng */}
+                            <option value="08:00:00">08:00 Sáng</option>
+                            <option value="09:00:00">09:00 Sáng</option>
+                            <option value="10:00:00">10:00 Sáng</option>
+                            <option value="11:00:00">11:00 Sáng</option>
+                            {/* Buổi Chiều */}
+                            <option value="13:30:00">13:30 Chiều</option>
+                            <option value="14:30:00">14:30 Chiều</option>
+                            <option value="15:30:00">15:30 Chiều</option>
+                            <option value="16:30:00">16:30 Chiều</option>
+                          </select>
+                    </div>
                 </div>
 
-                {/* Trả về class `btn-primary` như ban đầu */}
-                <button type="submit" disabled={loading || isLoadingPatient} className="w-full btn-primary flex items-center justify-center space-x-2 text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed">
+                {/* Nút Submit */}
+                <button
+                  type="submit"
+                  disabled={
+                    loading ||
+                    isLoadingPatient ||
+                    !formData.medicalServiceId ||
+                    !formData.appointmentDate ||
+                    !formData.appointmentTime ||
+                    (isNameUpdateRequired && !formData.fullName.trim()) ||
+                    (isPhoneUpdateRequired && !formData.phoneNumber.trim())
+                  }
+                  className="w-full btn-primary flex items-center justify-center space-x-2 text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                   {loading ? (
                     <Loader2 className="w-6 h-6 animate-spin" />
                   ) : (
@@ -358,6 +376,17 @@ const AppointmentBooking = () => {
           )}
         </div>
       </div>
+
+      {isServiceModalOpen && (
+          <ServiceSelectionModal
+            isOpen={isServiceModalOpen}
+            onClose={() => setIsServiceModalOpen(false)}
+            services={medicalServices}
+            specialties={specialties}
+            onSelectService={handleSelectService}
+            currentServiceId={formData.medicalServiceId}
+          />
+      )}
     </div>
   );
 };

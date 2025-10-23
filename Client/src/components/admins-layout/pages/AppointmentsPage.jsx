@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
-// (CẬP NHẬT) Thêm icon mới
 import { 
   Calendar as CalendarIcon, Clock, User, ChevronDown, ChevronLeft, ChevronRight, X, Info, 
   CheckCircle, AlertTriangle, XCircle, DollarSign, Stethoscope, Edit, BriefcaseMedical,
   UserCheck, CircleCheckBig, UserX, Edit2, Search, Filter
 } from 'lucide-react';
-import { format, parseISO } from 'date-fns'; // Bỏ các import không dùng
-import { vi } from 'date-fns/locale';
+import { format } from 'date-fns';
 import { toast } from "react-toastify";
 import api from "../../admins-layout/contexts/Api";
 import DoctorSelectionModal from './DoctorSelectionModal';
-
+import ConfirmationModal from "../ConfirmationModal";
 const ITEMS_PER_PAGE = 5;
 
 const AppointmentsPage = () => {
@@ -21,9 +19,10 @@ const AppointmentsPage = () => {
   const [editedStaffId, setEditedStaffId] = useState('');
   const [editedStatus, setEditedStatus] = useState(''); 
   const [staffs, setStaffs] = useState([]);
-  // State cho modal chọn bác sĩ
   const [isDoctorModalOpen, setIsDoctorModalOpen] = useState(false);
   const [specialtiesList, setSpecialtiesList] = useState([]);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmModalProps, setConfirmModalProps] = useState({});
 
   useEffect(() => {
     fetchAppointments();
@@ -32,28 +31,166 @@ const AppointmentsPage = () => {
   }, []);
 
   useEffect(() => {
-     if (selectedAppointment) {
-       setEditedStaffId(selectedAppointment.staff?.id || '');
-       setEditedStatus(selectedAppointment.status);
-     } else {
+    if (selectedAppointment) {
+        setEditedStaffId(selectedAppointment.staff?.id || '');
+        setEditedStatus(selectedAppointment.status); // Khởi tạo editedStatus = status hiện tại khi mở modal
+    } else {
         setEditedStaffId('');
         setIsDoctorModalOpen(false);
-     }
-   }, [selectedAppointment]);
+        setShowConfirmModal(false); // Đảm bảo modal confirm đóng khi modal chính đóng
+    }
+  }, [selectedAppointment]);
 
-   const API_BASE_URL = import.meta.env.VITE_API_URL;
+  /// <summary>
+  /// Lấy danh sách chuyên khoa từ API.
+  /// </summary>
   const fetchSpecialties = async () => {
+    const API_BASE_URL = import.meta.env.VITE_API_URL;
     try {
-      const res = await fetch(`${API_BASE_URL}/specialties`);
-      const result = await res.json();
-      if (result.status && result.data) setSpecialtiesList(result.data);
-      else toast.error(result.message || "Không thể tải chuyên khoa");
-    } catch {
-      toast.error("Lỗi kết nối đến server (chuyên khoa)");
+        const res = await fetch(`${API_BASE_URL}/specialties`);
+        const result = await res.json();
+        if (result.status && result.data) setSpecialtiesList(result.data);
+        else {
+            console.error("API /specialties không trả về dữ liệu hợp lệ:", result);
+            setSpecialtiesList([]);
+        }
+    } catch(error) {
+        console.error("Lỗi kết nối khi fetch chuyên khoa:", error);
+        setSpecialtiesList([]);
     }
   };
 
-  // Hàm helper để lấy các option trạng thái hợp lệ
+  /// <summary>
+  /// Lấy danh sách tất cả lịch hẹn từ API cho nhân viên (lễ tân).
+  /// </summary>
+  const fetchAppointments = async () => {
+    try {
+        const response = await api.get('/staff/appointments');
+        if (response.data.status) {
+            setAppointments(response.data.data);
+        } else {
+            toast.error(response.data.message || 'Không thể tải lịch hẹn.');
+            console.error(response.data.message);
+        }
+    } catch (error) {
+        toast.error(error.response?.data?.message || 'Lỗi khi kết nối đến máy chủ khi tải lịch hẹn.');
+        console.error('Lỗi khi lấy lịch hẹn:', error);
+    }
+  };
+
+  /// <summary>
+  /// Lấy danh sách tất cả nhân viên từ API.
+  /// </summary>
+  const fetchStaffs = async () => {
+    try {
+        const response = await api.get('/staff/staffs');
+        if (response.data.status) {
+            setStaffs(response.data.data);
+        } else {
+            console.error("Lỗi tải danh sách nhân viên:", response.data.message);
+        }
+    } catch (error) {
+        console.error(error.response?.data?.message || 'Lỗi kết nối khi lấy danh sách nhân viên:', error);
+    }
+  };
+
+  /* Trạng thái lịch hẹn
+    Pending = 0,      // Chờ xác nhận
+    Confirmed = 1,    // Đã xác nhận
+    CheckedIn = 2,    // Bệnh nhân đã đến
+    InProgress = 3,   // Đang khám
+    Completed = 4,    // Đã hoàn thành
+    Cancelled = 5,    // Đã hủy
+    NoShow = 6        // Không đến
+    */
+
+    /// <summary>
+    /// Trả về chuỗi mô tả trạng thái dựa trên mã trạng thái.
+    /// </summary>
+    /// <param name="status">Mã trạng thái (số nguyên).</param>
+    /// <returns>Chuỗi mô tả trạng thái.</returns>
+    const getStatusText = (status) => {
+        // ... (switch case giữ nguyên) ...
+          switch (status) {
+             case 0: return 'Chờ xác nhận';
+             case 1: return 'Đã xác nhận';
+             case 2: return 'Bệnh nhân đã đến';
+             case 3: return 'Đang khám';
+             case 4: return 'Đã hoàn thành';
+             case 5: return 'Đã hủy';
+             case 6: return 'Không đến';
+             default: return 'Không xác định';
+          }
+    };
+
+    /// <summary>
+    /// Trả về các lớp CSS Tailwind cho màu sắc badge dựa trên mã trạng thái.
+    /// </summary>
+    /// <param name="status">Mã trạng thái (số nguyên).</param>
+    /// <returns>Chuỗi các lớp CSS.</returns>
+    const getStatusColorClass = (status) => {
+         switch (status) {
+             case 0: return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+             case 1: return 'bg-green-100 text-green-700 border-green-200';
+             case 2: return 'bg-cyan-100 text-cyan-700 border-cyan-200';
+             case 3: return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+             case 4: return 'bg-blue-100 text-blue-700 border-blue-200';
+             case 5: return 'bg-red-100 text-red-700 border-red-200';
+             case 6: return 'bg-gray-200 text-gray-800 border-gray-300';
+             default: return 'bg-gray-100 text-gray-700 border-gray-200';
+         }
+    };
+
+    /// <summary>
+    /// Trả về component Icon tương ứng với mã trạng thái.
+    /// </summary>
+    /// <param name="status">Mã trạng thái (số nguyên).</param>
+    /// <returns>Component Icon từ lucide-react.</returns>
+    const getStatusIcon = (status) => {
+        switch (status) {
+            case 0: return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
+            case 1: return <CheckCircle className="w-5 h-5 text-green-500" />;
+            case 2: return <UserCheck className="w-5 h-5 text-cyan-500" />;
+            case 3: return <Stethoscope className="w-5 h-5 text-indigo-500" />;
+            case 4: return <CircleCheckBig className="w-5 h-5 text-blue-500" />;
+            case 5: return <XCircle className="w-5 h-5 text-red-500" />;
+            case 6: return <UserX className="w-5 h-5 text-gray-500" />;
+            default: return <Info className="w-5 h-5 text-gray-500" />;
+        }
+    };
+
+  // <summary>
+  /// Trả về chuỗi mô tả trạng thái TÁI KHÁM.
+  /// </summary>
+  /// <param name="revisitStatus">Mã trạng thái (0, 1, 2).</param>
+  /// <returns>Chuỗi mô tả.</returns>
+  const getRevisitStatusText = (revisitStatus) => {
+    switch (revisitStatus) {
+      case 1: return 'Tái khám';
+      case 2: return 'Hoàn thành tái khám';
+      default: return 'Không';
+    }
+  };
+
+  /// <summary>
+  /// Trả về các lớp CSS Tailwind cho badge TÁI KHÁM.
+  /// </summary>
+  /// <param name="revisitStatus">Mã trạng thái (0, 1, 2).</param>
+  /// <returns>Chuỗi các lớp CSS.</returns>
+  const getRevisitStatusColorClass = (revisitStatus) => {
+    switch (revisitStatus) {
+      case 1: return 'bg-purple-100 text-purple-700 border-purple-200'; // Cần tái khám
+      case 2: return 'bg-green-100 text-green-700 border-green-200';   // Đã hoàn thành
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';   // Không
+    }
+  };
+
+
+  /// <summary>
+    /// Lấy danh sách các lựa chọn trạng thái hợp lệ có thể chuyển đến từ trạng thái hiện tại.
+    /// </summary>
+    /// <param name="currentStatus">Trạng thái hiện tại của lịch hẹn.</param>
+    /// <returns>Mảng các object { value, text } cho thẻ <option>.</returns>
   const getAllowedStatusOptions = (currentStatus) => {
     // Luôn bao gồm trạng thái hiện tại là lựa chọn đầu tiên và hợp lệ
     const options = [{ value: currentStatus, text: getStatusText(currentStatus) }];
@@ -69,9 +206,7 @@ const AppointmentsPage = () => {
         options.push({ value: 6, text: getStatusText(6) }); // -> NoShow
         break;
       case 2: // CheckedIn (Đã đến)
-        options.push({ value: 3, text: getStatusText(3) }); // -> InProgress
         options.push({ value: 5, text: getStatusText(5) }); // -> Cancelled
-        options.push({ value: 6, text: getStatusText(6) }); // -> NoShow
         break;
       case 3: // InProgress (Đang khám)
         options.push({ value: 4, text: getStatusText(4) }); // -> Completed
@@ -81,144 +216,119 @@ const AppointmentsPage = () => {
     return options.sort((a, b) => a.value - b.value);
   };
 
-  const fetchAppointments = async () => {
-    try {
-      const response = await api.get('/staff/appointments');
-      if (response.data.status) {    
-        setAppointments(response.data.data);
-      } else {
-        toast.error(response.data.message || 'Không thể tải lịch hẹn.');
-        console.error(response.data.message);
-      }
-    } catch (error) {
-      toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi tải lịch hẹn.');
-      console.error('Lỗi khi lấy lịch hẹn:', error);
-    }
-  };
-
-  const fetchStaffs = async () => {
-    try {
-      const response = await api.get('/staff/staffs');
-      if (response.data.status) {
-        setStaffs(response.data.data);
-      } else {
-        console.error(response.data.message);
-      }
-    } catch (error) {
-      console.error(error.response.data.message || 'Lỗi khi lấy danh sách nhân viên:', error);
-    }
-  };
-
-  /* (CẬP NHẬT) Trạng thái mới
-  Pending = 0,      // Chờ xác nhận
-  Confirmed = 1,    // Đã xác nhận
-  CheckedIn = 2,    // Bệnh nhân đã đến
-  InProgress = 3,   // Đang khám
-  Completed = 4,    // Đã hoàn thành
-  Cancelled = 5,    // Đã hủy
-  NoShow = 6        // Không đến
-  */
-
-  // (CẬP NHẬT) Hàm getStatusText
-  const getStatusText = (status) => {
-    switch (status) {
-      case 0: return 'Chờ xác nhận';
-      case 1: return 'Đã xác nhận';
-      case 2: return 'Bệnh nhân đã đến';
-      case 3: return 'Đang khám';
-      case 4: return 'Đã hoàn thành';
-      case 5: return 'Đã hủy';
-      case 6: return 'Không đến';
-      default: return 'Không xác định';
-    }
-  };
-
-  // (CẬP NHẬT) Hàm getStatusColorClass
-  const getStatusColorClass = (status) => {
-    switch (status) {
-      case 0: return 'bg-yellow-100 text-yellow-700 border-yellow-200'; // Pending
-      case 1: return 'bg-green-100 text-green-700 border-green-200';   // Confirmed
-      case 2: return 'bg-cyan-100 text-cyan-700 border-cyan-200';     // CheckedIn
-      case 3: return 'bg-indigo-100 text-indigo-700 border-indigo-200'; // InProgress
-      case 4: return 'bg-blue-100 text-blue-700 border-blue-200';      // Completed
-      case 5: return 'bg-red-100 text-red-700 border-red-200';        // Cancelled
-      case 6: return 'bg-gray-200 text-gray-800 border-gray-300';      // NoShow
-      default: return 'bg-gray-100 text-gray-700 border-gray-200';
-    }
-  };
-
-  // (CẬP NHẬT) Hàm getStatusIcon
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 0: return <AlertTriangle className="w-5 h-5 text-yellow-500" />;
-      case 1: return <CheckCircle className="w-5 h-5 text-green-500" />;
-      case 2: return <UserCheck className="w-5 h-5 text-cyan-500" />;
-      case 3: return <Stethoscope className="w-5 h-5 text-indigo-500" />;
-      case 4: return <CircleCheckBig className="w-5 h-5 text-blue-500" />;
-      case 5: return <XCircle className="w-5 h-5 text-red-500" />;
-      case 6: return <UserX className="w-5 h-5 text-gray-500" />;
-      default: return <Info className="w-5 h-5 text-gray-500" />;
-    }
-  };
-
-  // Filter appointments based on selected status (Giữ nguyên)
+  // <summary>
+    /// Lọc danh sách lịch hẹn dựa trên bộ lọc trạng thái hiện tại.
+    /// </summary>
   const filteredAppointments = appointments.filter(apt => {
     if (currentFilterStatus === 'all') return true;
     return apt.status.toString() === currentFilterStatus;
   });
 
-  // Pagination logic (Giữ nguyên)
   const totalPages = Math.ceil(filteredAppointments.length / ITEMS_PER_PAGE);
   const paginatedAppointments = filteredAppointments.slice(
     (currentPage - 1) * ITEMS_PER_PAGE,
     currentPage * ITEMS_PER_PAGE
   );
 
+  /// <summary>
+  /// Xử lý việc thay đổi trang trong phân trang.
+  /// </summary>
+  /// <param name="pageNumber">Số trang mới.</param>
   const handlePageChange = (pageNumber) => {
     setCurrentPage(pageNumber);
   };
 
+  /// <summary>
+  /// Xử lý việc thay đổi bộ lọc trạng thái.
+  /// </summary>
+  /// <param name="status">Mã trạng thái mới hoặc 'all'.</param>
   const handleStatusFilterChange = (status) => {
     setCurrentFilterStatus(status);
-    setCurrentPage(1); // Reset page when filter changes
+    setCurrentPage(1);
   };
 
-  // handleUpdateAppointment (Giữ nguyên, nó đã linh hoạt)
-  const handleUpdateAppointment = async (newStatus = null) => {
+  /// <summary>
+  /// Xử lý việc cập nhật lịch hẹn (gán nhân viên hoặc thay đổi trạng thái).
+  /// Yêu cầu xác nhận nếu trạng thái bị thay đổi.
+  /// </summary>
+  const handleUpdateAppointment = async () => {
     if (!selectedAppointment) return;
+    // Xác định trạng thái mới và nhân viên mới từ state
+    const targetStatus = editedStatus; // Trạng thái người dùng chọn trong dropdown/text
+    const targetStaffId = editedStaffId ? parseInt(editedStaffId) : null; // Nhân viên người dùng chọn (nếu status=0)
 
+    // Kiểm tra xem trạng thái có thực sự thay đổi không
+    const statusHasChanged = targetStatus !== selectedAppointment.status;
+    // Kiểm tra xem nhân viên có thay đổi không (chỉ quan trọng nếu status gốc là 0)
+    const staffHasChanged = selectedAppointment.status === 0 && targetStaffId !== (selectedAppointment.staff?.id || null);
+
+    // Dữ liệu chuẩn bị gửi API
     const updatedData = {
-      id: selectedAppointment.id, 
-      patientId: selectedAppointment.patient?.id,
-      staffId: editedStaffId ? parseInt(editedStaffId) : null, 
-      status: newStatus !== null ? newStatus : editedStatus, 
+        id: selectedAppointment.id,
+        patientId: selectedAppointment.patient?.id,
+        staffId: targetStaffId,
+        status: targetStatus,
     };
 
-    if (!updatedData.staffId) {
-      delete updatedData.staffId;
-    }
+    // Dọn dẹp payload
+    if (!updatedData.staffId) delete updatedData.staffId;
+    if (!updatedData.patientId) delete updatedData.patientId; // Nếu không cần
 
-    if (!updatedData.patientId) {
-        delete updatedData.patientId;
-    }
+    // --- Logic Xác nhận ---
+    if (statusHasChanged) {
+      const newStatusText = getStatusText(targetStatus);
+      let message = `Bạn có chắc muốn cập nhật trạng thái lịch hẹn thành "${newStatusText}"?`;
 
-    try {
-      const response = await api.patch(`/staff/appointments/${selectedAppointment.id}`, updatedData);
-      if (response.data.status) {
-        toast.success(`${response.data.message}`);
-        fetchAppointments();
-        setSelectedAppointment(null);
-      } else {
-        toast.error(response.data.message);
-        console.error(response.data.message);
+      setConfirmModalProps({
+          message: message,
+          onConfirm: () => executeApiUpdate(updatedData),
+          onCancel: () => setShowConfirmModal(false),
+          title: 'Xác nhận Cập nhật Trạng thái',
+          confirmText: 'Đồng ý',
+          confirmColor: 'bg-blue-600 hover:bg-blue-700',
+      });
+      setShowConfirmModal(true);
       }
-    } catch (error) {
-      toast.error(error.response.data.message)
-      console.error('Lỗi khi cập nhật lịch hẹn:', error);
-    }
-  };
+      // Nếu chỉ thay đổi nhân viên (khi status=0) hoặc không thay đổi gì
+      else if (staffHasChanged) {
+        // Thực hiện cập nhật luôn nếu chỉ đổi nhân viên (không đổi status)
+        executeApiUpdate(updatedData);
+      } else {
+        toast.info("Không có thay đổi nào được thực hiện.");
+        setSelectedAppointment(null); // Đóng modal
+      }
+    };
 
-  // (CẬP NHẬT) Sửa lỗi .Id thành .id và thêm style badge
+    /// <summary>
+     /// Thực thi gọi API PATCH để cập nhật lịch hẹn.
+     /// </summary>
+     /// <param name="dataToUpdate">Payload dữ liệu gửi lên API.</param>
+     const executeApiUpdate = async (dataToUpdate) => {
+         setShowConfirmModal(false); // Đảm bảo modal confirm đóng lại
+         try {
+             const response = await api.patch(`/staff/appointments/${dataToUpdate.id}`, dataToUpdate);
+             if (response.data.status) {
+                 toast.success(response.data.message || 'Cập nhật lịch hẹn thành công!');
+                 if (dataToUpdate.status === 2) {
+                    setTimeout(() => {
+                        toast.info('Đã tạo hồ sơ bệnh án cho bệnh nhân này');
+                    }, 1000);
+                }
+                 fetchAppointments(); // Tải lại danh sách
+                 setSelectedAppointment(null); // Đóng modal chi tiết
+             } else {
+                 toast.error(response.data.message || 'Cập nhật lịch hẹn thất bại.');
+                 console.error(response.data.message);
+             }
+         } catch (error) {
+             toast.error(error.response?.data?.message || 'Lỗi khi kết nối máy chủ.');
+             console.error('Lỗi khi cập nhật lịch hẹn:', error);
+         }
+     };
+
+  /// <summary>
+  /// Component hiển thị thông tin tóm tắt của một lịch hẹn dưới dạng thẻ.
+  /// </summary>
   const AppointmentCard = ({ appointment }) => (
     <div
       onClick={() => setSelectedAppointment(appointment)}
@@ -228,7 +338,6 @@ const AppointmentsPage = () => {
         <div className="w-14 h-14 bg-blue-50 rounded-lg flex items-center justify-center">
           <CalendarIcon className="w-6 h-6 text-blue-600" />
         </div>
-        {/* (MỚI) Thêm badge cho ID */}
         <span className="mt-1.5 inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-blue-200">
           Mã LH: {appointment.id}
         </span>
@@ -237,10 +346,17 @@ const AppointmentsPage = () => {
       <div className="flex-1 w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2">
           <div>
-            <h3 className="font-semibold text-gray-900 text-lg">
-              {appointment.patient?.fullName || 'Chưa có bệnh nhân'}
-            </h3>
-            {/* Dòng `appointment.Id` đã bị xóa vì nó sai và đã được thay bằng badge */}
+            <div className="flex items-baseline gap-2 mb-1">
+              <h3 className="font-semibold text-gray-900 text-lg leading-tight">
+                {appointment.patient?.fullName || 'Bệnh nhân chưa có tên'}
+              </h3>
+              {(appointment.revisit === 1 || appointment.revisit === 2) && (
+                <span className={`px-2 py-0.5 rounded text-xs font-medium border self-center ${getRevisitStatusColorClass(appointment.revisit)}`}>
+                  {getRevisitStatusText(appointment.revisit)}
+                </span>
+              )}
+            </div>
+ 
             <p className="text-sm text-gray-600 flex items-center gap-1">
               <BriefcaseMedical className="w-4 h-4 inline-block text-gray-500" />
               {appointment.medicalService?.name || 'Chưa có dịch vụ'}
@@ -268,19 +384,26 @@ const AppointmentsPage = () => {
     </div>
   );
 
-  // Hàm mở modal chọn bác sĩ
-  const openDoctorSelectionModal = () => {
-    setIsDoctorModalOpen(true);
-  };
+  // <summary>
+    /// Mở modal chọn bác sĩ/nhân viên.
+    /// </summary>
+    const openDoctorSelectionModal = () => {
+        setIsDoctorModalOpen(true);
+    };
 
-  // Hàm xử lý khi chọn bác sĩ từ modal con
-  const handleSelectDoctor = (staffId) => {
-    setEditedStaffId(staffId); // Cập nhật ID bác sĩ đã chọn
-    setIsDoctorModalOpen(false); // Đóng modal chọn bác sĩ
-  };
+    /// <summary>
+    /// Xử lý khi một bác sĩ/nhân viên được chọn từ modal DoctorSelectionModal.
+    /// </summary>
+    /// <param name="staffId">ID của nhân viên được chọn.</param>
+    const handleSelectDoctor = (staffId) => {
+        setEditedStaffId(staffId);
+        setIsDoctorModalOpen(false);
+    };
 
-  // Lấy tên bác sĩ đang được chọn (dựa trên editedStaffId) để hiển thị
-  const selectedStaffName = staffs.find(s => s.id === editedStaffId)?.fullName || 'Chưa phân công';
+    /// <summary>
+    /// Lấy tên của nhân viên đang được chọn (trong state editedStaffId) để hiển thị.
+    /// </summary>
+    const selectedStaffName = staffs.find(s => s.id === editedStaffId)?.fullName || 'Chưa phân công';
 
   return (
     <div className="container mx-auto p-6 bg-gray-50 min-h-screen">
@@ -289,12 +412,10 @@ const AppointmentsPage = () => {
         <p className="text-gray-500">Theo dõi danh sách và thông tin chi tiết</p>
       </div>
 
-      {/* Appointment List Section */}
-      <div className="bg-white rounded-xl shadow-sm p-5 mt-6"> {/* (MỚI) Thêm mt-6 */}
+      <div className="bg-white rounded-xl shadow-sm p-5 mt-6">
         <div className="flex flex-wrap items-center justify-between mb-5 gap-3">
           <h3 className="text-xl font-semibold text-gray-800">Tất cả lịch hẹn</h3>
           
-          {/* (CẬP NHẬT) Toàn bộ các nút filter */}
           <div className="flex gap-2 flex-wrap">
             <button
               onClick={() => handleStatusFilterChange('all')}
@@ -451,7 +572,7 @@ const AppointmentsPage = () => {
                   // Hiển thị tên BS hiện tại và nút chọn
                   <div className="flex-1 flex items-center justify-between border border-gray-200 rounded-lg bg-gray-50 px-3 py-1.5">
                     <span className="font-medium text-gray-800">
-                       {selectedStaffName} {/* Hiển thị tên BS đã chọn */}
+                       {selectedStaffName}
                     </span>
                     <button
                       onClick={openDoctorSelectionModal}
@@ -496,7 +617,7 @@ const AppointmentsPage = () => {
                 {[4, 5, 6].includes(selectedAppointment.status) ? (
                   // Hiển thị dạng text, không cho sửa
                   <p className={`flex-1 px-3 py-2 border rounded-lg ${getStatusColorClass(selectedAppointment.status)} bg-opacity-70 font-medium`}>
-                    {getStatusText(selectedAppointment.status)} (Không thể thay đổi)
+                    {getStatusText(selectedAppointment.status)}
                   </p>
                 ) : (
                   // Hiển thị dropdown với các option hợp lệ
@@ -528,18 +649,14 @@ const AppointmentsPage = () => {
 
             {/* Action Buttons */}
             <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
-              {/* Chỉ hiển thị nút Lưu nếu trạng thái không phải là trạng thái cuối */}
               {![4, 5, 6].includes(selectedAppointment.status) && (
                 <button
                   onClick={() => handleUpdateAppointment(null)} // Lưu trạng thái đã chọn trong editedStatus
                   className="flex items-center justify-center px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors duration-200 shadow-md"
-                  disabled={selectedAppointment.status === 0 && !editedStaffId}
                 >
                   <Edit className="w-5 h-5 mr-2" /> Lưu thay đổi
                 </button>
               )}
-               {/* Nút Đóng luôn hiển thị (hoặc thay bằng nút Hủy) */}
-               {/* <button onClick={() => setSelectedAppointment(null)} className="...">Đóng</button> */}
             </div>
           </div>
         </div>
@@ -554,6 +671,18 @@ const AppointmentsPage = () => {
           specialties={specialtiesList}
           onSelectDoctor={handleSelectDoctor}
           currentStaffId={editedStaffId} // Truyền ID hiện tại để highlight
+        />
+      )}
+
+      {/* Modal Xác nhận */}
+      {showConfirmModal && (
+        <ConfirmationModal
+            message={confirmModalProps.message}
+            onConfirm={confirmModalProps.onConfirm}
+            onCancel={confirmModalProps.onCancel}
+            title={confirmModalProps.title}
+            confirmText={confirmModalProps.confirmText}
+            confirmColor={confirmModalProps.confirmColor}
         />
       )}
     </div>

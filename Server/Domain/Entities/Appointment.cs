@@ -22,7 +22,7 @@ public partial class Appointment
 
     public AppointmentStatus Status { get; set; }
 
-    public bool IsRevisit { get; set; }
+    public RevisitStatus Revisit { get; set; }
 
     public virtual MedicalService MedicalService { get; set; } = null!;
 

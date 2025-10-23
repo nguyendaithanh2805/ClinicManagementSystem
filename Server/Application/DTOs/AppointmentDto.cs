@@ -34,7 +34,7 @@ namespace Application.DTOs
 
         [Required(ErrorMessage = "Trạng thái là bắt buộc.")]
         public AppointmentStatus Status { get; set; }
-        public bool IsRevisit { get; set; }
+        public RevisitStatus Revisit { get; set; }
         public string? FullName { get; set; }
         public string? phoneNumber { get; set; }
         public PatientDto? Patient { get; set; }

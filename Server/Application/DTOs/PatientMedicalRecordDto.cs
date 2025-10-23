@@ -36,6 +36,5 @@ namespace Application.DTOs
         public virtual ICollection<TestResultDto>? TestResults { get; set; }
         //public virtual InvoiceDto? InvoiceDto { get; set; }
         public virtual ICollection<AppointmentDto>? Appointments { get; set; }
-
     }
 }

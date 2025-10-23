@@ -119,29 +119,40 @@ const DoctorDashboard = () => {
     switch (status) {
       case 0: return 'Chờ xác nhận';
       case 1: return 'Đã xác nhận';
-      case 2: return 'Đã hủy';
-      case 3: return 'Hoàn thành';
+      case 2: return 'Bệnh nhân đã đến';
+      case 3: return 'Đang khám';
+      case 4: return 'Đã hoàn thành';
+      case 5: return 'Đã hủy';
+      case 6: return 'Không đến';
       default: return 'Không xác định';
     }
   };
 
   const getStatusColorClass = (status) => {
     switch (status) {
-      case 0: return 'bg-yellow-100 text-yellow-700'; // Pending
-      case 1: return 'bg-green-100 text-green-700';   // Confirmed
-      case 2: return 'bg-red-100 text-red-700';      // Cancelled
-      case 3: return 'bg-blue-100 text-blue-700';     // Completed
-      default: return 'bg-gray-100 text-gray-700';
+      case 0: return 'bg-yellow-100 text-yellow-700 border-yellow-200'; // Pending
+      case 1: return 'bg-green-100 text-green-700 border-green-200';   // Confirmed
+      case 2: return 'bg-cyan-100 text-cyan-700 border-cyan-200';     // CheckedIn
+      case 3: return 'bg-indigo-100 text-indigo-700 border-indigo-200'; // InProgress
+      case 4: return 'bg-blue-100 text-blue-700 border-blue-200';      // Completed
+      case 5: return 'bg-red-100 text-red-700 border-red-200';        // Cancelled
+      case 6: return 'bg-gray-100 text-gray-700 border-gray-200';      // NoShow
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
     }
   };
 
   const getAppointmentStatusIcon = (status) => {
-    switch (status) {
-      case 1: return <CheckCircle className="w-4 h-4 text-green-500" />;
-      case 3: return <Stethoscope className="w-4 h-4 text-blue-500" />;
-      default: return <Info className="w-4 h-4 text-gray-500" />;
-    }
-  };
+  switch (status) {
+    case 0: return <AlertTriangle className="w-4 h-4 text-yellow-500" />; // Chờ xác nhận
+    case 1: return <CheckCircle className="w-4 h-4 text-green-500" />;   // Đã xác nhận
+    case 2: return <UserCheck className="w-4 h-4 text-cyan-500" />;     // Bệnh nhân đã đến
+    case 3: return <Stethoscope className="w-4 h-4 text-indigo-500" />; // Đang khám
+    case 4: return <CircleCheckBig className="w-4 h-4 text-blue-500" />;    // Đã hoàn thành
+    case 5: return <XCircle className="w-4 h-4 text-red-500" />;        // Đã hủy
+    case 6: return <UserX className="w-4 h-4 text-gray-500" />;         // Không đến
+    default: return <Info className="w-4 h-4 text-gray-500" />;         // Không xác định
+  }
+};
 
 
   if (loading) {

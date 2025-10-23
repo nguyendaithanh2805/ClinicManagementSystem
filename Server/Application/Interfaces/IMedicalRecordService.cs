@@ -13,6 +13,7 @@ namespace Application.Interfaces
         Task<IEnumerable<PatientMedicalRecordDto>> GetAllForLabTechnicianAsync();
         Task ConfirmInProgress(int medicalRecordId);
         Task ConfirmCompleted(int medicalRecordId);
+        Task ConfirmCompletedRevisit(int medicalRecordId);
         Task ConfirmIsRevisit(int medicalRecordId, ConfirmIsRevisitAppointment confirmIsRevisitAppointment);
     }
 }

@@ -23,8 +23,9 @@ namespace Application.Services
         private readonly IRepository<Staff> _staffRepository;
         private readonly IInvoiceService _invoiceService;
         private readonly IRepository<Appointment> _appointmentRepository;
+        private readonly IRepository<Invoice> _invoiceRepository;
 
-        public MedicalRecordService(IRepository<PatientMedicalRecord> patientMedicalRecordRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Staff> staffRepository, IInvoiceService invoiceService, IRepository<Appointment> appointmentRepository)
+        public MedicalRecordService(IRepository<PatientMedicalRecord> patientMedicalRecordRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Staff> staffRepository, IInvoiceService invoiceService, IRepository<Appointment> appointmentRepository, IRepository<Invoice> invoiceRepository)
         {
             _patientMedicalRecordRepository = patientMedicalRecordRepository;
             _unitOfWork = unitOfWork;
@@ -33,8 +34,11 @@ namespace Application.Services
             _staffRepository = staffRepository;
             _invoiceService = invoiceService;
             _appointmentRepository = appointmentRepository;
+            _invoiceRepository = invoiceRepository;
         }
 
+
+        // Tạo hồ sơ bệnh án mặc định
         public async Task<PatientMedicalRecordDto> AddAsync(PatientMedicalRecordDto dto)
         {
             dto.CreateAt = DateTime.UtcNow;
@@ -76,7 +80,7 @@ namespace Application.Services
             var staff = await _staffRepository.GetAsync(s => s.AccountId == accountId);
 
             var medicalRecord = await _patientMedicalRecordRepository.Query()
-               .Include(pmr => pmr.Appointments)
+               .Include(pmr => pmr.Appointments.OrderByDescending(a => a.Id))
                         .ThenInclude(a => a.MedicalService)
                 .Include(pmr => pmr.Prescriptions)
                     .ThenInclude(pr => pr.PrescriptionDetails)
@@ -90,6 +94,7 @@ namespace Application.Services
                     .ThenInclude(t => t.Staff) // Nhân viên xét nghiệm
                         .ThenInclude(s => s.Account)
                 .Where(p => p.StaffId == staff.Id)
+                .Distinct()
                 .ToListAsync();
             return _mapper.Map<IEnumerable<PatientMedicalRecordDto>>(medicalRecord);
         }
@@ -103,7 +108,7 @@ namespace Application.Services
         {
             var medicalRecord = await _patientMedicalRecordRepository.GetByIdAsync(dto.Id);
             if (medicalRecord is null)
-                throw new NotFoundException($"Không tìm thấy Hồ sơ Bệnh án với ID {dto.Id}");
+                throw new NotFoundException($"Không tìm thấy Hồ sơ bệnh án với ID {dto.Id}");
 
             medicalRecord.CreateAt = DateTime.UtcNow;
             medicalRecord.Diagnosis = dto.Diagnosis;
@@ -126,24 +131,22 @@ namespace Application.Services
 
                 var medicalRecord = await _patientMedicalRecordRepository.GetByIdAsync(medicalRecordId);
                 if (medicalRecord is null)
-                    throw new NotFoundException($"Không tìm thấy Hồ sơ Bệnh án với ID {medicalRecordId}");
+                    throw new NotFoundException($"Không tìm thấy Hồ sơ bệnh án với ID {medicalRecordId}");
 
                 // Chưa nhập thông tin ở tab tổng quan nên ko callback ở fe đc
                 var appointment = await _appointmentRepository.GetAsync(a => a.PatientMedicalRecordId == medicalRecordId);
                 if (appointment.Status != AppointmentStatus.InProgress)
-                    throw new Exception("Vui lòng nhập thông tin khám bệnh cho trang tổng quan");
+                    throw new Exception("Vui lòng nhập thông tin khám bệnh cho bệnh nhân");
 
-                medicalRecord.Status = true;
+                medicalRecord.Status = true; // Xác nhận HSBA đã hoàn thành
                 _patientMedicalRecordRepository.Update(medicalRecord);
 
-                if (medicalRecord.Status)
+                // Tạo hóa đơn với pmrId
+                var invoiceDto = new InvoiceDto
                 {
-                    var invoiceDto = new InvoiceDto
-                    {
-                        PatientMedicalRecordId = medicalRecordId,
-                    };
-                    await _invoiceService.AddAsync(invoiceDto);
-                }
+                    PatientMedicalRecordId = medicalRecordId,
+                };
+                await _invoiceService.AddAsync(invoiceDto);
 
                 ///*
                 //    SELECT i.* FROM Appointment a
@@ -210,7 +213,8 @@ namespace Application.Services
             }
         }
 
-        // Xác nhận tái khám, lúc này lịch hẹn chuyển về trạng thái đã xác nhận và tiếp tục cho đến khi BS xác nhận hoàn thành thì thôi
+        // Xác nhận tái khám,
+        // lúc này tạo lịch hẹn mới với status đã xác nhận và có pmr của HSBA hiện tại cùng tt lịch hẹn hiện tại
         public async Task ConfirmIsRevisit(int medicalRecordId, ConfirmIsRevisitAppointment confirmIsRevisitAppointment)
         {
             try
@@ -219,21 +223,86 @@ namespace Application.Services
 
                 var medicalRecord = await _patientMedicalRecordRepository.GetByIdAsync(medicalRecordId);
                 if (medicalRecord is null)
-                    throw new NotFoundException($"Không tìm thấy Hồ sơ Bệnh án với ID {medicalRecordId}");
+                    throw new NotFoundException($"Không tìm thấy Hồ sơ bệnh án với ID {medicalRecordId}");
 
-                var appointmentCheck = await _appointmentRepository.GetAsync(a => a.PatientMedicalRecordId == medicalRecordId && a.IsRevisit == true);
-                if (appointmentCheck is not null)
-                    throw new NotFoundException($"Bệnh nhân đã có lịch tái khám với hồ sơ bệnh án này, vui lòng tiến hành khám bệnh");
+                var invoice = await _invoiceRepository.GetAsync(i =>
+                    i.PatientMedicalRecordId == medicalRecord.Id
+                    && i.Status == false);
+                if (invoice is not null)
+                    throw new ErrorException("Bệnh nhân chưa thanh toán hóa đơn cho lần khám này, vui lòng liên hệ Lễ tân để xác nhận thanh toán");
 
-                // Tìm lịch hẹn của bệnh nhân và chuyển nó thành trạng thái tái khám
-                var appointment = await _appointmentRepository.GetAsync(a => a.PatientMedicalRecordId == medicalRecordId);
+                medicalRecord.Status = true;  // Tạm hoàn thành cho đến khi bệnh nhân đến Lễ tân cập nhật trạng thái lịch hẹn 'Đã đến' sẽ mở lại cho edit
+                _patientMedicalRecordRepository.Update(medicalRecord);
+
+                // Tìm tất cả lịch hẹn theo HSBA cần tái khám
+                var appointmentChecks = await _appointmentRepository.GetAllAsync(a => 
+                a.PatientMedicalRecordId == medicalRecordId 
+                && (a.Revisit == RevisitStatus.NeedRevisit));
+                if (appointmentChecks.Any())
+                    throw new NotFoundException($"Bệnh nhân đã có lịch tái khám với hồ sơ bệnh án này, vui lòng kiểm tra");
+
+
+                /*SELECT* FROm PatientMedicalRecord pd
+                INNER JOIN Appointment a ON pd.Id = a.PatientMedicalRecordId
+                where pd.Id = 1 AND a.Revisit = 0*/
+                // Nếu chưa có
+                // Tìm lịch hẹn đang khám hoặc đã HT với HSBA hiện tại(Lấy mặc định LH đầu vì nó giống nhau)
+                // Vì lúc đang khám thì chưa có lịch tái khám, lúc đặt lịch tái khám rồi xác nhận hoàn thành tái khám thì lịch hẹn đã ở status completed
+                var appointment = await (
+                    from pmr in _patientMedicalRecordRepository.Query()
+                    join a in _appointmentRepository.Query() on pmr.Id equals a.PatientMedicalRecordId
+                    where pmr.Id == medicalRecordId && (a.Status == AppointmentStatus.InProgress || a.Status == AppointmentStatus.Completed)
+                    select a
+                    ).FirstOrDefaultAsync();
+
+                if (appointment is not null)
+                {
+                    // Đồng thời cập nhật lịch đang khám thành hoàn thành -> tạo lịch mới là đã xác nhận
+                    appointment.Status = AppointmentStatus.Completed;
+                    _appointmentRepository.Update(appointment);
+
+                    var appointmentNew = new Appointment
+                    {
+                        PatientId = appointment.PatientId,
+                        StaffId = appointment.StaffId,
+                        MedicalServiceId = appointment.MedicalServiceId,
+                        PatientMedicalRecordId = medicalRecordId,
+                        Revisit = RevisitStatus.NeedRevisit,
+                        Status = AppointmentStatus.Confirmed,
+                        AppointmentDate = confirmIsRevisitAppointment.AppointmentDate,
+                        AppointmentTime = confirmIsRevisitAppointment.AppointmentTime
+                    };
+                    await _appointmentRepository.AddAsync(appointmentNew);
+                }    
+                await _unitOfWork.CommitAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
+        }
+
+        // Cập nhật hoàn thành tái khám
+        public async Task ConfirmCompletedRevisit(int medicalRecordId)
+        {
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+
+                var medicalRecord = await _patientMedicalRecordRepository.GetByIdAsync(medicalRecordId);
+                if (medicalRecord is null)
+                    throw new NotFoundException($"Không tìm thấy Hồ sơ bệnh án với ID {medicalRecordId}");
+
+                // Tìm lịch hẹn đang khám
+                var appointment = await _appointmentRepository.GetAsync(a => 
+                    a.PatientMedicalRecordId == medicalRecordId 
+                    && a.Status == AppointmentStatus.InProgress);
                 if (appointment is null)
                     throw new NotFoundException($"Không tìm thấy lịch hẹn với ID {medicalRecordId}");
 
-                appointment.IsRevisit = true;
-                appointment.Status = AppointmentStatus.Confirmed;
-                appointment.AppointmentDate = confirmIsRevisitAppointment.AppointmentDate;
-                appointment.AppointmentTime = confirmIsRevisitAppointment.AppointmentTime;
+                appointment.Revisit = RevisitStatus.Completed;
+                appointment.Status = AppointmentStatus.Completed;
                 _appointmentRepository.Update(appointment);
 
                 // Tạo hóa đơn
@@ -262,17 +331,19 @@ namespace Application.Services
         {
             var medicalRecord = await _patientMedicalRecordRepository.GetByIdAsync(medicalRecordId);
             if (medicalRecord is null)
-                throw new NotFoundException($"Không tìm thấy Hồ sơ Bệnh án với ID {medicalRecordId}");
+                throw new NotFoundException($"Không tìm thấy Hồ sơ bệnh án với ID {medicalRecordId}");
 
-            // Tìm lịch hẹn của bệnh nhân và chuyển nó thành trạng thái đang khám
-            var appointment = await _appointmentRepository.GetAsync(a => a.PatientMedicalRecordId == medicalRecordId);
-            if (appointment is null)
-                throw new NotFoundException($"Không tìm thấy lịch hẹn với ID {medicalRecordId}");
-
-            appointment.IsRevisit = false;
-            appointment.Status = AppointmentStatus.InProgress;
-            _appointmentRepository.Update(appointment);
-            await _unitOfWork.SaveChangeAsync();
+            // Tìm lịch hẹn có trạng thái đã đến và chuyển nó thành trạng thái đang khám
+            var appointment = await _appointmentRepository.GetAsync(a => 
+                a.PatientMedicalRecordId == medicalRecordId
+                && a.Status == AppointmentStatus.CheckedIn);
+            if (appointment is not null)
+            {
+                // appointment.IsRevisit = false;
+                appointment.Status = AppointmentStatus.InProgress;
+                _appointmentRepository.Update(appointment);
+                await _unitOfWork.SaveChangeAsync();
+            }
         }
     }
 }

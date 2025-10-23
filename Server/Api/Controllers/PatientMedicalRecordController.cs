@@ -75,7 +75,7 @@ namespace Api.Controllers
                 if (id != dto.Id)
                     return BadRequest("Id không khớp");
 
-                return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Cập nhật Hồ sơ Bệnh án thành công",
+                return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Cập nhật Hồ sơ bệnh án thành công",
                     await _medicalRecordService.Update(dto)));
             }
             catch (NotFoundException ex)
@@ -95,9 +95,13 @@ namespace Api.Controllers
             try
             {
                 await _medicalRecordService.ConfirmCompleted(medicalRecordId);
-                return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Xác nhận hoàn thành thành công", null));
+                return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Xác nhận hoàn thành khám thành công", null));
             }
             catch (NotFoundException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+            catch (ErrorException ex)
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));
             }
@@ -120,6 +124,10 @@ namespace Api.Controllers
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));
             }
+            catch (ErrorException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
             catch (Exception ex)
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));
@@ -134,6 +142,25 @@ namespace Api.Controllers
             {
                 await _medicalRecordService.ConfirmInProgress(medicalRecordId);
                 return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Xác nhận đang khám", null));
+            }
+            catch (NotFoundException ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+        }
+
+        [HttpPut("confirm-completed-revisit/{medicalRecordId:int}")]
+        [Authorize(Roles = "Doctor")]
+        public async Task<IActionResult> ConfirmCompletedRevisit([FromRoute] int medicalRecordId)
+        {
+            try
+            {
+                await _medicalRecordService.ConfirmCompletedRevisit(medicalRecordId);
+                return Ok(new ApiResponse<PatientMedicalRecordDto>(true, "Xác nhận hoàn thành tái khám", null));
             }
             catch (NotFoundException ex)
             {

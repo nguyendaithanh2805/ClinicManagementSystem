@@ -12,7 +12,7 @@ namespace Domain.Enums
         Confirmed = 1,    // Đã xác nhận
         CheckedIn = 2,    // Bệnh nhân đã đến
         InProgress = 3,   // Đang khám
-        Completed = 4,    // Đã hoàn tất (ko thể dùng lại HSBA)
+        Completed = 4,    // Đã hoàn thành (ko thể dùng lại HSBA)
         Cancelled = 5,    // Đã hủy
         NoShow = 6        // Không đến
     }
