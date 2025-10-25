@@ -6,6 +6,7 @@ import {
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'react-toastify';
+import {formatDbUtcToVnTime} from '../../../../utils/dateFormatter.js';
 
 const MedicalRecordCard = ({
   record,
@@ -126,7 +127,7 @@ const MedicalRecordCard = ({
           <div className="flex items-center gap-1.5 text-xs text-gray-500 pt-1">
             <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />
             <span>Ngày tạo HS:</span>
-            <span>{format(parseISO(record.createAt), 'HH:mm dd/MM/yyyy', { locale: vi })}</span>
+            <span>{formatDbUtcToVnTime(record.createAt)}</span>
           </div>
         </div>
 
@@ -162,7 +163,7 @@ const MedicalRecordCard = ({
                     className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border border-blue-300 text-blue-700 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                     disabled={record.status === true}
                   >
-                    <CalendarDays className="w-3.5 h-3.5" /> Tái khám
+                    <CalendarDays className="w-3.5 h-3.5" /> Đặt lịch tái khám
                   </button>
                   <button
                     onClick={() => handleActionClick(onMarkAsComplete, record.id)}
@@ -182,7 +183,7 @@ const MedicalRecordCard = ({
                     className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border border-blue-300 text-blue-700 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                     disabled={record.status === true}
                   >
-                    <CalendarDays className="w-3.5 h-3.5" /> Tái khám
+                    <CalendarDays className="w-3.5 h-3.5" /> Đặt lịch tái khám
                   </button>
                   <button
                     onClick={() => handleActionClick(onMarkAsComplete, record.id)}
@@ -195,7 +196,19 @@ const MedicalRecordCard = ({
               )}
             </div>
           )}
-          {/* Kết thúc khối nút actions */}
+          {/* TH4: Tái khám đã hoàn thành (revisit = 2) -> Hiển thị lại cho tái khám nữa */}
+          {(linkedAppointment?.revisit === 2 && record.status === true) && (
+            <div className="flex items-center gap-2">
+            <>
+              <button
+                onClick={() => handleActionClick(onMarkAsRevisit, record.id)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium border border-blue-300 text-blue-700 hover:bg-blue-100 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+              >
+                <CalendarDays className="w-3.5 h-3.5" /> Đặt lịch tái khám
+              </button>
+            </>
+          </div>
+          )}
         </div>
       </div>
     </div>

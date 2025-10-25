@@ -1,12 +1,21 @@
 import React from 'react';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
-
-const PrintableInvoice = ({ invoice, formatCurrency }) => {
+import {formatDbUtcToVnTime} from '../../../utils/dateFormatter';
+/**
+ * Component con để hiển thị nội dung hóa đơn có thể in.
+ * @param {{invoice: object, formatCurrency: function}} props
+ */
+const PrintableInvoice = ({ invoice, relevantAppointment, formatCurrency }) => {
   if (!invoice) {
     return <div className="text-center p-2 text-sm">Không có dữ liệu hóa đơn để in.</div>;
   }
 
+  /**
+   * Chuyển đổi trạng thái boolean thành văn bản.
+   * @param {boolean} status
+   * @returns {string}
+   */
   const getStatusText = (status) => {
     switch (status) {
       case true: return 'Đã thanh toán';
@@ -15,11 +24,12 @@ const PrintableInvoice = ({ invoice, formatCurrency }) => {
     }
   };
 
-  // Lấy chi tiết đơn thuốc một cách an toàn
-  const prescriptionDetails = invoice.patientMedicalRecord?.prescriptions &&
-    invoice.patientMedicalRecord.prescriptions.length > 0
-    ? invoice.patientMedicalRecord.prescriptions[0].prescriptionDetails
-    : [];
+  const mainService = relevantAppointment?.medicalService;
+
+  // Lấy chi tiết đơn thuốc CHỈ từ các đơn thuốc của relevantAppointment
+  const relevantPrescriptionDetails = relevantAppointment?.prescriptions?.flatMap(
+    p => p.prescriptionDetails
+  ) || [];
 
   return (
     <div className="p-6 text-xs" style={{ backgroundColor: '#ffffff', color: '#1f2937' }}>
@@ -27,7 +37,7 @@ const PrintableInvoice = ({ invoice, formatCurrency }) => {
       {/* Header - Thông tin bệnh viện và Hóa đơn */}
       <div className="flex justify-between items-start mb-6 pb-4 border-b border-gray-200">
         <div className="text-left">
-          <p className="text-lg font-bold text-gray-800 mb-0.5">BỆNH VIỆN ĐA KHOA</p>
+          <p className="text-lg font-bold text-gray-800 mb-0.5">PHÒNG KHÁM ĐA KHOA</p>
           <p className="text-xs text-gray-600">123 Đường ABC, Quận XYZ, TP.HCM</p>
           <p className="text-xs text-gray-600">Điện thoại: (028) 1234 5678</p>
           <p className="text-xs text-gray-600">Email: info@benhvienyte.com</p>
@@ -35,9 +45,6 @@ const PrintableInvoice = ({ invoice, formatCurrency }) => {
         <div className="text-right">
           <h1 className="text-2xl font-extrabold text-blue-800 mb-1">HÓA ĐƠN</h1>
           <p className="text-sm text-gray-700">Mã hóa đơn: <span className="font-semibold text-gray-800">{invoice.id}</span></p>
-          {invoice.paymentDate && (
-            <p className="text-sm text-gray-700">Ngày lập: <span className="font-semibold text-gray-800">{format(parseISO(invoice.paymentDate), 'dd/MM/yyyy', { locale: vi })}</span></p>
-          )}
         </div>
       </div>
 
@@ -46,12 +53,10 @@ const PrintableInvoice = ({ invoice, formatCurrency }) => {
         <h2 className="text-base font-bold text-gray-800 mb-2 border-b pb-1">THÔNG TIN KHÁCH HÀNG</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-1 text-gray-700 text-xs">
           <div>
-            {/* SỬA Ở ĐÂY */}
             <p><strong className="text-gray-900">Tên bệnh nhân:</strong> {invoice.patientMedicalRecord?.patient?.fullName || 'N/A'}</p>
             <p><strong className="text-gray-900">Email:</strong> {invoice.patientMedicalRecord?.patient?.account?.email || 'N/A'}</p>
           </div>
           <div>
-            {/* SỬA Ở ĐÂY */}
             <p><strong className="text-gray-900">Số điện thoại:</strong> {invoice.patientMedicalRecord?.patient?.account?.phoneNumber || 'N/A'}</p>
             <p><strong className="text-gray-900">Địa chỉ:</strong> {invoice.patientMedicalRecord?.patient?.address || 'N/A'}</p>
           </div>
@@ -73,17 +78,16 @@ const PrintableInvoice = ({ invoice, formatCurrency }) => {
             <tbody className="text-gray-700 text-xs">
               <tr className="border-b border-gray-200 hover:bg-gray-50">
                 <td className="py-2 px-4">1</td>
-                {/* SỬA Ở ĐÂY */}
-                <td className="py-2 px-4">{invoice.patientMedicalRecord?.appointment?.medicalService?.name || 'Dịch vụ không xác định'}</td>
-                <td className="py-2 px-4 text-right">{formatCurrency(invoice.patientMedicalRecord?.appointment?.medicalService?.cost || 0)}</td>
+                <td className="py-2 px-4">{mainService?.name || 'Dịch vụ không xác định'}</td>
+                <td className="py-2 px-4 text-right">{formatCurrency(mainService?.cost || 0)}</td>
               </tr>
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Prescription Details - SỬA Ở ĐÂY */}
-      {prescriptionDetails && prescriptionDetails.length > 0 && (
+      {/* Prescription Details */}
+      {relevantPrescriptionDetails && relevantPrescriptionDetails.length > 0 && (
         <div className="mb-6">
           <h2 className="text-base font-bold text-gray-800 mb-2 border-b pb-1">CHI TIẾT ĐƠN THUỐC</h2>
           <div className="overflow-x-auto">
@@ -100,9 +104,8 @@ const PrintableInvoice = ({ invoice, formatCurrency }) => {
                 </tr>
               </thead>
               <tbody className="text-gray-700 text-xs">
-                {/* SỬA Ở ĐÂY */}
-                {prescriptionDetails.map((detail, index) => (
-                  <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                {relevantPrescriptionDetails.map((detail, index) => (
+                  <tr key={detail.id || index} className="border-b border-gray-200 hover:bg-gray-50">
                     <td className="py-2 px-4">{index + 1}</td>
                     <td className="py-2 px-4">{detail.medicine?.name || 'Thuốc không xác định'}</td>
                     <td className="py-2 px-4">{detail.dosage}</td>
@@ -133,7 +136,7 @@ const PrintableInvoice = ({ invoice, formatCurrency }) => {
           {invoice.paymentDate && (
             <div className="flex justify-between text-xs">
               <span>Ngày thanh toán:</span>
-              <span>{format(parseISO(invoice.paymentDate), 'HH:mm dd/MM/yyyy', { locale: vi })}</span>
+              <span>{formatDbUtcToVnTime(invoice.paymentDate)}</span>
             </div>
           )}
         </div>

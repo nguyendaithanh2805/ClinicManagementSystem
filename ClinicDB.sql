@@ -126,19 +126,22 @@ GO
 CREATE TABLE Prescription (
 	Id						INT				IDENTITY(1,1),
 	PatientMedicalRecordId	INT				NOT NULL,
+	AppointmentId			INT				NOT NULL,
 	PrescriptionDate		DATETIME		NOT NULL,
+	IsCompleted				BIT				NOT NULL,
 	CONSTRAINT PK_Prescription PRIMARY KEY (Id)
 );
 GO
 
 CREATE TABLE PrescriptionDetail (
+	Id				INT				IDENTITY(1,1), ---- Ở đây dùng thêm Id làm khóa chính vì có thể kê 1 loại thuốc nhiều lần cho đơn thuốc (tái khám)
 	PrescriptionId	INT				NOT NULL,
 	MedicineId		INT				NOT NULL,
 	Quantity		INT				NOT NULL,
 	Dosage			NVARCHAR(200)	NULL,
 	Frequency		NVARCHAR(200)	NULL,
 	Amount			DECIMAL(15,0)	NOT NULL,
-	CONSTRAINT PK_PrescriptionDetail PRIMARY KEY (PrescriptionId, MedicineId)
+	CONSTRAINT PK_PrescriptionDetail PRIMARY KEY (Id)
 );
 GO
 
@@ -232,6 +235,10 @@ GO
 
 ALTER TABLE Prescription
 ADD CONSTRAINT FK_Prescription_PatientMedicalRecord FOREIGN KEY (PatientMedicalRecordId) REFERENCES PatientMedicalRecord(Id)
+GO
+
+ALTER TABLE Prescription
+ADD CONSTRAINT FK_Prescription_Appointment FOREIGN KEY (AppointmentId) REFERENCES Appointment(Id)
 GO
 
 ALTER TABLE PrescriptionDetail

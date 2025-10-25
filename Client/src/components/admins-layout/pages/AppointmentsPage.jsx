@@ -309,18 +309,18 @@ const AppointmentsPage = () => {
              const response = await api.patch(`/staff/appointments/${dataToUpdate.id}`, dataToUpdate);
              if (response.data.status) {
                  toast.success(response.data.message || 'Cập nhật lịch hẹn thành công!');
-                 if (dataToUpdate.status === 2 && dataToUpdate.revisit === 1) {
-                   setTimeout(() => {
-                       toast.info('Đã mở lại HSBA cho việc tái khám');
-                   }, 1000);
-                 }
-                 if (dataToUpdate.status === 2) {
-                    setTimeout(() => {
-                        toast.info('Đã tạo hồ sơ bệnh án cho bệnh nhân này');
-                    }, 1000);
-                  }
-                 fetchAppointments(); // Tải lại danh sách
-                 setSelectedAppointment(null); // Đóng modal chi tiết
+                 // Bệnh nhân đã đến và lịch hẹn có tái khám
+                if (Number(dataToUpdate.status) === 2 && Number(response.data.data.revisit) === 1) {
+                  setTimeout(() => {
+                    toast.info('Đã mở lại HSBA cũ cho việc tái khám');
+                  }, 1000);
+                } else if (Number(dataToUpdate.status) === 2) {
+                  setTimeout(() => {
+                    toast.info('Đã tạo hồ sơ bệnh án cho bệnh nhân');
+                  }, 1000);
+                }
+                fetchAppointments();
+                setSelectedAppointment(null);
              } else {
                  toast.error(response.data.message || 'Cập nhật lịch hẹn thất bại.');
                  console.error(response.data.message);

@@ -31,4 +31,5 @@ public partial class Appointment
     public virtual PatientMedicalRecord? PatientMedicalRecord { get; set; }
 
     public virtual Staff? Staff { get; set; }
+    public virtual ICollection<Prescription> Prescriptions { get; set; } = null!;
 }

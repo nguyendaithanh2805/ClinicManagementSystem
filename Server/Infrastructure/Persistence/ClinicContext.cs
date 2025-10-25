@@ -164,12 +164,15 @@ public partial class ClinicContext : DbContext
                 .HasForeignKey(d => d.PatientMedicalRecordId)
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_Prescription_PatientMedicalRecord");
+
+            entity.HasOne(d => d.Appointment).WithMany(p => p.Prescriptions)
+                .HasForeignKey(d => d.AppointmentId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Prescription_Appointment");
         });
 
         modelBuilder.Entity<PrescriptionDetail>(entity =>
         {
-            entity.HasKey(e => new { e.PrescriptionId, e.MedicineId });
-
             entity.ToTable("PrescriptionDetail");
 
             entity.Property(e => e.Amount).HasColumnType("decimal(15, 0)");

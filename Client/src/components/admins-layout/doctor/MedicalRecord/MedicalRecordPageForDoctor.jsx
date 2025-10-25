@@ -607,30 +607,31 @@ const MedicalRecordPageForDoctor = () => {
       const response = await api.put(`/staff/medical-records/confirm-revisit/${recordToRevisit.id}`, payload);
       if (response.data.status) {
         toast.success(response.data.message || 'Đã tạo lịch hẹn tái khám thành công!');
-        
+
         setTimeout(() => {
-          toast.info('Đã tạo hóa đơn')
+          toast.success(
+            <span>
+              Đã tạo hóa đơn, liên hệ Lễ tân để thanh toán.
+            </span>,
+            { autoClose: 5000 }
+          );
         }, 2000)
 
         setTimeout(() => {
           toast.info(
             <span>
-              Lịch hẹn tái khám cho bệnh nhân này đã được tạo ở trạng thái{' '}
+              Đã đặt lịch tái khám ở trạng thái{' '}
               <b style={{ color: 'green' }}>Đã xác nhận</b>.
-            </span>
-          ),
-          {
-            autoClose: 8000
-          };
-        }, 5000)
+            </span>,
+            {
+              autoClose: 8000
+            }
+          );
+        }, 3000)
         
         fetchMedicalRecords(); // Tải lại danh sách
         setShowRevisitModal(false); // Đóng modal
         setRecordToRevisit(null);
-
-        navigate('/staff/schedule', {
-          state: { filterStatus: '1' } // Truyền '1' cho "Đã xác nhận"
-        });
       } else {
         toast.error(response.data.message || 'Tạo lịch hẹn tái khám thất bại.');
       }

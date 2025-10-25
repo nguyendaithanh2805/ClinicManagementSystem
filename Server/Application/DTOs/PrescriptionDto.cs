@@ -12,8 +12,9 @@ namespace Application.DTOs
     {
         public int Id { get; set; }
         public int PatientMedicalRecordId { get; set; }
-
+        public int AppointmentId { get; set; }
         public DateTime PrescriptionDate { get; set; }
+        public bool IsCompleted { get; set; }
 
         public virtual ICollection<PrescriptionDetailDto>? PrescriptionDetails { get; set; }
     }

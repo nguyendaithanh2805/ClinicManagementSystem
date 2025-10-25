@@ -55,44 +55,28 @@ namespace Application.Services
                 from pmr in _medicalRecordRepository.Query()
                 join a in _appointmentRepository.Query() on pmr.Id equals a.PatientMedicalRecordId
                 join m in _medicalServiceRepository.Query() on a.MedicalServiceId equals m.Id
-                where(pmr.Id == dto.PatientMedicalRecordId)
+                where pmr.Id == dto.PatientMedicalRecordId
                 select m
                 ).FirstOrDefaultAsync();
-
-            // Lấy chi tiết đơn thuốc theo HSBA chưa hoàn thành A(Xem dưới A)
-            /*
-             select DISTINCT pd.* from PrescriptionDetail pd
-            INNER JOIN Prescription p ON pd.PrescriptionId = p.Id
-            INNER JOIN PatientMedicalRecord pmr ON p.PatientMedicalRecordId = pmr.Id
-            where pmr.Id = 4 AND pmr.Status = 0
-             */
-            var prescriptionDetails = await (
-                from pd in _prescriptionDetailRepository.Query()
-                join p in _prescriptionRepository.Query() on pd.PrescriptionId equals p.Id
-                join pmr in _medicalRecordRepository.Query() on p.PatientMedicalRecordId equals pmr.Id
-                where pmr.Id == dto.PatientMedicalRecordId && pmr.Status == false
-                select pd
-            ).Distinct()
-            .ToListAsync();
-
-            // Đã kiểm tra trc khi gọi service này
-            //// A. Ở đây sẽ check xem bệnh nhân ở lần khám trước đã thanh toán chưa, chưa thanh toán thì không cho tái khám, bắt đi thanh toán
-            //// Tìm xem có hóa đơn nào được tạo bởi hồ sơ bệnh án mà chưa thanh toán ko
-            //var invoice = await _invoiceRepository.GetAsync(i => 
-            //    i.PatientMedicalRecordId == dto.PatientMedicalRecordId
-            //    && i.Status == false);
-            //if (invoice is not null)
-            //    throw new ErrorException("Bệnh nhân chưa thanh toán hóa đơn cho lần khám trước đó, liên hệ lễ tân để thanh toán");
-            
-            // Tạo hóa đơn
-            dto.Status = false; // Chưa thanh toán
 
             if (medicalService is not null)
                 dto.TotalAmount = medicalService.Cost;
 
-            if (prescriptionDetails is not null)
-                dto.TotalAmount += prescriptionDetails.Sum(pd => pd.Amount);
+            // Tìm ra danh sách đơn thuốc chưa hoàn thành để tính giá tiền
+            var prescriptions = await (
+                from p in _prescriptionRepository.Query()
+                .Include(p => p.PrescriptionDetails)
+                where p.PatientMedicalRecordId == dto.PatientMedicalRecordId && p.IsCompleted == false
+                select p
+            )
+            .ToListAsync();
 
+            // Từ đơn thuốc có đc sẽ tìm được chi tiết đơn thuốc và tổng của các CT đó
+            if (prescriptions.Any())
+                foreach ( var p in prescriptions )
+                    dto.TotalAmount += p.PrescriptionDetails.Sum(pd => pd.Amount);
+
+            dto.Status = false; // Chưa thanh toán
             await _invoiceRepository.AddAsync(
                 _mapper.Map<Invoice>(dto));  
             return dto;
@@ -115,9 +99,10 @@ namespace Application.Services
                         .ThenInclude(a => a.MedicalService)
                             .ThenInclude(m => m.Specialty)
                 .Include(i => i.PatientMedicalRecord)
-                    .ThenInclude(pmr => pmr.Prescriptions)
-                        .ThenInclude(p => p.PrescriptionDetails)
-                            .ThenInclude(pd => pd.Medicine)
+                    .ThenInclude(pmr => pmr.Appointments)
+                        .ThenInclude(a => a.Prescriptions)
+                            .ThenInclude(p => p.PrescriptionDetails)
+                                .ThenInclude(pd => pd.Medicine)
                 .OrderByDescending(i => i.Id)
                 .ToListAsync());
         }
@@ -152,27 +137,44 @@ namespace Application.Services
 
         public async Task<InvoiceDto> UpdateStatus(InvoiceStatusDto dto)
         {
-            var invoice = await _invoiceRepository.GetByIdAsync(dto.Id);
-            if (invoice is null)
-                throw new NotFoundException($"Hóa đơn với ID {dto.Id} không tồn tại");
+            try
+            {
+                await _unitOfWork.BeginTransactionAsync();
+                var invoice = await _invoiceRepository.GetByIdAsync(dto.Id);
+                if (invoice is null)
+                    throw new NotFoundException($"Hóa đơn với ID {dto.Id} không tồn tại");
 
-            //// Tìm hồ sơ bệnh án cần tái khám đang được invoice chuẩn bị thanh toán
-            //var pmr = await _medicalRecordRepository.GetAsync(pmr => 
-            //    pmr.Id == invoice.PatientMedicalRecordId
-            //    && dto.Status == true
-            //    && pmr.Appointment.IsRevisit == true);
+                invoice.Status = dto.Status;
+                invoice.PaymentDate = DateTime.UtcNow;
+                _invoiceRepository.Update(invoice);
 
-            //// Đánh dấu hoàn thành khám
-            //if (pmr is not null)
-            //{
-            //    pmr.Status = true;
-            //}
 
-            invoice.Status = dto.Status;
-            invoice.PaymentDate = DateTime.UtcNow;
-            _invoiceRepository.Update(invoice);
-            await _unitOfWork.SaveChangeAsync();
+                // Tìm ra danh sách đơn thuốc chưa hoàn thành để tính giá tiền
+                var prescriptions = await (
+                    from p in _prescriptionRepository.Query()
+                    .Include(p => p.PrescriptionDetails)
+                    where p.PatientMedicalRecordId == invoice.PatientMedicalRecordId && p.IsCompleted == false
+                    select p
+                )
+                .ToListAsync();
 
+                // Từ đơn thuốc có đc sẽ tìm được chi tiết đơn thuốc và tổng của các CT đó
+                if (prescriptions.Any())
+                {
+                    foreach (var p in prescriptions)
+                    {
+                        p.IsCompleted = true;
+                        _prescriptionRepository.Update(p);
+                    }    
+                }
+
+                await _unitOfWork.CommitAsync();
+            }
+            catch
+            {
+                await _unitOfWork.RollbackAsync();
+                throw;
+            }
             return _mapper.Map<InvoiceDto>(await _invoiceRepository.GetByIdAsync(dto.Id));
         }
     }

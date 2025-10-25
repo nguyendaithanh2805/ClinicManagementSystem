@@ -5,13 +5,17 @@ import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from "react-toastify";
 import api from "../../admins-layout/contexts/Api";
-import PrintableInvoice from './PrintableInvoice';
-
+import PrintableInvoice from './PrintableInvoice'; // Giả định component này tồn tại
+import {formatDbUtcToVnTime} from '../../../utils/dateFormatter';
 import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 
 const ITEMS_PER_PAGE = 5;
 
+/**
+ * Component trang quản lý và hiển thị danh sách hóa đơn/thanh toán.
+ * Cho phép nhân viên quản lý và bệnh nhân xem lịch sử thanh toán.
+ */
 const PaymentsPage = () => {
   const { user } = useAuth();
   const [invoices, setInvoices] = useState([]);
@@ -23,6 +27,9 @@ const PaymentsPage = () => {
 
   const pdfContentRef = useRef();
 
+  /**
+   * Component SVG icon hình viên thuốc.
+   */
   const Pill = () => (
     <svg
       xmlns="http://www.w3.org/2000/svg"
@@ -53,6 +60,9 @@ const PaymentsPage = () => {
     fetchInvoices();
   }, []);
 
+  /**
+   * Lấy danh sách hóa đơn từ API.
+   */
   const fetchInvoices = async () => {
     try {
       const response = await api.get('/staff/invoices');
@@ -63,11 +73,16 @@ const PaymentsPage = () => {
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi tải hóa đơn.');
+      toast.error(error.response?.data?.message || 'Lỗi khi kết nối đến máy chủ khi tải hóa đơn.');
       console.error('Lỗi khi lấy hóa đơn:', error);
     }
   };
-
+  
+  /**
+   * Chuyển đổi trạng thái boolean thành văn bản tiếng Việt.
+   * @param {boolean} status - Trạng thái hóa đơn (true/false).
+   * @returns {string} Văn bản mô tả trạng thái.
+   */
   const getStatusText = (status) => {
     switch (status) {
       case true: return 'Đã thanh toán';
@@ -76,6 +91,11 @@ const PaymentsPage = () => {
     }
   };
 
+  /**
+   * Trả về các lớp CSS Tailwind dựa trên trạng thái hóa đơn.
+   * @param {boolean} status - Trạng thái hóa đơn (true/false).
+   * @returns {string} Chuỗi các lớp CSS.
+   */
   const getStatusColor = (status) => {
     switch (status) {
       case true:
@@ -87,6 +107,11 @@ const PaymentsPage = () => {
     }
   };
 
+  /**
+   * Gửi yêu cầu API để cập nhật trạng thái hóa đơn.
+   * @param {number} invoiceId - ID của hóa đơn cần cập nhật.
+   * @param {boolean} newStatus - Trạng thái mới (thường là true).
+   */
   const handleUpdateInvoiceStatus = async (invoiceId, newStatus) => {
     try {
       const response = await api.patch(`/staff/invoices/${invoiceId}`, {
@@ -96,21 +121,25 @@ const PaymentsPage = () => {
 
       if (response.data.status) {
         toast.success(response.data.message || 'Cập nhật trạng thái hóa đơn thành công!');
-        fetchInvoices();
-        setSelectedInvoice(null);
+        fetchInvoices(); // Tải lại danh sách
+        setSelectedInvoice(null); // Đóng modal
       } else {
         toast.error(response.data.message || 'Không thể cập nhật trạng thái hóa đơn.');
         console.error(response.data.message);
       }
     } catch (error) {
-      toast.error(error.response.data.message || 'Lỗi khi cập nhật hóa đơn.');
+      toast.error(error.response?.data?.message || 'Lỗi khi cập nhật hóa đơn.');
       console.error('Error updating invoice status:', error);
     }
   };
 
+  /**
+   * Lọc và tìm kiếm danh sách hóa đơn dựa trên trạng thái và từ khóa.
+   */
   const filteredInvoices = invoices.filter(invoice => {
     const patientName = invoice.patientMedicalRecord?.patient?.fullName || '';
-    const medicalService = invoice.patientMedicalRecord?.appointment?.medicalService?.name || '';
+    // SỬA: Truy cập mảng appointments[0]
+    const medicalService = invoice.patientMedicalRecord?.appointments?.[0]?.medicalService?.name || '';
     const totalAmount = invoice.totalAmount ? invoice.totalAmount.toString() : '';
 
     const matchesSearch = searchTerm === '' ||
@@ -131,23 +160,34 @@ const PaymentsPage = () => {
     currentPage * ITEMS_PER_PAGE
   );
 
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber);
-  };
-
+  /**
+   * Chuyển đổi số sang định dạng tiền tệ VND.
+   * @param {number} amount - Số tiền.
+   * @param {string} [currency='VND'] - Đơn vị tiền tệ.
+   * @returns {string} Chuỗi tiền tệ đã định dạng.
+   */
   const formatCurrency = (amount, currency = 'VND') => {
+    if (amount === null || amount === undefined) {
+      return 'N/A'; // Hoặc 0 VND, tùy logic
+    }
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: currency,
     }).format(amount);
   };
 
+  /**
+   * Mở modal xem trước PDF.
+   */
   const handleOpenPdfPreview = () => {
     if (selectedInvoice) {
       setShowPdfPreviewModal(true);
     }
   };
 
+  /**
+   * Tạo và tải về file PDF của hóa đơn từ nội dung HTML.
+   */
   const handleDownloadPdf = async () => {
     if (!selectedInvoice || !pdfContentRef.current) return;
 
@@ -190,6 +230,10 @@ const PaymentsPage = () => {
     }
   };
 
+  /**
+   * Component con hiển thị thông tin tóm tắt của một hóa đơn.
+   * @param {{invoice: object}} props - Props chứa đối tượng hóa đơn.
+   */
   const InvoiceCard = ({ invoice }) => (
     <div
       key={invoice.id}
@@ -215,7 +259,7 @@ const PaymentsPage = () => {
                 {invoice.patientMedicalRecord?.patient?.fullName || 'Bệnh nhân không xác định'}
               </h3>
               <p className="text-sm text-medical-600 mb-1">
-                {invoice.patientMedicalRecord?.appointment?.medicalService?.name || 'Dịch vụ không xác định'}
+                {invoice.patientMedicalRecord?.appointments?.[0]?.medicalService?.name || 'Dịch vụ không xác định'}
               </p>
               <p className="text-sm text-medical-500">
                 Mã hóa đơn: {invoice.id}
@@ -235,7 +279,7 @@ const PaymentsPage = () => {
             {invoice.paymentDate && (
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                <span>{format(parseISO(invoice.paymentDate), 'HH:mm dd/MM/yyyy', { locale: vi })}</span>
+                <span>{formatDbUtcToVnTime(invoice.paymentDate)}</span>
               </div>
             )}
             {invoice.patientMedicalRecord?.patient?.fullName && (
@@ -347,7 +391,7 @@ const PaymentsPage = () => {
         {totalPages > 1 && (
           <div className="flex justify-center items-center mt-6 space-x-2">
             <button
-              onClick={() => handlePageChange(currentPage - 1)}
+              onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -356,7 +400,7 @@ const PaymentsPage = () => {
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <button
                 key={page}
-                onClick={() => handlePageChange(page)}
+                onClick={() => setCurrentPage(page)}
                 className={`px-4 py-2 rounded-full text-sm font-medium
                   ${currentPage === page ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
                 `}
@@ -365,7 +409,7 @@ const PaymentsPage = () => {
               </button>
             ))}
             <button
-              onClick={() => handlePageChange(currentPage + 1)}
+              onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -376,112 +420,137 @@ const PaymentsPage = () => {
       </div>
 
       {/* Invoice Detail Modal */}
-      {selectedInvoice && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
-          style={{ marginTop: 0 }}
-        >
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg relative shadow-lg max-h-[90vh] flex flex-col"> {/* Added max-h and flex-col */}
-            <button
-              className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
-              onClick={() => setSelectedInvoice(null)}
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h2 className="text-2xl font-bold text-gray-800 mb-5 border-b pb-3 flex items-center gap-2">
-              <FileText className="w-6 h-6 text-blue-600" /> Chi tiết hóa đơn
-            </h2>
+      {selectedInvoice && (() => {
+        // --- LOGIC XÁC ĐỊNH ĐƠN THUỐC LIÊN QUAN ---
+        // 1. Tìm Appointment liên quan đến Invoice này. 
+        //    Cách tìm phụ thuộc vào backend đã sửa thế nào. 
+        //    Giả sử cách đáng tin cậy nhất là tìm Appointment có tổng tiền (dịch vụ + thuốc) khớp với Invoice.totalAmount
+        //    (HOẶC nếu backend thêm AppointmentId vào Invoice thì dùng nó)
+        
+        const relevantAppointment = selectedInvoice.patientMedicalRecord?.appointments?.find(app => {
+            const serviceCost = app.medicalService?.cost || 0;
+            // Tính tổng tiền thuốc CHỈ cho lịch hẹn (app) này
+            const prescriptionCostForThisApp = app.prescriptions?.reduce((presSum, pres) => {
+              // Chỉ tính các đơn thuốc thuộc LỊCH HẸN NÀY (quan trọng nếu 1 PMR có nhiều App)
+              if (pres.appointmentId === app.id) {
+                 const detailsSum = pres.prescriptionDetails?.reduce((detSum, det) => detSum + det.amount, 0) || 0;
+                 return presSum + detailsSum;
+              }
+              return presSum; 
+            }, 0) || 0;
+            // So sánh tổng chi phí của Appointment này với totalAmount của Invoice
+            return Math.abs((serviceCost + prescriptionCostForThisApp) - selectedInvoice.totalAmount) < 0.01; 
+        });
 
-            {/* Scrollable content for the modal */}
-            <div className="flex-1 overflow-y-auto space-y-4 text-gray-700 pr-2"> {/* Added overflow-y-auto and pr-2 for scrollbar */}
-              {/* Invoice ID */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <FileText className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                <strong className="font-semibold w-32">Mã hóa đơn:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {selectedInvoice.id}
-                </p>
-              </div>
+        // 2. Lấy chi tiết thuốc CHỈ từ các đơn thuốc (prescriptions) thuộc về relevantAppointment
+        const relevantPrescriptionDetails = relevantAppointment?.prescriptions?.flatMap(
+          p => p.prescriptionDetails // Lấy tất cả details từ các prescriptions của appointment này
+        ) || [];
 
-              {/* Patient Name */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <User className="w-5 h-5 text-purple-500 flex-shrink-0" />
-                <strong className="font-semibold w-32">Bệnh nhân:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {selectedInvoice.patientMedicalRecord?.patient?.fullName || 'N/A'}
-                </p>
-              </div>
+        return (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+            style={{ marginTop: 0 }}
+          >
+            <div className="bg-white rounded-xl p-6 w-full max-w-lg relative shadow-lg max-h-[90vh] flex flex-col">
+              <button
+                className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
+                onClick={() => setSelectedInvoice(null)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-2xl font-bold text-gray-800 mb-5 border-b pb-3 flex items-center gap-2">
+                <FileText className="w-6 h-6 text-blue-600" /> Chi tiết hóa đơn
+              </h2>
 
-              {/* Service */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <BriefcaseMedical className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <strong className="font-semibold w-32">Dịch vụ:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {selectedInvoice.patientMedicalRecord?.appointment?.medicalService?.name || 'N/A'}
-                </p>
-              </div>
-
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <DollarSign className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <strong className="font-semibold w-32">Giá dịch vụ:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {/* SỬA Ở ĐÂY */}
-                  {formatCurrency(selectedInvoice.patientMedicalRecord?.appointment?.medicalService?.cost, 'VND')}
-                </p>
-              </div>
-
-              {/* Payment Date */}
-              {selectedInvoice.paymentDate ? (
+              {/* Scrollable content for the modal */}
+              <div className="flex-1 overflow-y-auto space-y-4 text-gray-700 pr-2">
+                {/* Invoice ID */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <Calendar className="w-5 h-5 text-indigo-500 flex-shrink-0" />
-                  <strong className="font-semibold w-32">Ngày thanh toán:</strong>
+                  <FileText className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Mã hóa đơn:</strong>
                   <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                    {format(parseISO(selectedInvoice.paymentDate), 'HH:mm dd/MM/yyyy', { locale: vi })}
+                    {selectedInvoice.id}
                   </p>
                 </div>
-                ) : (
+
+                {/* Patient Name */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <Calendar className="w-5 h-5 text-indigo-500 flex-shrink-0" />
-                  <strong className="font-semibold w-32">Ngày thanh toán:</strong>
-                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400">
-                    Chưa có
+                  <User className="w-5 h-5 text-purple-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Bệnh nhân:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    {selectedInvoice.patientMedicalRecord?.patient?.fullName || 'N/A'}
                   </p>
                 </div>
-              )}
 
-              {/* Total Amount */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <DollarSign className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                <strong className="font-semibold w-32">Tổng cộng:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {formatCurrency(selectedInvoice.totalAmount, 'VND')}
-                </p>
-              </div>
+                {/* Service */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <BriefcaseMedical className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Dịch vụ:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    {/* SỬA: Truy cập mảng appointments[0] */}
+                    {relevantAppointment?.medicalService?.name || 'N/A'}
+                  </p>
+                </div>
 
-              {/* Status */}
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <span className={`p-1 rounded-full ${getStatusColor(selectedInvoice.status)} flex-shrink-0`}>
-                  {selectedInvoice.status ? <CheckCircle className="w-5 h-5 text-green-700" /> : <XCircle className="w-5 h-5 text-yellow-700" />}
-                </span>
-                <strong className="font-semibold w-32">Trạng thái:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {getStatusText(selectedInvoice.status)}
-                </p>
-              </div>
+                {/* Service Cost */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Giá dịch vụ:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    {/* SỬA: Truy cập mảng appointments[0] */}
+                    {formatCurrency(relevantAppointment?.medicalService?.cost, 'VND')}
+                  </p>
+                </div>
 
-              {/* Prescription Details */}
-              {selectedInvoice.patientMedicalRecord?.prescriptions &&
-                selectedInvoice.patientMedicalRecord.prescriptions.length > 0 &&
-                selectedInvoice.patientMedicalRecord.prescriptions[0].prescriptionDetails &&
-                selectedInvoice.patientMedicalRecord.prescriptions[0].prescriptionDetails.length > 0 && (
+                {/* Payment Date */}
+                {selectedInvoice.paymentDate ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <Calendar className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+                    <strong className="font-semibold w-32">Ngày thanh toán:</strong>
+                    <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                      {formatDbUtcToVnTime(selectedInvoice.paymentDate)}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <Calendar className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+                    <strong className="font-semibold w-32">Ngày thanh toán:</strong>
+                    <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400">
+                      Chưa có
+                    </p>
+                  </div>
+                )}
+
+                {/* Total Amount */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Tổng cộng:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    {formatCurrency(selectedInvoice.totalAmount, 'VND')}
+                  </p>
+                </div>
+
+                {/* Status */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <span className={`p-1 rounded-full ${getStatusColor(selectedInvoice.status)} flex-shrink-0`}>
+                    {selectedInvoice.status ? <CheckCircle className="w-5 h-5 text-green-700" /> : <XCircle className="w-5 h-5 text-yellow-700" />}
+                  </span>
+                  <strong className="font-semibold w-32">Trạng thái:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    {getStatusText(selectedInvoice.status)}
+                  </p>
+                </div>
+
+                {/* Prescription Details */}
+                {relevantPrescriptionDetails.length > 0 && (
                   <div className="pt-4 border-t border-gray-200 mt-4">
                     <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <FileText className="w-5 h-5 text-orange-500" /> Chi tiết đơn thuốc
                     </h3>
                     <ul className="space-y-2">
-                      {/* SỬA Ở ĐÂY */}
-                      {selectedInvoice.patientMedicalRecord.prescriptions[0].prescriptionDetails.map((detail, index) => (
-                        <li key={index} className="flex flex-col border border-gray-100 rounded-lg p-3 bg-white shadow-sm">
+                      {relevantPrescriptionDetails.map((detail) => (
+                        <li key={detail.id} className="flex flex-col border border-gray-100 rounded-lg p-3 bg-white shadow-sm">
                           <div className="flex justify-between items-center mb-1">
                             <span className="font-medium text-gray-900 whitespace-nowrap flex items-center">
                               <Pill className="inline-block mr-1" /> {detail.medicine?.name || 'Thuốc không xác định'}
@@ -498,28 +567,29 @@ const PaymentsPage = () => {
                     </ul>
                   </div>
                 )}
-            </div>
+              </div>
 
-            {/* Action Buttons */}
-            <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
-              {user?.role !== 'patient' && selectedInvoice.status === false && (
+              {/* Action Buttons */}
+              <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
+                {user?.role !== 'patient' && selectedInvoice.status === false && (
+                  <button
+                    onClick={() => handleUpdateInvoiceStatus(selectedInvoice.id, true)}
+                    className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-md order-2 sm:order-1"
+                  >
+                    <CheckCircle className="w-5 h-5 mr-2" /> Xác nhận thanh toán
+                  </button>
+                )}
                 <button
-                  onClick={() => handleUpdateInvoiceStatus(selectedInvoice.id, true)}
-                  className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 shadow-md order-2 sm:order-1"
+                  onClick={handleOpenPdfPreview}
+                  className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md order-1 sm:order-2"
                 >
-                  <CheckCircle className="w-5 h-5 mr-2" /> Xác nhận thanh toán
+                  <Printer className="w-5 h-5 mr-2" /> Xem trước & Xuất PDF
                 </button>
-              )}
-              <button
-                onClick={handleOpenPdfPreview}
-                className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md order-1 sm:order-2"
-              >
-                <Printer className="w-5 h-5 mr-2" /> Xem trước & Xuất PDF
-              </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* PDF Preview Modal */}
       {showPdfPreviewModal && selectedInvoice && (
@@ -548,13 +618,35 @@ const PaymentsPage = () => {
             </div>
 
             {/* Nội dung hóa đơn có thể cuộn */}
-            <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: '#f9fafb' }}> {/* Added overflow-y-auto */}
+            <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: '#f9fafb' }}>
               <div
                 ref={pdfContentRef}
                 className="bg-white p-8 rounded-lg shadow-md mx-auto"
                 style={{ maxWidth: '210mm', boxSizing: 'border-box' }}
               >
-                <PrintableInvoice invoice={selectedInvoice} formatCurrency={formatCurrency} />
+                {(() => {
+                  // Lấy lại logic tìm relevantAppointment từ modal chi tiết
+                  const relevantAppointment = selectedInvoice.patientMedicalRecord?.appointments?.find(app => {
+                      const serviceCost = app.medicalService?.cost || 0;
+                      const prescriptionCostForThisApp = app.prescriptions?.reduce((presSum, pres) => {
+                        if (pres.appointmentId === app.id) {
+                           const detailsSum = pres.prescriptionDetails?.reduce((detSum, det) => detSum + det.amount, 0) || 0;
+                           return presSum + detailsSum;
+                        }
+                        return presSum; 
+                      }, 0) || 0;
+                      return Math.abs((serviceCost + prescriptionCostForThisApp) - selectedInvoice.totalAmount) < 0.01; 
+                  });
+                  
+                  // Truyền relevantAppointment tìm được vào PrintableInvoice
+                  return (
+                    <PrintableInvoice 
+                      invoice={selectedInvoice} 
+                      relevantAppointment={relevantAppointment} // Truyền prop này
+                      formatCurrency={formatCurrency} 
+                    />
+                  );
+                })()}
               </div>
             </div>
           </div>

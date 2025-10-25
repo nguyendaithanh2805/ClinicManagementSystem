@@ -38,15 +38,6 @@ namespace Application.Services
             _invoiceRepository = invoiceRepository;
         }
 
-        /// <summary>
-        /// Thêm mới chi tiết đơn thuốc cho bệnh nhân.
-        /// </summary>
-        /// <remarks>
-        /// - Nếu hồ sơ bệnh án chưa có đơn thuốc, hoặc đơn thuốc cũ khác ngày hiện tại (tái khám) → tạo mới đơn thuốc.  
-        /// - Nếu đã có đơn thuốc trong cùng ngày → chỉ thêm chi tiết đơn thuốc mới và cập nhật lại thời gian kê đơn.  
-        /// - Tự động tính toán tổng tiền của chi tiết đơn  
-        /// - Không cho phép thêm nếu lịch hẹn (hồ sơ bệnh án) đã hoàn thành.
-        /// </remarks>
         public async Task<PrescriptionDetailDto> AddAsync(PrescriptionDetailDto dto)
         {
             var medicine = await _medicineRepository.GetByIdAsync(dto.MedicineId);
@@ -62,117 +53,73 @@ namespace Application.Services
             {
                 await _unitOfWork.BeginTransactionAsync();
 
-                // Tìm xem đơn thuốc ngày hôm nay theo HSBA của bệnh nhân đã có đơn thuốc nào hay chưa,
-                // Nếu chưa có thì tạo mới đơn thuốc và CT đơn thuốc
-                // Nếu đã có thì kiểm tra xem chi tiết đơn thuốc theo HSBA ngày hôm nay chưa thanh toán có ko,
-                // -> Nếu có thì tạo chi tiết đơn thuốc và update lại tgian tạo đơn
-                // -> Nếu ko thì tạo đơn thuốc mới và CT đơn thuốc
-                // => Trường hợp nào cũng phải thêm CT đơn thuốc
-                var todayPrescription = await _prescriptionRepository.Query()
+                // Tìm xem đơn thuốc ngày hôm nay theo HSBA của bệnh nhân đã có đơn nào chưa hoàn thành hay ko,
+                // Nếu ko có thì tạo mới đơn thuốc và CT đơn thuốc
+                // Nếu đã có thì tạo mới CT đơn và cập nhật tgian kê đơn
+                var prescription = await _prescriptionRepository.Query()
                     .FirstOrDefaultAsync(p =>
-                        p.PatientMedicalRecordId == dto.PatientMedicalRecordId &&
-                        p.PrescriptionDate.Date == DateTime.UtcNow.Date);
+                        p.PatientMedicalRecordId == dto.PatientMedicalRecordId
+                        && p.PrescriptionDate.Date == DateTime.UtcNow.Date
+                        && p.IsCompleted == false);
 
-                if (todayPrescription is null)
+                if (prescription is null)
                 {
-                    todayPrescription = new Prescription
+                    var Appointment = await (
+                        from a in _appointmentRepository.Query()
+                        join pmr in _patientMedicalRecordRepository.Query() on a.PatientMedicalRecordId equals pmr.Id
+                        where pmr.Id == dto.PatientMedicalRecordId
+                        select a
+                    ).OrderByDescending(a => a.Id)
+                    .FirstOrDefaultAsync();
+                    if (Appointment is not null)
                     {
-                        PrescriptionDate = DateTime.UtcNow,
-                        PatientMedicalRecordId = (int)dto.PatientMedicalRecordId!
-                    };
-                    await _prescriptionRepository.AddAsync(todayPrescription);
-                    await _unitOfWork.SaveChangeAsync();
-
-                    //// Thêm chi tiết đơn thuốc với prescriptionId hiện tại (1-N)
-                    //var prescriptionDetail = new PrescriptionDetail
-                    //{
-                    //    PrescriptionId = todayPrescription.Id,
-                    //    Amount = dto.Quantity * medicine.Price,
-                    //    MedicineId = dto.MedicineId
-                    //};
-                    //await _prescriptionDetailRepository.AddAsync(prescriptionDetail);
-                }
-                else // // Nếu đã có thì kiểm tra xem chi tiết đơn thuốc theo HSBA ngày hôm nay chưa thanh toán có ko
-                {
-                    /*
-                        select DISTINCT pd.* from PrescriptionDetail pd
-                        INNER JOIN Prescription p ON pd.PrescriptionId = p.Id
-                        INNER JOIN PatientMedicalRecord pmr ON p.PatientMedicalRecordId = pmr.Id
-                        INNER JOIN Invoice i ON pmr.Id = i.PatientMedicalRecordId
-                        where pmr.Id = 4 AND p.PrescriptionDate = '2025-10-23 10:44:17.810' AND i.Status = 0
-
-                    PrescriptionId	MedicineId	Quantity	Dosage	Frequency	Amount
-                                1       	3	        11  	10	        lkjl	33000
-                                1       	4	        2	    3323        fdf	    4000
-                     */
-                    var unpaidPrescriptionDetails = await (
-                       from pd in _prescriptionDetailRepository.Query()
-                       join p in _prescriptionRepository.Query() on pd.PrescriptionId equals p.Id
-                       join pmr in _patientMedicalRecordRepository.Query() on p.PatientMedicalRecordId equals pmr.Id
-                       join i in _invoiceRepository.Query() on pmr.Id equals i.PatientMedicalRecordId
-                       where pmr.Id == dto.PatientMedicalRecordId
-                          && p.PrescriptionDate.Date == DateTime.UtcNow.Date
-                          && i.Status == false
-                       select pd
-                   ).Distinct()
-                   .ToListAsync();
-
-                    // Nếu chưa có thanh toán thì tạo chi tiết đơn thuốc và update lại tgian tạo đơn
-                    if (!unpaidPrescriptionDetails.Any())
-                    {
-                        // Kiểm tra xem thuốc đc kê đơn chưa
-                        var prescriptionDetailCheck = await _prescriptionDetailRepository.GetAsync(pd =>
-                        pd.MedicineId == dto.MedicineId
-                        && pd.PrescriptionId == todayPrescription.Id);
-
-                        if (prescriptionDetailCheck is not null)
-                            throw new AlreadyExistsException($"Thuốc {medicine.Name} đã được kê đơn, vui lòng xóa đơn đã kê.");
-
-                        //// Thêm chi tiết đơn thuốc với prescriptionId hiện tại (1-N)
-                        //var prescriptionDetail = new PrescriptionDetail
-                        //{
-                        //    PrescriptionId = todayPrescription.Id,
-                        //    Amount = dto.Quantity * medicine.Price
-                        //};
-                        //await _prescriptionDetailRepository.AddAsync(prescriptionDetail);
-
-
-                        // Update tgian tạo đơn thuốc
-                        todayPrescription.PrescriptionDate = DateTime.UtcNow;
-                        _prescriptionRepository.Update(todayPrescription);
-                    }
-                    else // Nếu đã thanh toán rồi thì tạo đơn thuốc mới và tạo chi tiết theo đơn thuốc mới đó
-                    {
-                        todayPrescription = new Prescription
+                        var newPres = new Prescription
                         {
                             PrescriptionDate = DateTime.UtcNow,
-                            PatientMedicalRecordId = (int)dto.PatientMedicalRecordId!
+                            PatientMedicalRecordId = (int)dto.PatientMedicalRecordId!,
+                            AppointmentId = Appointment.Id,
+                            IsCompleted = false
                         };
-                        await _prescriptionRepository.AddAsync(todayPrescription);
+                        await _prescriptionRepository.AddAsync(newPres);
                         await _unitOfWork.SaveChangeAsync();
-
-                        //// Thêm chi tiết đơn thuốc với prescriptionId hiện tại (1-N)
-                        //var prescriptionDetail = new PrescriptionDetail
-                        //{
-                        //    PrescriptionId = todayPrescription.Id,
-                        //    Amount = dto.Quantity * medicine.Price,
-                        //    MedicineId = dto.MedicineId
-                        //};
-                        //await _prescriptionDetailRepository.AddAsync(prescriptionDetail);
+                        // Thêm chi tiết đơn thuốc với prescriptionId mới (1-N)
+                        var prescriptionDetail = new PrescriptionDetail
+                        {
+                            PrescriptionId = newPres.Id,
+                            MedicineId = dto.MedicineId,
+                            Quantity = dto.Quantity,
+                            Dosage = dto.Dosage,
+                            Frequency = dto.Frequency,
+                            Amount = dto.Quantity * medicine.Price
+                        };
+                        await _prescriptionDetailRepository.AddAsync(prescriptionDetail);
                     }
-
-                };
-                // Thêm chi tiết đơn thuốc với prescriptionId hiện tại (1-N)
-                var prescriptionDetail = new PrescriptionDetail
+                }
+                else
                 {
-                    PrescriptionId = todayPrescription.Id,
-                    MedicineId = dto.MedicineId,
-                    Quantity = dto.Quantity,
-                    Dosage = dto.Dosage,
-                    Frequency = dto.Frequency,
-                    Amount = dto.Quantity * medicine.Price
+                    // Kiểm tra xem thuốc đc kê đơn chưa
+                    var medicineCheckExist = await _prescriptionDetailRepository.GetAsync(pd =>
+                    pd.MedicineId == dto.MedicineId && pd.PrescriptionId == prescription.Id);
+
+                    if (medicineCheckExist is not null)
+                        throw new AlreadyExistsException($"Thuốc {medicine.Name} đã được kê đơn, vui lòng xóa đơn đã kê.");
+
+                    prescription.PrescriptionDate = DateTime.UtcNow;
+                    _prescriptionRepository.Update(prescription);
+
+                    // Thêm chi tiết đơn thuốc với prescriptionId hiện tại (1-N)
+                    var prescriptionDetail = new PrescriptionDetail
+                    {
+                        PrescriptionId = prescription.Id,
+                        MedicineId = dto.MedicineId,
+                        Quantity = dto.Quantity,
+                        Dosage = dto.Dosage,
+                        Frequency = dto.Frequency,
+                        Amount = dto.Quantity * medicine.Price
+                    };
+                    await _prescriptionDetailRepository.AddAsync(prescriptionDetail);
                 };
-                await _prescriptionDetailRepository.AddAsync(prescriptionDetail);
+
 
                 await _unitOfWork.CommitAsync();
             }
