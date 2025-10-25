@@ -329,3 +329,19 @@ VALUES
     (N'Omeprazole 20mg', N'Dạ dày', N'Ức chế bơm proton, giảm tiết acid', N'Viên', N'Người mẫn cảm với Omeprazole', N'Diazepam, Warfarin', 3000.00), -- ID 3
     (N'Loratadine 10mg', N'Dị ứng', N'Kháng Histamin H1', N'Viên', N'Quá mẫn với thành phần', N'Cimetidin, Ketoconazol', 2000.00); -- ID 4
 GO
+
+  INSERT INTO Appointment (
+    PatientId,
+    StaffId,
+    MedicalServiceId,
+    PatientMedicalRecordId,
+    AppointmentDate,
+    AppointmentTime,
+    Status,
+    Revisit
+)
+VALUES
+(1, NULL, 2, NULL, '2025-10-24', '14:30:00', 0, 0),
+(1, 1, 4, NULL, '2025-10-29', '13:30:00', 1, 0),
+(2, 1, 1, NULL, '2025-10-24', '15:30:00', 1, 0),
+(2, NULL, 2, NULL, '2025-10-29', '15:30:00', 5, 0);

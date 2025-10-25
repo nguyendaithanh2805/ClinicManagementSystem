@@ -88,6 +88,8 @@ const MedicalRecordDetailModal = ({
   getAppointmentStatusIcon,
   getAppointmentStatusText,
   getAppointmentStatusColorClass,
+  getRevisitStatusText,
+  getRevisitStatusColorClass,
   onInteractionStart,
   onViewFullImage,
   format,
@@ -253,7 +255,7 @@ const MedicalRecordDetailModal = ({
                       disabled={isReadOnly}
                       className="form-checkbox h-5 w-5 text-blue-600 rounded"
                     />
-                    <span className="text-gray-700">Có yêu cầu xét nghiệm</span>
+                    <span className="text-gray-700">Yêu cầu xét nghiệm</span>
                   </label>
                 ) : (
                   <p>{record.requiresTest ? 'Có' : 'Không'}</p>
@@ -600,7 +602,7 @@ const MedicalRecordDetailModal = ({
                      </h4>
                      <div className="space-y-2 text-sm text-gray-700 pl-7 border-l-2 border-cyan-200 ml-1 pt-1">
                        <p>Mô tả: <span className="font-medium">{result.description || 'N/A'}</span></p>
-                       <p>Thực hiện bởi: <span className="font-medium">{result.staff?.fullName || 'N/A'}</span> (<span className="text-gray-600">{result.staff?.expertise || 'Kỹ thuật viên'}</span>)</p>
+                       <p>Thực hiện bởi: <span className="font-medium">{result.staff?.fullName || 'N/A'}</span></p>
                        <p>Ngày thực hiện: <span className="font-medium">{result.createdAt && isValid(parseISO(result.createdAt)) ? format(parseISO(result.createdAt), 'dd/MM/yyyy HH:mm', { locale: viLocale }) : 'N/A'}</span></p>
                        {result.image ? (
                          <div>
@@ -686,18 +688,36 @@ const MedicalRecordDetailModal = ({
                           )}
                           <span>{apt.medicalService?.name || 'Lịch hẹn'}</span>
                           <span className="text-gray-400 font-normal text-xs">
-                            (Mã: {apt.id})
+                            (Mã LH: {apt.id})
                           </span>
                         </h4>
-                        {getAppointmentStatusText && getAppointmentStatusColorClass && (
-                          <span
-                            className={`px-2.5 py-0.5 rounded-lg text-xs font-medium border shadow-sm ${getAppointmentStatusColorClass(
-                              apt.status
-                            )} bg-opacity-90`}
-                          >
-                            {getAppointmentStatusText(apt.status)}
-                          </span>
-                        )}
+                        {/* Nhóm trạng thái */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {apt && getAppointmentStatusText && getAppointmentStatusColorClass ? (
+                            <span
+                              className={`px-2.5 py-0.5 rounded text-xs font-medium border ${getAppointmentStatusColorClass(
+                                apt.status
+                              )} bg-opacity-80`}
+                            >
+                              {getAppointmentStatusText(apt.status)}
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200">
+                              N/A
+                            </span>
+                          )}
+
+                          {(apt?.revisit === 1 || apt?.revisit === 2) && (
+                            <span
+                              className={`px-2.5 py-0.5 rounded text-xs font-medium border ${getRevisitStatusColorClass(
+                                apt?.revisit
+                              )}`}
+                            >
+                              {getRevisitStatusText(apt?.revisit)}
+                            </span>
+                          )}
+                            </div>
+
                       </div>
 
                       {/* Details */}
@@ -735,18 +755,6 @@ const MedicalRecordDetailModal = ({
                             </span>
                           </p>
                         )}
-
-                        <p className="flex items-center gap-2 text-gray-700">
-                          <Info className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="font-medium text-gray-600 w-20">Tái khám:</span>
-                          {apt.isRevisit ? (
-                            <span className="px-2 py-0.5 rounded-md text-xs font-semibold bg-purple-100 text-purple-700 border border-purple-200">
-                              Có
-                            </span>
-                          ) : (
-                            <span className="text-gray-900">Không</span>
-                          )}
-                        </p>
                       </div>
                     </div>
                   ))

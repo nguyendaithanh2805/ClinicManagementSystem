@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, ChevronLeft, ChevronRight, Search, CircleCheckBig, UserCheck  } from 'lucide-react';
+import { 
+  X, 
+  ChevronLeft, 
+  ChevronRight, 
+  Search, 
+  CircleCheckBig, 
+  UserCheck, 
+  Stethoscope, 
+  CheckCircle,
+  XCircle,
+  UserX,
+  Info
+} from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from "react-toastify";
@@ -9,7 +21,7 @@ import ConfirmationModal from "../../ConfirmationModal";
 import MedicalRecordCard from './MedicalRecordCard';
 import MedicalRecordDetailModal from './MedicalRecordDetailModal';
 import AddPrescriptionModal from './AddPrescriptionModal';
-import RevisitModal from './RevisitModal'; // (MỚI) Import modal tái khám
+import RevisitModal from './RevisitModal';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
@@ -595,6 +607,10 @@ const MedicalRecordPageForDoctor = () => {
       const response = await api.put(`/staff/medical-records/confirm-revisit/${recordToRevisit.id}`, payload);
       if (response.data.status) {
         toast.success(response.data.message || 'Đã tạo lịch hẹn tái khám thành công!');
+        
+        setTimeout(() => {
+          toast.info('Đã tạo hóa đơn')
+        }, 2000)
 
         setTimeout(() => {
           toast.info(
@@ -602,8 +618,11 @@ const MedicalRecordPageForDoctor = () => {
               Lịch hẹn tái khám cho bệnh nhân này đã được tạo ở trạng thái{' '}
               <b style={{ color: 'green' }}>Đã xác nhận</b>.
             </span>
-          );
-        }, 2000)
+          ),
+          {
+            autoClose: 8000
+          };
+        }, 5000)
         
         fetchMedicalRecords(); // Tải lại danh sách
         setShowRevisitModal(false); // Đóng modal
@@ -788,6 +807,8 @@ const MedicalRecordPageForDoctor = () => {
           // (MỚI) Truyền 2 hàm helper cho tab Lịch hẹn
           getStatusText={getStatusText}
           getStatusColorClass={getStatusColorClass}
+          getRevisitStatusText={getRevisitStatusText}
+          getRevisitStatusColorClass={getRevisitStatusColorClass}
         />
       )}
 

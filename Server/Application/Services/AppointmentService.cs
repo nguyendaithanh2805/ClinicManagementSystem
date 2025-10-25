@@ -246,7 +246,7 @@ namespace Application.Services
                         appointment.PatientMedicalRecordId = medicalRecord.Id;
                         _appointmentRepository.Update(appointment);
                     }
-                    else // C. Điều kiện này sẽ thực thi khi bệnh nhân khám bệnh -> BS yêu cầu tái khám hoặc hoàn thành -> Lễ tân xác nhận bệnh nhân đã đến
+                    else
                     {
                         var medicalRecord = await _medicalRecordRepository.GetByIdAsync((int)appointment.PatientMedicalRecordId!);
                         

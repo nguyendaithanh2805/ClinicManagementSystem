@@ -9,6 +9,7 @@ import { toast } from "react-toastify";
 import api from "../../admins-layout/contexts/Api";
 import { formatInTimeZone } from 'date-fns-tz';
 import ConfirmationModal from  "../ConfirmationModal";
+import { formatDbUtcToVnTime } from '../../../utils/dateFormatter';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -70,8 +71,8 @@ const LabTechnicianPage = () => {
         const sortedRecords = recordsNeedingTest.sort((a, b) => b.id - a.id);
         setMedicalRecords(sortedRecords);
         if (selectedRecord) {
-          // Update selectedRecord to get the latest test results after changes
           const updatedSelected = sortedRecords.find(rec => rec.id === selectedRecord.id);
+          console.log(updatedSelected)
           setSelectedRecord(updatedSelected);
         }
       } else {
@@ -292,7 +293,7 @@ const LabTechnicianPage = () => {
         <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <CalendarDays className="w-4 h-4 text-gray-500" />
-            <span>Ngày tạo: {record.createAt && isValid(parseISO(record.createAt)) ? format(parseISO(record.createAt), 'HH:mm dd/MM/yyyy', { locale: vi }) : 'N/A'}</span>
+            <span>Ngày tạo: {formatDbUtcToVnTime(record.createAt)}</span>
           </div>
           <div className="flex items-center gap-2">
             <User className="w-4 h-4 text-gray-500" />
@@ -397,7 +398,7 @@ const LabTechnicianPage = () => {
             </button>
 
             <h2 className="text-2xl font-bold text-gray-800 mb-5 border-b pb-3 flex items-center gap-2">
-              <FileText className="w-6 h-6 text-blue-600" /> Chi tiết Hồ sơ Bệnh án - {selectedRecord.patient?.fullName || 'N/A'}
+              <FileText className="w-6 h-6 text-blue-600" />Phiếu xét nghiệm
             </h2>
 
             <div className="space-y-4 text-gray-700 mb-6">
@@ -408,7 +409,7 @@ const LabTechnicianPage = () => {
                 <p className="font-semibold text-indigo-700">{selectedRecord.requiresTest ? 'Có' : 'Không'}</p>
               </DetailItem>
               <DetailItem icon={<CalendarDays className="w-5 h-5 text-gray-500" />} label="Ngày tạo hồ sơ">
-                <p>{selectedRecord.createdAt && isValid(parseISO(selectedRecord.createdAt)) ? formatInTimeZone(parseISO(selectedRecord.createdAt), 'Asia/Ho_Chi_Minh', 'dd/MM/yyyy HH:mm', { locale: vi }) : 'N/A'}</p>
+                <p>{formatDbUtcToVnTime(selectedRecord.createAt)}</p>
               </DetailItem>
               <DetailItem icon={<Stethoscope className="w-5 h-5 text-purple-500" />} label="Bác sĩ chỉ định">
                 <p>{selectedRecord.staff?.fullName || 'N/A'}</p>

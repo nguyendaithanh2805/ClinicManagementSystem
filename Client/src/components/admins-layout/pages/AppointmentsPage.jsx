@@ -309,11 +309,16 @@ const AppointmentsPage = () => {
              const response = await api.patch(`/staff/appointments/${dataToUpdate.id}`, dataToUpdate);
              if (response.data.status) {
                  toast.success(response.data.message || 'Cập nhật lịch hẹn thành công!');
+                 if (dataToUpdate.status === 2 && dataToUpdate.revisit === 1) {
+                   setTimeout(() => {
+                       toast.info('Đã mở lại HSBA cho việc tái khám');
+                   }, 1000);
+                 }
                  if (dataToUpdate.status === 2) {
                     setTimeout(() => {
                         toast.info('Đã tạo hồ sơ bệnh án cho bệnh nhân này');
                     }, 1000);
-                }
+                  }
                  fetchAppointments(); // Tải lại danh sách
                  setSelectedAppointment(null); // Đóng modal chi tiết
              } else {

@@ -15,10 +15,10 @@ const MedicalRecordCard = ({
   getRevisitStatusColorClass,
   onMarkAsComplete,
   onMarkAsRevisit,
-  getStatusColorClass, // For Medical Record (true/false)
-  getStatusText,       // For Medical Record (true/false)
-  getAppointmentStatusText, // For Appointment (0-6)
-  getAppointmentStatusColorClass // For Appointment (0-6)
+  getStatusColorClass,
+  getStatusText,
+  getAppointmentStatusText,
+  getAppointmentStatusColorClass
 }) => {
   const linkedAppointment = record.appointments?.find(
     apt => apt.patientMedicalRecordId === record.id

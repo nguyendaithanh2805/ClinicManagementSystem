@@ -3,6 +3,7 @@ import { XCircle, Save, CalendarDays, Clock } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { format } from 'date-fns';
 
+// Phiếu hẹn tái khám
 const RevisitModal = ({ onClose, onSubmit }) => {
   // Lấy ngày mai làm giá trị mặc định
   const tomorrow = format(new Date(Date.now() + 86400000), 'yyyy-MM-dd');
@@ -42,7 +43,7 @@ const RevisitModal = ({ onClose, onSubmit }) => {
         </button>
         <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-3 flex items-center gap-2">
           <CalendarDays className="w-6 h-6 text-blue-600" />
-          Xác nhận Hẹn Tái khám
+          Phiếu hẹn tái khám
         </h2>
         
         <div className="space-y-4">

@@ -147,63 +147,6 @@ namespace Application.Services
                     PatientMedicalRecordId = medicalRecordId,
                 };
                 await _invoiceService.AddAsync(invoiceDto);
-
-                ///*
-                //    SELECT i.* FROM Appointment a
-                //    INNER JOIN PatientMedicalRecord pmr ON a.Id = pmr.AppointmentId
-                //    INNER JOIN Invoice i ON a.Id = i.AppointmentId
-                //    where pmr.Id = 7
-                
-                //    Id  AppointmentId   PrescriptionId  PaymentDate                 TotalAmount     Status
-                //    5	8	            NULL	        2025-10-20 11:08:59.400	    300000	        0
-                //*/
-                ///*
-                // *  Mục đích là tìm hóa đơn theo lịch hẹn dựa vào Id hồ sơ bệnh án để cập nhật tổng tiền
-                // *  Lúc này sẽ tìm được hóa đơn tạm đã được tạo lúc lịch hẹn đã xác nhận bởi lễ tân, 
-                //        nhưng hiện tại prescriptionId của cái này đang null nên sẽ update thêm prescriptionId cho nó
-                //*/
-                //var invoice = await (
-                //    from a in _appointmentRepository.Query()
-                //    join pmr in _patientMedicalRecordRepository.Query() on a.Id equals pmr.AppointmentId
-                //    join i in _invoiceRepository.Query() on a.Id equals i.AppointmentId
-                //    where pmr.Id == medicalRecordId
-                //    select i
-                //).FirstOrDefaultAsync();
-
-                ///*
-                // select pd.* from PrescriptionDetail pd
-                //    INNER JOIN Prescription p ON pd.PrescriptionId = p.Id
-                //    INNER JOIN PatientMedicalRecord pmr ON p.PatientMedicalRecordId = pmr.Id
-                //    where pmr.Id = 8
-
-                //PrescriptionId  MedicineId  Quantity    Dosage	        Frequency	Amount
-                //7	            102	        11	        2 viên/ ngày	Sáng	    303776
-                //7	            112	        11	        2 viên/ ngày	Sáng	    403502
-                // */
-                //// Mục đích là tìm thành tiền của chi tiết đơn thuốc rồi theo lịch hẹn rồi cập nhật vào tổng tiền của hóa đơn
-                //var prescriptionDetails = await (
-                //    from pd in _prescriptionDetailRepository.Query()
-                //    join p in _prescriptionRepository.Query() on pd.PrescriptionId equals p.Id
-                //    join pmr in _patientMedicalRecordRepository.Query() on p.PatientMedicalRecordId equals pmr.Id
-                //    where pmr.AppointmentId == medicalRecord.AppointmentId
-                //    select pd
-                //).ToListAsync();
-
-                ////// Tìm đơn thuốc muốn cộng tiền vào hóa đơn theo hồ sơ bệnh án
-                ////var prescription = await _prescriptionRepository.Query()
-                ////    .Where(p => p.PatientMedicalRecordId == medicalRecordId)
-                ////    .OrderByDescending(p => p.PrescriptionDate)
-                ////    .FirstOrDefaultAsync();
-
-
-                ////if (invoice != null)
-                ////    foreach (var prescriptionDetail in prescriptionDetails)
-                ////    {
-                ////        invoice.PrescriptionId = prescriptionDetail.PrescriptionId;
-                ////        invoice.TotalAmount += prescriptionDetail.Amount;
-                ////    }
-
-                ////_invoiceRepository.Update(invoice!);
                 await _unitOfWork.CommitAsync();
             }
             catch
@@ -213,7 +156,7 @@ namespace Application.Services
             }
         }
 
-        // Xác nhận tái khám,
+        // Đặt lịch tái khám -> tính tiền thuốc
         // lúc này tạo lịch hẹn mới với status đã xác nhận và có pmr của HSBA hiện tại cùng tt lịch hẹn hiện tại
         public async Task ConfirmIsRevisit(int medicalRecordId, ConfirmIsRevisitAppointment confirmIsRevisitAppointment)
         {
@@ -225,54 +168,78 @@ namespace Application.Services
                 if (medicalRecord is null)
                     throw new NotFoundException($"Không tìm thấy Hồ sơ bệnh án với ID {medicalRecordId}");
 
+                // tìm hóa đơn theo HSBA chưa đc thanh toán
+                // Nếu nó null thì xem phần code ở dưới đoạn tạo hóa đơn
                 var invoice = await _invoiceRepository.GetAsync(i =>
                     i.PatientMedicalRecordId == medicalRecord.Id
                     && i.Status == false);
                 if (invoice is not null)
-                    throw new ErrorException("Bệnh nhân chưa thanh toán hóa đơn cho lần khám này, vui lòng liên hệ Lễ tân để xác nhận thanh toán");
+                    throw new ErrorException("Bệnh nhân chưa thanh toán hóa đơn cho lần khám trước đó, liên hệ lễ tân để thanh toán");
 
                 medicalRecord.Status = true;  // Tạm hoàn thành cho đến khi bệnh nhân đến Lễ tân cập nhật trạng thái lịch hẹn 'Đã đến' sẽ mở lại cho edit
                 _patientMedicalRecordRepository.Update(medicalRecord);
 
-                // Tìm tất cả lịch hẹn theo HSBA cần tái khám
+                // Tìm tất cả lịch hẹn đc đánh dấu là tái khám theo HSBA 
                 var appointmentChecks = await _appointmentRepository.GetAllAsync(a => 
                 a.PatientMedicalRecordId == medicalRecordId 
-                && (a.Revisit == RevisitStatus.NeedRevisit));
+                && a.Revisit == RevisitStatus.Revisit);
+                // Nếu HSBA này đã có lịch tái khám thì -> thông báo
                 if (appointmentChecks.Any())
                     throw new NotFoundException($"Bệnh nhân đã có lịch tái khám với hồ sơ bệnh án này, vui lòng kiểm tra");
 
 
-                /*SELECT* FROm PatientMedicalRecord pd
-                INNER JOIN Appointment a ON pd.Id = a.PatientMedicalRecordId
-                where pd.Id = 1 AND a.Revisit = 0*/
-                // Nếu chưa có
-                // Tìm lịch hẹn đang khám hoặc đã HT với HSBA hiện tại(Lấy mặc định LH đầu vì nó giống nhau)
-                // Vì lúc đang khám thì chưa có lịch tái khám, lúc đặt lịch tái khám rồi xác nhận hoàn thành tái khám thì lịch hẹn đã ở status completed
+                /*
+                 * SELECT a.* FROm PatientMedicalRecord pd
+                    INNER JOIN Appointment a ON pd.Id = a.PatientMedicalRecordId
+                    where pd.Id = 1 AND a.Status = 3 (đang khám)
+                */
+
+                // Nếu HSBA này chưa có lịch tái khám thì:
+                // Tìm lịch hẹn với HSBA hiện tại có trạng thái LH là đang khám
                 var appointment = await (
                     from pmr in _patientMedicalRecordRepository.Query()
                     join a in _appointmentRepository.Query() on pmr.Id equals a.PatientMedicalRecordId
-                    where pmr.Id == medicalRecordId && (a.Status == AppointmentStatus.InProgress || a.Status == AppointmentStatus.Completed)
+                    where pmr.Id == medicalRecordId && a.Status == AppointmentStatus.InProgress
                     select a
-                    ).FirstOrDefaultAsync();
+                    )
+                    .OrderByDescending(a => a.Id) // Sắp xếp lịch hẹn mới nhất trước để nó lấy lịch hẹn mới thay vì lịch cũ
+                    .FirstOrDefaultAsync();
 
+                // Nếu có LH đang khám thì nó cập nhật trạng thái lịch sang đã hoàn thành và tạo 1 lịch mới với thông tin HSBA y hệt
+                // Nếu không có LH đang khám -> trường hợp này ko bao giờ xảy ra vì khi bác sĩ nhập vô form HSBA là nó thành đang khám rồi, nhưng dùng if để tránh lỗi
                 if (appointment is not null)
                 {
                     // Đồng thời cập nhật lịch đang khám thành hoàn thành -> tạo lịch mới là đã xác nhận
                     appointment.Status = AppointmentStatus.Completed;
                     _appointmentRepository.Update(appointment);
 
+                    // Đánh dấu lịch hẹn mới tạo là lịch tái khám
                     var appointmentNew = new Appointment
                     {
                         PatientId = appointment.PatientId,
                         StaffId = appointment.StaffId,
                         MedicalServiceId = appointment.MedicalServiceId,
                         PatientMedicalRecordId = medicalRecordId,
-                        Revisit = RevisitStatus.NeedRevisit,
+                        Revisit = RevisitStatus.Revisit,
                         Status = AppointmentStatus.Confirmed,
                         AppointmentDate = confirmIsRevisitAppointment.AppointmentDate,
                         AppointmentTime = confirmIsRevisitAppointment.AppointmentTime
                     };
                     await _appointmentRepository.AddAsync(appointmentNew);
+
+                    // tìm hóa đơn theo HSBA chưa đc thanh toán
+                    // Nếu mà nó không tồn tại thì mới tạo hóa đơn, nếu mà nó đã tồn tại thì throw new ErrorException("Bệnh nhân chưa thanh toán hóa đơn cho lần khám trước đó, liên hệ lễ tân để thanh toán");
+                    if (invoice is null)
+                    {
+                        // Tạo hóa đơn
+                        var invoiceDto = new InvoiceDto
+                        {
+                            PatientMedicalRecordId = medicalRecordId,
+                        };
+                        await _invoiceService.AddAsync(invoiceDto);
+                    }
+
+                    await _unitOfWork.CommitAsync();
                 }    
                 await _unitOfWork.CommitAsync();
             }
@@ -293,6 +260,13 @@ namespace Application.Services
                 var medicalRecord = await _patientMedicalRecordRepository.GetByIdAsync(medicalRecordId);
                 if (medicalRecord is null)
                     throw new NotFoundException($"Không tìm thấy Hồ sơ bệnh án với ID {medicalRecordId}");
+
+                // tìm hóa đơn theo HSBA chưa đc thanh toán
+                var invoice = await _invoiceRepository.GetAsync(i =>
+                    i.PatientMedicalRecordId == medicalRecord.Id
+                    && i.Status == false);
+                if (invoice is not null)
+                    throw new ErrorException("Bệnh nhân chưa thanh toán hóa đơn cho lần khám trước đó, liên hệ lễ tân để thanh toán");
 
                 // Tìm lịch hẹn đang khám
                 var appointment = await _appointmentRepository.GetAsync(a => 

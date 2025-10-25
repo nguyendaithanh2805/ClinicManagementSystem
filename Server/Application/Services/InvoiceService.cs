@@ -75,13 +75,14 @@ namespace Application.Services
             ).Distinct()
             .ToListAsync();
 
-            // A. Ở đây sẽ check xem bệnh nhân ở lần khám trước đã thanh toán chưa, chưa thanh toán thì không cho tái khám, bắt đi thanh toán
-            // Tìm xem có hóa đơn nào được tạo bởi hồ sơ bệnh án mà chưa thanh toán ko
-            var invoice = await _invoiceRepository.GetAsync(i => 
-                i.PatientMedicalRecordId == dto.PatientMedicalRecordId
-                && i.Status == false);
-            if (invoice is not null)
-                throw new ErrorException("Bệnh nhân chưa thanh toán hóa đơn cho lần khám này, vui lòng liên hệ Lễ tân để xác nhận thanh toán");
+            // Đã kiểm tra trc khi gọi service này
+            //// A. Ở đây sẽ check xem bệnh nhân ở lần khám trước đã thanh toán chưa, chưa thanh toán thì không cho tái khám, bắt đi thanh toán
+            //// Tìm xem có hóa đơn nào được tạo bởi hồ sơ bệnh án mà chưa thanh toán ko
+            //var invoice = await _invoiceRepository.GetAsync(i => 
+            //    i.PatientMedicalRecordId == dto.PatientMedicalRecordId
+            //    && i.Status == false);
+            //if (invoice is not null)
+            //    throw new ErrorException("Bệnh nhân chưa thanh toán hóa đơn cho lần khám trước đó, liên hệ lễ tân để thanh toán");
             
             // Tạo hóa đơn
             dto.Status = false; // Chưa thanh toán
