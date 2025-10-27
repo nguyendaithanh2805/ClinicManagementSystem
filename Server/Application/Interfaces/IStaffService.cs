@@ -9,6 +9,9 @@ namespace Application.Interfaces
 {
     public interface IStaffService : IService<StaffDto>
     {
+        Task AssignStaff(AssignStaffDto dto);
+        Task AddAsync(AccountStaffDto dto);
+        Task<IEnumerable<StaffDto>> GetAllStaffAsync();
         Task<IEnumerable<StaffDto>> GetAllReceptionistAsync();
     }
 }

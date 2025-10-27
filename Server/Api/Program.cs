@@ -107,6 +107,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IPasswordHasher<Account>, PasswordHasher<Account>>();
 builder.Services.AddScoped<IPasswordHasher<PatientWithAccountDto>, PasswordHasher<PatientWithAccountDto>>();
+builder.Services.AddScoped<IPasswordHasher<AccountStaffDto>, PasswordHasher<AccountStaffDto>>();
 builder.Services.AddScoped<IPatientService, PatientService>();
 builder.Services.AddScoped<IAccountHelper, AccountHelper>();
 builder.Services.AddScoped<IService<AppointmentDto>, AppointmentService>();
