@@ -3,7 +3,7 @@ import ReactDOM from 'react-dom/client';
 import { useAuth } from '../contexts/AuthContext';
 import {
   FileText, Search, Filter, Download, Eye, Calendar, User, CalendarDays, Heart, TestTube, Pill, AlertCircle, CheckCircle, Stethoscope,
-  Info, ListTodo, ClipboardCheck, Microscope, X
+  Info, ListTodo, ClipboardCheck, Microscope, X, Clock, XCircle, CircleCheckBig, UserCheck, UserX, BriefcaseMedical
 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
 import { vi } from 'date-fns/locale';
@@ -12,11 +12,15 @@ import api from "../../admins-layout/contexts/Api";
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas-pro';
 import PrintableMedicalRecord from '../pages/PrintableMedicalRecord'; // Đảm bảo đúng đường dẫn
+import { useLocation, useNavigate } from 'react-router-dom';
+import { formatDbUtcToVnTime } from "../../../utils/dateFormatter";
 
 const IMAGE_URL = import.meta.env.VITE_IMAGE_URL;
 
 const MedicalRecordsPage = () => {
   const { user } = useAuth();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [medicalRecords, setMedicalRecords] = useState([]);
@@ -29,6 +33,97 @@ const MedicalRecordsPage = () => {
 
   // Thêm ref cho vùng render PDF ẩn
   const pdfPrintAreaRef = useRef(null);
+
+  // --- TOÀN BỘ HÀM HELPER VÀ LOGIC ---
+  const getStatusColorClass = (status) => {
+    switch (status) {
+      case false: return 'bg-yellow-100 text-yellow-700 border-yellow-200';
+      case true: return 'bg-green-100 text-green-700 border-green-200';
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getStatusText = (status) => {
+    switch (status) {
+      case false: return 'Chưa hoàn thành';
+      case true: return 'Đã hoàn thành';
+    }
+  };
+  
+  // <summary>
+  /// Trả về chuỗi mô tả trạng thái TÁI KHÁM.
+  /// </summary>
+  /// <param name="revisitStatus">Mã trạng thái (0, 1, 2).</param>
+  /// <returns>Chuỗi mô tả.</returns>
+  const getRevisitStatusText = (revisitStatus) => {
+    switch (revisitStatus) {
+      case 1: return 'Tái khám';
+      case 2: return 'Hoàn thành tái khám';
+    }
+  };
+
+  /// <summary>
+  /// Trả về các lớp CSS Tailwind cho badge TÁI KHÁM.
+  /// </summary>
+  /// <param name="revisitStatus">Mã trạng thái (0, 1, 2).</param>
+  /// <returns>Chuỗi các lớp CSS.</returns>
+  const getRevisitStatusColorClass = (revisitStatus) => {
+    switch (revisitStatus) {
+      case 1: return 'bg-purple-100 text-purple-700 border-purple-200'; // Cần tái khám
+      case 2: return 'bg-green-100 text-green-700 border-green-200';   // Đã hoàn thành
+    }
+  };
+  
+  const getAppointmentStatusText = (status) => {
+    switch (status) {
+      case 0: return 'Chờ xác nhận';
+      case 1: return 'Đã xác nhận';
+      case 2: return 'Bệnh nhân đã đến';
+      case 3: return 'Đang khám';
+      case 4: return 'Đã hoàn thành';
+      case 5: return 'Đã hủy';
+      case 6: return 'Không đến';
+      default: return 'Không xác định';
+    }
+  };
+
+  const getAppointmentStatusColorClass = (status) => {
+    switch (status) {
+      case 0: return 'bg-yellow-100 text-yellow-700 border-yellow-200'; // Pending
+      case 1: return 'bg-green-100 text-green-700 border-green-200';   // Confirmed
+      case 2: return 'bg-cyan-100 text-cyan-700 border-cyan-200';     // CheckedIn
+      case 3: return 'bg-indigo-100 text-indigo-700 border-indigo-200'; // InProgress
+      case 4: return 'bg-blue-100 text-blue-700 border-blue-200';      // Completed
+      case 5: return 'bg-red-100 text-red-700 border-red-200';        // Cancelled
+      case 6: return 'bg-gray-100 text-gray-700 border-gray-200';      // NoShow
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  const getAppointmentStatusIcon = (status) => {
+  switch (status) {
+    case 0: return <AlertTriangle className="w-4 h-4 text-yellow-500" />; // Chờ xác nhận
+    case 1: return <CheckCircle className="w-4 h-4 text-green-500" />;   // Đã xác nhận
+    case 2: return <UserCheck className="w-4 h-4 text-cyan-500" />;     // Bệnh nhân đã đến
+    case 3: return <Stethoscope className="w-4 h-4 text-indigo-500" />; // Đang khám
+    case 4: return <CircleCheckBig className="w-4 h-4 text-blue-500" />;    // Đã hoàn thành
+    case 5: return <XCircle className="w-4 h-4 text-red-500" />;        // Đã hủy
+    case 6: return <UserX className="w-4 h-4 text-gray-500" />;         // Không đến
+    default: return <Info className="w-4 h-4 text-gray-500" />;         // Không xác định
+  }
+};
+
+  useEffect(() => {
+      // Kiểm tra xem có state openRecordId được gửi đến không
+      if (location.state?.openRecordId) {
+        // Nếu có, set searchTerm bằng ID đó (chuyển sang String)
+        setSearchTerm(String(location.state.openRecordId));
+        
+        // Xóa state khỏi location để khi người dùng
+        // refresh trang, nó không tự động tìm kiếm lại ID đó.
+        navigate(location.pathname, { replace: true, state: {} });
+      }
+  }, [location, navigate]);
 
   useEffect(() => {
     const fetchMedicalRecords = async () => {
@@ -55,6 +150,8 @@ const MedicalRecordsPage = () => {
             staff: record.staff,
             createAt: record.createAt,
             treatmentMethod: record.treatmentMethod,
+            appointments: Array.isArray(record.appointments) ? record.appointments : [],
+            status: record.status
           }));
           setMedicalRecords(formattedRecords);
         } else {
@@ -85,11 +182,14 @@ const MedicalRecordsPage = () => {
   };
 
   const filteredRecords = medicalRecords.filter(record => {
+    const lowercasedSearchTerm = searchTerm.toLowerCase().trim();
+
     const matchesSearch = searchTerm === '' ||
       record.diagnosis.toLowerCase().includes(searchTerm.toLowerCase()) ||
       record.doctor?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       record.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      record.patientName?.toLowerCase().includes(searchTerm.toLowerCase());
+      record.patientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(record.id).includes(lowercasedSearchTerm);;
 
     const matchesCategory = selectedCategory === 'all' ||
       (selectedCategory === 'examination' && record.prescriptions.length === 0) ||
@@ -99,6 +199,7 @@ const MedicalRecordsPage = () => {
   });
 
   const handleViewDetails = (record) => {
+    console.log(record)
     setSelectedRecordDetail(record);
     setActiveTabDetail('summary');
   };
@@ -201,19 +302,6 @@ const MedicalRecordsPage = () => {
               Xem lịch sử khám bệnh và kết quả điều trị của bạn.
             </p>
           </div>
-
-          <div className="flex flex-col sm:flex-row items-center gap-3">
-            {/* Nút xuất PDF cho hồ sơ đang xem chi tiết */}
-            {selectedRecordDetail && (
-              <button
-                className="btn-primary inline-flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium border border-medical-200 bg-blue-600 text-white hover:bg-blue-700 transition-colors"
-                onClick={() => handleExportPdf(selectedRecordDetail)}
-              >
-                <Download className="w-4 h-4" />
-                Xuất PDF hồ sơ này
-              </button>
-            )}
-          </div>
         </div>
       </div>
 
@@ -249,65 +337,121 @@ const MedicalRecordsPage = () => {
         </div>
 
         <div className="space-y-4">
-          {filteredRecords.map((record) => {
-            const TypeIcon = getTypeIcon(record.type);
-            return (
-              <div key={record.id} className="border border-medical-200 rounded-xl p-6 bg-white hover:shadow-soft transition-all duration-200">
-                <div className="flex flex-col sm:flex-row items-start gap-4">
-                  <div className="flex flex-col items-center flex-shrink-0 mr-2">
-                    <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-2">
-                      <TypeIcon className="w-6 h-6 text-blue-600" />
-                    </div>
-                    <span className="text-xs font-medium text-medical-600">
-                      HS{String(record.id).padStart(3, '0')}
+  { filteredRecords.map((record) => {
+      // --- Lấy thông tin lịch hẹn liên kết ---
+      const linkedAppointment = record.appointments?.find(
+        apt => apt.patientMedicalRecordId === record.id
+      );
+      const linkedAppointmentStatus = linkedAppointment?.status;
+      const revisitText = getRevisitStatusText(linkedAppointment?.revisit);
+
+      return (
+        // --- BẮT ĐẦU Cấu trúc JSX mới ---
+        <div key={record.id} className="border border-gray-200 rounded-lg p-4 bg-white hover:shadow-md transition-shadow duration-200 flex flex-col sm:flex-row items-start gap-4">
+
+          {/* Cột trái: Icon + Mã HS */}
+          <div className="flex-shrink-0 flex flex-col items-center w-16 text-center pt-1">
+            <div className="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center mb-1.5">
+              <FileText className="w-5 h-5 text-blue-600" />
+            </div>
+            <span className="inline-block bg-gray-100 text-gray-700 text-[11px] font-medium px-2 py-0.5 rounded-md border border-gray-200">
+              HS: {record.id || 'N/A'}
+            </span>
+          </div>
+
+          {/* Cột phải: Nội dung chính */}
+          <div className="flex-1 w-full">
+            {/* Hàng trên: Tên, Trạng thái, Nút Xem */}
+            <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-2">
+              <div>
+                <h3 className="font-bold text-gray-900 text-lg sm:text-xl leading-tight mb-1"> {/* Tăng cỡ chữ */}
+                  {record.patient?.fullName || "Bệnh nhân chưa có tên"}
+                </h3>
+                {/* Nhóm trạng thái */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  {linkedAppointment ? (
+                    <span
+                      className={`px-2 py-0.5 rounded text-xs font-medium border ${getAppointmentStatusColorClass(linkedAppointmentStatus)} bg-opacity-80`}
+                    >
+                      Lịch hẹn: {getAppointmentStatusText(linkedAppointmentStatus)}
                     </span>
-                  </div>
-
-                  <div className="flex-1 w-full">
-                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-3 gap-2">
-                      <div>
-                        <h3 className="text-lg font-semibold text-medical-900 mb-1">
-                          {record.type}
-                        </h3>
-                        <p className="text-medical-600 mb-1 text-sm">
-                          Bác sĩ: {record.doctor} • {record.department}
-                        </p>
-                        <div className="flex items-center gap-2 text-sm text-medical-500">
-                          <Calendar className="w-4 h-4" />
-                          <span>{format(record.date, 'dd/MM/yyyy HH:mm', { locale: vi })}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg p-4 mb-4">
-                      <div className="flex items-center gap-2 mb-2">
-                        <Heart className="w-5 h-5 text-blue-600" />
-                        <h4 className="font-medium text-medical-900">Chẩn đoán</h4>
-                      </div>
-                      <p className="text-medical-700 text-sm line-clamp-2">{record.diagnosis}</p>
-                    </div>
-
-                    <div className="flex flex-col sm:flex-row items-center justify-between pt-4 border-t border-medical-100 mt-4 gap-3 sm:gap-0">
-                      <div className="flex gap-4">
-                        <button
-                          onClick={() => handleViewDetails(record)}
-                          className="text-sm text-primary-600 hover:text-primary-700 font-medium flex items-center gap-1"
-                        >
-                          <Eye className="w-4 h-4" /> Xem chi tiết
-                        </button>
-                        <button
-                          onClick={() => handleExportPdf(record)}
-                          className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1 ml-4"
-                        >
-                          <Download className="w-4 h-4" /> Xuất PDF
-                        </button>
-                      </div>
-                    </div>
-                  </div>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200">
+                      Lịch hẹn: K.liên kết
+                    </span>
+                  )}
+                  {linkedAppointment && (
+                    <span
+                      className={`px-2 py-0.5 rounded text-xs font-medium border ${getRevisitStatusColorClass(linkedAppointment?.revisit)}`}
+                    >
+                      {getRevisitStatusText(linkedAppointment?.revisit)}
+                    </span>
+                  )}
                 </div>
               </div>
-            );
-          })}
+              {/* Nút Xem chi tiết */}
+              <button
+                onClick={() => handleViewDetails(record)}
+                className="mt-2 sm:mt-0 px-3 py-1 rounded-md text-xs font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 border border-blue-200 flex items-center gap-1 whitespace-nowrap shadow-sm hover:shadow" // Cập nhật style nút
+              >
+                <Eye className="w-3.5 h-3.5" /> Xem chi tiết
+              </button>
+            </div>
+
+            {/* Khối thông tin màu xám */}
+            <div className="bg-gray-50 border border-gray-100 rounded-md p-3 space-y-1.5 text-sm"> {/* Giảm space-y */}
+              {/* Dịch vụ khám*/}
+              <p className="text-gray-700 flex items-center gap-1.5">
+                <BriefcaseMedical className="w-4 h-4 text-gray-500 flex-shrink-0" /> {/* Đổi màu icon */}
+                <span className="font-medium text-gray-500 min-w-[60px]">Dịch vụ:</span> {/* Thêm min-width */}
+                <span className="text-gray-800">{linkedAppointment?.medicalService?.name || 'N/A'}</span>
+              </p>
+              {/* Bác sĩ */}
+              <p className="text-gray-700 flex items-center gap-1.5">
+                <Stethoscope className="w-4 h-4 text-gray-500 flex-shrink-0" /> {/* Đổi màu icon */}
+                <span className="font-medium text-gray-500 min-w-[60px]">Bác sĩ:</span> {/* Thêm min-width */}
+                <span className="text-gray-800">{record.staff?.fullName || 'N/A'}</span>
+              </p>
+              {/* Chẩn đoán */}
+              <div className="flex items-start gap-1.5">
+                <ClipboardCheck className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" /> {/* Đổi màu icon */}
+                <span className="font-medium text-gray-500 min-w-[60px]">Chẩn đoán:</span> {/* Thêm min-width */}
+                <span className="text-gray-800 line-clamp-2">{record.diagnosis || 'Chưa có'}</span> {/* Thêm line-clamp */}
+              </div>
+              {/* Điều trị (có thể ẩn nếu không cần thiết) */}
+              {record.treatmentMethod && (
+                 <div className="flex items-start gap-1.5">
+                   <ListTodo className="w-4 h-4 text-gray-500 flex-shrink-0 mt-0.5" /> {/* Đổi màu icon */}
+                   <span className="font-medium text-gray-500 min-w-[60px]">Điều trị:</span> {/* Thêm min-width */}
+                   <span className="text-gray-800 line-clamp-2">{record.treatmentMethod}</span> {/* Thêm line-clamp */}
+                 </div>
+              )}
+              {/* Ngày tạo HS */}
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 pt-1">
+                <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />
+                <span>Ngày tạo HS:</span>
+                <span>{formatDbUtcToVnTime(record.createAt)}</span>
+              </div>
+            </div>
+
+            {/* Hàng dưới: Trạng thái HSBA + Nút Xuất PDF */}
+            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-100">
+              <span className={`px-2.5 py-0.5 rounded text-xs font-medium border ${getStatusColorClass(record.status)}`}>
+                HS: {getStatusText(record.status)}
+              </span>
+              <button
+                  onClick={(e) => { e.stopPropagation(); handleExportPdf(record); }} // Ngăn click vào card cha
+                  className="text-xs text-green-600 hover:text-green-700 font-medium flex items-center gap-1 p-1 rounded hover:bg-green-50"
+              >
+                  <Download className="w-3.5 h-3.5" /> Xuất PDF
+              </button>
+            </div>
+          </div>
+        </div>
+        // --- KẾT THÚC Cấu trúc JSX mới ---
+      );
+    })
+  }
         </div>
 
         {filteredRecords.length === 0 && (
@@ -345,6 +489,7 @@ const MedicalRecordsPage = () => {
               <TabButton icon={<ListTodo className="w-5 h-5" />} label="Triệu chứng" isActive={activeTabDetail === 'symptoms'} onClick={() => setActiveTabDetail('symptoms')} />
               <TabButton icon={<Microscope className="w-5 h-5" />} label="Kết quả xét nghiệm" isActive={activeTabDetail === 'testResults'} onClick={() => setActiveTabDetail('testResults')} />
               <TabButton icon={<Stethoscope className="w-5 h-5" />} label="Bác sĩ điều trị" isActive={activeTabDetail === 'staff'} onClick={() => setActiveTabDetail('staff')} />
+              <TabButton icon={<CalendarDays className="w-4 h-4" />} label="Lịch hẹn" isActive={activeTabDetail === 'appointments'} onClick={() => setActiveTabDetail('appointments')} />
             </div>
 
             <div className="py-4">
@@ -499,6 +644,106 @@ const MedicalRecordsPage = () => {
                   )}
                 </div>
               )}
+              {activeTabDetail === 'appointments' && (
+             <div className="space-y-4">
+              {selectedRecordDetail.appointments && selectedRecordDetail.appointments.length > 0 ? (
+                selectedRecordDetail.appointments
+                  .sort(
+                    (a, b) =>
+                      parseISO(b.appointmentDate).getTime() -
+                        parseISO(a.appointmentDate).getTime() ||
+                      a.appointmentTime.localeCompare(b.appointmentTime)
+                  )
+                  .map((apt) => (
+                    <div
+                      key={apt.id}
+                      className="border border-gray-100 rounded-xl bg-white shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden"
+                    >
+                      {/* Header */}
+                      <div className="flex items-center justify-between px-4 py-2.5 bg-gray-50 border-b border-gray-100">
+                        <h4 className="font-semibold text-gray-800 text-sm flex items-center gap-2">
+                          {getAppointmentStatusIcon ? (
+                            getAppointmentStatusIcon(apt.status)
+                          ) : (
+                            <CalendarDays className="w-4 h-4 text-blue-600" />
+                          )}
+                          <span>{apt.medicalService?.name || 'Lịch hẹn'}</span>
+                          <span className="text-gray-400 font-normal text-xs">
+                            (Mã LH: {apt.id})
+                          </span>
+                        </h4>
+                        {/* Nhóm trạng thái */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {apt && getAppointmentStatusText && getAppointmentStatusColorClass ? (
+                            <span
+                              className={`px-2.5 py-0.5 rounded text-xs font-medium border ${getAppointmentStatusColorClass(
+                                apt.status
+                              )} bg-opacity-80`}
+                            >
+                              {getAppointmentStatusText(apt.status)}
+                            </span>
+                          ) : (
+                            <span className="px-2.5 py-0.5 rounded text-xs font-medium border bg-gray-100 text-gray-500 border-gray-200">
+                              N/A
+                            </span>
+                          )}
+
+                          {(apt?.revisit === 1 || apt?.revisit === 2) && (
+                            <span
+                              className={`px-2.5 py-0.5 rounded text-xs font-medium border ${getRevisitStatusColorClass(
+                                apt?.revisit
+                              )}`}
+                            >
+                              {getRevisitStatusText(apt?.revisit)}
+                            </span>
+                          )}
+                            </div>
+
+                      </div>
+
+                      {/* Details */}
+                      <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
+                        <p className="flex items-center gap-2 text-gray-700 sm:col-span-2">
+                          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium text-gray-600 w-20">Bệnh nhân:</span>
+                          <span className="text-gray-900 font-semibold">
+                            {selectedRecordDetail.patient?.fullName || 'N/A'}
+                          </span>
+                        </p>
+
+                        <p className="flex items-center gap-2 text-gray-700">
+                          <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium text-gray-600 w-20">Ngày:</span>
+                          <span className="text-gray-900">
+                            {format(parseISO(apt.appointmentDate), 'dd/MM/yyyy')}
+                          </span>
+                        </p>
+
+                        <p className="flex items-center gap-2 text-gray-700">
+                          <Clock className="w-4 h-4 text-gray-400 flex-shrink-0" />
+                          <span className="font-medium text-gray-600 w-20">Giờ:</span>
+                          <span className="text-gray-900">
+                            {apt.appointmentTime.substring(0, 5)}
+                          </span>
+                        </p>
+
+                        {apt.staff && (
+                          <p className="flex items-center gap-2 text-gray-700">
+                            <Stethoscope className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                            <span className="font-medium text-gray-600 w-20">Bác sĩ:</span>
+                            <span className="text-gray-900 font-medium">
+                              {apt.staff.fullName}
+                            </span>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))
+               ) : (
+                 <p className="text-center text-sm text-gray-500 py-4 italic">Không có lịch hẹn nào liên kết với hồ sơ bệnh án này.</p>
+               )}
+             </div>
+          )}
             </div>
 
             <div className="mt-6 flex justify-end">

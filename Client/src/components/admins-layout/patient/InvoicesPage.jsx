@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CreditCard, DollarSign, BriefcaseMedical, Filter, Search, Calendar, CheckCircle, XCircle, Pill, FileText, ChevronLeft, ChevronRight, X, Printer, Download } from 'lucide-react';
+import { CreditCard, DollarSign, BriefcaseMedical, Filter, Search, Calendar, CheckCircle, XCircle, User, FileText, ChevronLeft, ChevronRight, X, Printer, Download } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from "react-toastify";
 import api from "../../admins-layout/contexts/Api";
 import PrintableInvoice from '../../admins-layout/pages/PrintableInvoice';
-
+import { formatDbUtcToVnTime } from '../../../utils/dateFormatter';
 import html2canvas from 'html2canvas-pro';
 import jsPDF from 'jspdf';
 
@@ -94,14 +94,15 @@ const InvoicesPage = () => {
   };
 
   const filteredInvoices = invoices.filter(invoice => {
-    const medicalService = invoice.patientMedicalRecord?.appointment?.medicalService?.name || '';
+    const patientName = invoice.patientMedicalRecord?.patient?.fullName || '';
+    // Truy cập mảng appointments[0]
+    const medicalService = invoice.patientMedicalRecord?.appointments?.[0]?.medicalService?.name || '';
     const totalAmount = invoice.totalAmount ? invoice.totalAmount.toString() : '';
-    const invoiceId = invoice.id ? invoice.id.toString() : '';
 
     const matchesSearch = searchTerm === '' ||
+      patientName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       medicalService.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      totalAmount.includes(searchTerm) ||
-      invoiceId.includes(searchTerm);
+      totalAmount.includes(searchTerm);
 
     const matchesStatus = filterStatus === 'all' ||
       (filterStatus === 'paid' && invoice.status === true) ||
@@ -197,9 +198,12 @@ const InvoicesPage = () => {
           <div className="flex items-start justify-between mb-2">
             <div>
               <h3 className="font-semibold text-medical-900 mb-1">
-                {invoice.patientMedicalRecord?.appointment?.medicalService?.name || 'Dịch vụ không xác định'}
+                {invoice.patientMedicalRecord?.patient?.fullName || 'Bệnh nhân không xác định'}
               </h3>
               <p className="text-sm text-medical-600 mb-1">
+                {invoice.patientMedicalRecord?.appointments?.[0]?.medicalService?.name || 'Dịch vụ không xác định'}
+              </p>
+              <p className="text-sm text-medical-500">
                 Mã hóa đơn: {invoice.id}
               </p>
             </div>
@@ -217,14 +221,15 @@ const InvoicesPage = () => {
             {invoice.paymentDate && (
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                <span>{format(parseISO(invoice.paymentDate), 'HH:mm dd/MM/yyyy', { locale: vi })}</span>
+                <span>{formatDbUtcToVnTime(invoice.paymentDate)}</span>
               </div>
             )}
-            <div className="flex items-center gap-2">
-              <BriefcaseMedical className="w-4 h-4" />
-              {/* SỬA Ở ĐÂY */}
-              <span>Dịch vụ: {invoice.patientMedicalRecord?.appointment?.medicalService?.name || 'N/A'}</span>
-            </div>
+            {invoice.patientMedicalRecord?.patient?.fullName && (
+              <div className="flex items-center gap-2">
+                <User className="w-4 h-4" />
+                <span>Bệnh nhân: {invoice.patientMedicalRecord.patient.fullName}</span>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -233,14 +238,18 @@ const InvoicesPage = () => {
 
   return (
     <div className="space-y-6">
+      {/* Page Header */}
       <div className="glass-effect rounded-2xl p-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-medical-900 mb-2">
-              Lịch sử thanh toán của tôi
+              {user?.role === 'patient' ? 'Lịch sử thanh toán của tôi' : 'Quản lý hóa đơn'}
             </h1>
             <p className="text-medical-600">
-              Xem và quản lý các giao dịch thanh toán của bạn
+              {user?.role === 'patient'
+                ? 'Xem và quản lý các giao dịch thanh toán của bạn'
+                : 'Quản lý tất cả các hóa đơn của bệnh viện'
+              }
             </p>
           </div>
 
@@ -261,6 +270,7 @@ const InvoicesPage = () => {
         </div>
       </div>
 
+      {/* Search and Filters */}
       <div className="glass-effect rounded-2xl p-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <h2 className="text-xl font-bold text-medical-900">
@@ -273,16 +283,17 @@ const InvoicesPage = () => {
               value={searchTerm}
               onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
               className="pl-10 pr-4 py-2 border border-medical-200 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent text-sm w-full"
-              placeholder="Tìm kiếm mã hóa đơn, dịch vụ..."
+              placeholder="Tìm kiếm mã hóa đơn, bệnh nhân, dịch vụ..."
             />
           </div>
         </div>
       </div>
 
+      {/* Payments List */}
       <div className="glass-effect rounded-2xl p-6">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-medical-900">
-            Danh sách hóa đơn của tôi
+            Danh sách hóa đơn
           </h2>
           <div className="flex items-center gap-2 text-sm text-medical-600">
             <CreditCard className="w-4 h-4" />
@@ -299,16 +310,17 @@ const InvoicesPage = () => {
             <div className="text-center py-8">
               <FileText className="w-12 h-12 text-medical-300 mx-auto mb-4" />
               <p className="text-medical-600">
-                {searchTerm || filterStatus !== 'all' ? 'Không tìm thấy hóa đơn nào phù hợp' : 'Bạn chưa có hóa đơn thanh toán nào'}
+                {searchTerm || filterStatus !== 'all' ? 'Không tìm thấy hóa đơn nào phù hợp' : 'Chưa có hóa đơn thanh toán nào'}
               </p>
             </div>
           )}
         </div>
 
+        {/* Pagination Controls */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center mt-6 space-x-2">
             <button
-              onClick={() => handlePageChange(currentPage - 1)}
+              onClick={() => setCurrentPage(currentPage - 1)}
               disabled={currentPage === 1}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -317,7 +329,7 @@ const InvoicesPage = () => {
             {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
               <button
                 key={page}
-                onClick={() => handlePageChange(page)}
+                onClick={() => setCurrentPage(page)}
                 className={`px-4 py-2 rounded-full text-sm font-medium
                   ${currentPage === page ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
                 `}
@@ -326,7 +338,7 @@ const InvoicesPage = () => {
               </button>
             ))}
             <button
-              onClick={() => handlePageChange(currentPage + 1)}
+              onClick={() => setCurrentPage(currentPage + 1)}
               disabled={currentPage === totalPages}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -336,94 +348,142 @@ const InvoicesPage = () => {
         )}
       </div>
 
-      {selectedInvoice && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
-          style={{ marginTop: 0 }}
-        >
-          <div className="bg-white rounded-xl p-6 w-full max-w-lg relative shadow-lg max-h-[90vh] flex flex-col">
-            <button
-              className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
-              onClick={() => setSelectedInvoice(null)}
-            >
-              <X className="w-5 h-5" />
-            </button>
-            <h2 className="text-2xl font-bold text-gray-800 mb-5 border-b pb-3 flex items-center gap-2">
-              <FileText className="w-6 h-6 text-blue-600" /> Chi tiết hóa đơn
-            </h2>
+      {/* Invoice Detail Modal */}
+      {selectedInvoice && (() => {
+        // --- LOGIC XÁC ĐỊNH ĐƠN THUỐC LIÊN QUAN ---
+        // 1. Tìm Appointment liên quan đến Invoice này. 
+        //    Cách tìm phụ thuộc vào backend đã sửa thế nào. 
+        //    Giả sử cách đáng tin cậy nhất là tìm Appointment có tổng tiền (dịch vụ + thuốc) khớp với Invoice.totalAmount
+        //    (HOẶC nếu backend thêm AppointmentId vào Invoice thì dùng nó)
+        
+        const relevantAppointment = selectedInvoice.patientMedicalRecord?.appointments?.find(app => {
+            const serviceCost = app.medicalService?.cost || 0;
+            // Tính tổng tiền thuốc CHỈ cho lịch hẹn (app) này
+            const prescriptionCostForThisApp = app.prescriptions?.reduce((presSum, pres) => {
+              // Chỉ tính các đơn thuốc thuộc LỊCH HẸN NÀY (quan trọng nếu 1 PMR có nhiều App)
+              if (pres.appointmentId === app.id) {
+                 const detailsSum = pres.prescriptionDetails?.reduce((detSum, det) => detSum + det.amount, 0) || 0;
+                 return presSum + detailsSum;
+              }
+              return presSum; 
+            }, 0) || 0;
+            // So sánh tổng chi phí của Appointment này với totalAmount của Invoice
+            return Math.abs((serviceCost + prescriptionCostForThisApp) - selectedInvoice.totalAmount) < 0.01; 
+        });
 
-            <div className="flex-1 overflow-y-auto space-y-4 text-gray-700 pr-2">
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <FileText className="w-5 h-5 text-blue-500 flex-shrink-0" />
-                <strong className="font-semibold w-32">Mã hóa đơn:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {selectedInvoice.id}
-                </p>
-              </div>
+        // 2. Lấy chi tiết thuốc CHỈ từ các đơn thuốc (prescriptions) thuộc về relevantAppointment
+        const relevantPrescriptionDetails = relevantAppointment?.prescriptions?.flatMap(
+          p => p.prescriptionDetails // Lấy tất cả details từ các prescriptions của appointment này
+        ) || [];
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <BriefcaseMedical className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <strong className="font-semibold w-32">Dịch vụ:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {/* SỬA Ở ĐÂY */}
-                  {selectedInvoice.patientMedicalRecord?.appointment?.medicalService?.name || 'N/A'}
-                </p>
-              </div>
+        return (
+          <div
+            className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
+            style={{ marginTop: 0 }}
+          >
+            <div className="bg-white rounded-xl p-6 w-full max-w-lg relative shadow-lg max-h-[90vh] flex flex-col">
+              <button
+                className="absolute top-4 right-4 p-2 rounded-full bg-gray-100 hover:bg-gray-200 text-gray-600"
+                onClick={() => setSelectedInvoice(null)}
+              >
+                <X className="w-5 h-5" />
+              </button>
+              <h2 className="text-2xl font-bold text-gray-800 mb-5 border-b pb-3 flex items-center gap-2">
+                <FileText className="w-6 h-6 text-blue-600" /> Chi tiết hóa đơn
+              </h2>
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <DollarSign className="w-5 h-5 text-green-500 flex-shrink-0" />
-                <strong className="font-semibold w-32">Giá dịch vụ:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {/* SỬA Ở ĐÂY */}
-                  {formatCurrency(selectedInvoice.patientMedicalRecord?.appointment?.medicalService?.cost, 'VND')}
-                </p>
-              </div>
-
-              {selectedInvoice.paymentDate && (
+              {/* Scrollable content for the modal */}
+              <div className="flex-1 overflow-y-auto space-y-4 text-gray-700 pr-2">
+                {/* Invoice ID */}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <Calendar className="w-5 h-5 text-indigo-500 flex-shrink-0" />
-                  <strong className="font-semibold w-32">Ngày thanh toán:</strong>
+                  <FileText className="w-5 h-5 text-blue-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Mã hóa đơn:</strong>
                   <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                    {format(parseISO(selectedInvoice.paymentDate), 'HH:mm dd/MM/yyyy', { locale: vi })}
+                    {selectedInvoice.id}
                   </p>
                 </div>
-              )}
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <DollarSign className="w-5 h-5 text-emerald-500 flex-shrink-0" />
-                <strong className="font-semibold w-32">Tổng cộng:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {formatCurrency(selectedInvoice.totalAmount, 'VND')}
-                </p>
-              </div>
+                {/* Patient Name */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <User className="w-5 h-5 text-purple-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Bệnh nhân:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    {selectedInvoice.patientMedicalRecord?.patient?.fullName || 'N/A'}
+                  </p>
+                </div>
 
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                <span className={`p-1 rounded-full ${getStatusColor(selectedInvoice.status)} flex-shrink-0`}>
-                  {selectedInvoice.status ? <CheckCircle className="w-5 h-5 text-green-700" /> : <XCircle className="w-5 h-5 text-yellow-700" />}
-                </span>
-                <strong className="font-semibold w-32">Trạng thái:</strong>
-                <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
-                  {getStatusText(selectedInvoice.status)}
-                </p>
-              </div>
+                {/* Service */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <BriefcaseMedical className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Dịch vụ:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    {/* SỬA: Truy cập mảng appointments[0] */}
+                    {relevantAppointment?.medicalService?.name || 'N/A'}
+                  </p>
+                </div>
 
-              {/* SỬA Ở ĐÂY: Toàn bộ khối điều kiện và map */}
-              {selectedInvoice.patientMedicalRecord?.prescriptions &&
-                selectedInvoice.patientMedicalRecord.prescriptions.length > 0 &&
-                selectedInvoice.patientMedicalRecord.prescriptions[0].prescriptionDetails &&
-                selectedInvoice.patientMedicalRecord.prescriptions[0].prescriptionDetails.length > 0 && (
+                {/* Service Cost */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-green-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Giá dịch vụ:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    {/* SỬA: Truy cập mảng appointments[0] */}
+                    {formatCurrency(relevantAppointment?.medicalService?.cost, 'VND')}
+                  </p>
+                </div>
+
+                {/* Payment Date */}
+                {selectedInvoice.paymentDate ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <Calendar className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+                    <strong className="font-semibold w-32">Ngày thanh toán:</strong>
+                    <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                      {formatDbUtcToVnTime(selectedInvoice.paymentDate)}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                    <Calendar className="w-5 h-5 text-indigo-500 flex-shrink-0" />
+                    <strong className="font-semibold w-32">Ngày thanh toán:</strong>
+                    <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50 text-gray-400">
+                      Chưa có
+                    </p>
+                  </div>
+                )}
+
+                {/* Total Amount */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <DollarSign className="w-5 h-5 text-emerald-500 flex-shrink-0" />
+                  <strong className="font-semibold w-32">Tổng cộng:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    {formatCurrency(selectedInvoice.totalAmount, 'VND')}
+                  </p>
+                </div>
+
+                {/* Status */}
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <span className={`p-1 rounded-full ${getStatusColor(selectedInvoice.status)} flex-shrink-0`}>
+                    {selectedInvoice.status ? <CheckCircle className="w-5 h-5 text-green-700" /> : <XCircle className="w-5 h-5 text-yellow-700" />}
+                  </span>
+                  <strong className="font-semibold w-32">Trạng thái:</strong>
+                  <p className="flex-1 px-3 py-2 border border-gray-200 rounded-lg bg-gray-50">
+                    {getStatusText(selectedInvoice.status)}
+                  </p>
+                </div>
+
+                {/* Prescription Details */}
+                {relevantPrescriptionDetails.length > 0 && (
                   <div className="pt-4 border-t border-gray-200 mt-4">
                     <h3 className="text-lg font-semibold text-gray-800 mb-3 flex items-center gap-2">
                       <FileText className="w-5 h-5 text-orange-500" /> Chi tiết đơn thuốc
                     </h3>
                     <ul className="space-y-2">
-                      {selectedInvoice.patientMedicalRecord.prescriptions[0].prescriptionDetails.map((detail, index) => (
-                        <li key={index} className="flex flex-col border border-gray-100 rounded-lg p-3 bg-white shadow-sm">
+                      {relevantPrescriptionDetails.map((detail) => (
+                        <li key={detail.id} className="flex flex-col border border-gray-100 rounded-lg p-3 bg-white shadow-sm">
                           <div className="flex justify-between items-center mb-1">
                             <span className="font-medium text-gray-900 whitespace-nowrap flex items-center">
                               <Pill className="inline-block mr-1" /> {detail.medicine?.name || 'Thuốc không xác định'}
                             </span>
-
                             <span className="text-sm text-gray-600">x{detail.quantity}</span>
                           </div>
                           <p className="text-sm text-gray-600 italic">{formatCurrency(detail.medicine?.price, 'VND')} / {detail.medicine?.unit}</p>
@@ -436,23 +496,27 @@ const InvoicesPage = () => {
                     </ul>
                   </div>
                 )}
-            </div>
+              </div>
 
-            <div className="mt-6 pt-4 border-t border-gray-200 flex justify-end">
-              <button
-                onClick={handleOpenPdfPreview}
-                className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md"
-              >
-                <Printer className="w-5 h-5 mr-2" /> Xem trước & Xuất PDF
-              </button>
+              {/* Action Buttons */}
+              <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
+                <button
+                  onClick={handleOpenPdfPreview}
+                  className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md order-1 sm:order-2"
+                >
+                  <Printer className="w-5 h-5 mr-2" /> Xem trước & Xuất PDF
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
+      {/* PDF Preview Modal */}
       {showPdfPreviewModal && selectedInvoice && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-[100] p-4">
           <div className="bg-white rounded-xl shadow-2xl relative w-full h-full max-w-4xl max-h-[90vh] flex flex-col">
+            {/* Header của modal xem trước */}
             <div className="flex justify-between items-center p-4 border-b border-gray-200 bg-gray-50 rounded-t-xl">
               <h3 className="text-xl font-bold text-gray-800 flex items-center gap-2">
                 <FileText className="w-5 h-5 text-blue-600" />
@@ -474,13 +538,36 @@ const InvoicesPage = () => {
               </div>
             </div>
 
+            {/* Nội dung hóa đơn có thể cuộn */}
             <div className="flex-1 overflow-y-auto p-6" style={{ backgroundColor: '#f9fafb' }}>
               <div
                 ref={pdfContentRef}
                 className="bg-white p-8 rounded-lg shadow-md mx-auto"
                 style={{ maxWidth: '210mm', boxSizing: 'border-box' }}
               >
-                <PrintableInvoice invoice={selectedInvoice} formatCurrency={formatCurrency} />
+                {(() => {
+                  // Lấy lại logic tìm relevantAppointment từ modal chi tiết
+                  const relevantAppointment = selectedInvoice.patientMedicalRecord?.appointments?.find(app => {
+                      const serviceCost = app.medicalService?.cost || 0;
+                      const prescriptionCostForThisApp = app.prescriptions?.reduce((presSum, pres) => {
+                        if (pres.appointmentId === app.id) {
+                           const detailsSum = pres.prescriptionDetails?.reduce((detSum, det) => detSum + det.amount, 0) || 0;
+                           return presSum + detailsSum;
+                        }
+                        return presSum; 
+                      }, 0) || 0;
+                      return Math.abs((serviceCost + prescriptionCostForThisApp) - selectedInvoice.totalAmount) < 0.01; 
+                  });
+                  
+                  // Truyền relevantAppointment tìm được vào PrintableInvoice
+                  return (
+                    <PrintableInvoice 
+                      invoice={selectedInvoice} 
+                      relevantAppointment={relevantAppointment} // Truyền prop này
+                      formatCurrency={formatCurrency} 
+                    />
+                  );
+                })()}
               </div>
             </div>
           </div>

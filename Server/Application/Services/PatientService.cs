@@ -115,28 +115,6 @@ namespace Application.Services
             return _mapper.Map<IEnumerable<PatientDto>>(await _patientRepository.GetAllAsync());
         }
 
-        public async Task<IEnumerable<PatientMedicalRecordDto>> GetAllMedicalRecordByPatient()
-        {
-            var accountId = await _accountHelper.GetAccountId();
-            var patient = await _patientRepository.GetAsync(s => s.AccountId == accountId);
-
-            var medicalRecord = await _patientMedicalRecordRepository.Query()
-                .Include(p => p.Patient)
-                    .ThenInclude(pt => pt.Appointments)
-                        .ThenInclude(a => a.MedicalService)
-                .Include(p => p.Prescriptions)
-                    .ThenInclude(pr => pr.PrescriptionDetails)
-                        .ThenInclude(pd => pd.Medicine)
-                .Include(p => p.Staff)
-                    .ThenInclude(s => s.Account)
-                .Include(p => p.Symptoms)
-                .Include(p => p.TestResults)
-                    .ThenInclude(t => t.Staff)
-                .Where(pt => pt.PatientId == patient.Id)
-                .ToListAsync();
-            return _mapper.Map<IEnumerable<PatientMedicalRecordDto>>(medicalRecord);
-        }
-
         public async Task<IEnumerable<PatientWithAccountDto>> GetAllWithAccountAsync()
         {
             var patients = await _patientRepository.Query().Include(p => p.Account).ToListAsync();

@@ -7,7 +7,7 @@ const CostStructureChart = ({ invoices }) => {
   // 1. Tính tổng chi phí dịch vụ và chi phí thuốc từ tất cả hóa đơn
   const totalCosts = invoices.reduce(
     (acc, invoice) => {
-      const serviceCost = invoice.appointment.medicalService.cost;
+      const serviceCost = invoice.appointments?.medicalService.cost;
       const prescriptionCost = Math.max(0, invoice.totalAmount - serviceCost);
       acc.service += serviceCost;
       acc.prescription += prescriptionCost;

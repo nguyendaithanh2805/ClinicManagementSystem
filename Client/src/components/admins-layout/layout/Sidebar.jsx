@@ -31,7 +31,7 @@ const Sidebar = () => {
     switch (user?.role) {
       case 'Patient':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/patient/patient-dashboard' },
+          { icon: Home, label: 'Trang chủ', path: '/', isReload: true },
           { icon: Calendar, label: 'Lịch khám của tôi', path: '/patient/appointments' },
           { icon: FileText, label: 'Hồ sơ bệnh án', path: '/patient/medical-records' },
           { icon: CircleDollarSign, label: 'Hóa đơn thanh toán', path: '/patient/invoices' },
@@ -113,24 +113,48 @@ const Sidebar = () => {
 
         {/* Navigation Menu */}
         <nav className="space-y-2">
-          {menuItems.map((item) => (
-            <Link
-              key={item.path}
-              to={item.path}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
-                isActive(item.path)
-                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
-                  : 'text-medical-700 hover:bg-white/50 hover:text-medical-900'
-              }`}
-              title={isCollapsed ? item.label : ''}
-            >
-              <item.icon className="w-5 h-5 flex-shrink-0" />
-              {!isCollapsed && (
-                <span className="font-medium text-sm">{item.label}</span>
-              )}
-            </Link>
-          ))}
+        {menuItems.map((item, index) => {
+          const isActive = (path) => {
+            if (!path) return false; // tránh lỗi undefined
+            return location.pathname === path;
+          };
+
+          const classNames = `flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
+            isActive(item.path)
+              ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg'
+              : 'text-medical-700 hover:bg-white/50 hover:text-medical-900'
+          }`;
+
+      // Nếu là item reload (ví dụ Trang chủ)
+      if (item.isReload) {
+        return (
+          <button
+            key={index}
+            onClick={() => window.location.href ="/"}
+            className={classNames}
+            title={isCollapsed ? item.label : ''}
+          >
+            <item.icon className="w-5 h-5 flex-shrink-0" />
+            {!isCollapsed && <span className="font-medium text-sm">{item.label}</span>}
+          </button>
+        );
+      }
+
+    // Còn lại là các Link bình thường
+    return (
+      <Link
+        key={index}
+        to={item.path}
+        className={classNames}
+        title={isCollapsed ? item.label : ''}
+      >
+        <item.icon className="w-5 h-5 flex-shrink-0" />
+        {!isCollapsed && <span className="font-medium text-sm">{item.label}</span>}
+      </Link>
+    );
+  })}
         </nav>
+
 
         {/* Quick Stats */}
         {!isCollapsed && (

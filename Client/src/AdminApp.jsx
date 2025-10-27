@@ -6,7 +6,7 @@ import LoginPage from './components/admins-layout/pages/LoginPage';
 import PatientDashboardContent from './components/admins-layout/dashboard/PatientDashboardContent';
 import MainLayout from './components/admins-layout/layout/MainLayout';
 import AppointmentsPage from './components/admins-layout/pages/AppointmentsPage';
-import MedicalRecordsPage from './components/admins-layout/pages/MedicalRecordsPage';
+import MedicalRecordsPage from './components/admins-layout/patient/MedicalRecordsPage';
 import TestResultsPage from './components/admins-layout/pages/TestResultsPage';
 import HealthTrackingPage from './components/admins-layout/pages/HealthTrackingPage';
 import PatientsPage from './components/admins-layout/pages/PatientsPage';

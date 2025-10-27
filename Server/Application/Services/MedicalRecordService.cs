@@ -24,8 +24,9 @@ namespace Application.Services
         private readonly IInvoiceService _invoiceService;
         private readonly IRepository<Appointment> _appointmentRepository;
         private readonly IRepository<Invoice> _invoiceRepository;
+        private readonly IRepository<Patient> _patientRepository;
 
-        public MedicalRecordService(IRepository<PatientMedicalRecord> patientMedicalRecordRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Staff> staffRepository, IInvoiceService invoiceService, IRepository<Appointment> appointmentRepository, IRepository<Invoice> invoiceRepository)
+        public MedicalRecordService(IRepository<PatientMedicalRecord> patientMedicalRecordRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Staff> staffRepository, IInvoiceService invoiceService, IRepository<Appointment> appointmentRepository, IRepository<Invoice> invoiceRepository, IRepository<Patient> patientRepository)
         {
             _patientMedicalRecordRepository = patientMedicalRecordRepository;
             _unitOfWork = unitOfWork;
@@ -35,7 +36,9 @@ namespace Application.Services
             _invoiceService = invoiceService;
             _appointmentRepository = appointmentRepository;
             _invoiceRepository = invoiceRepository;
+            _patientRepository = patientRepository;
         }
+
 
 
         // Tạo hồ sơ bệnh án mặc định
@@ -93,7 +96,7 @@ namespace Application.Services
                 .Include(pmr => pmr.TestResults)
                     .ThenInclude(t => t.Staff) // Nhân viên xét nghiệm
                         .ThenInclude(s => s.Account)
-                .Where(p => p.StaffId == staff.Id)
+                .Where(pmr => pmr.StaffId == staff.Id)
                 .Distinct()
                 .ToListAsync();
             return _mapper.Map<IEnumerable<PatientMedicalRecordDto>>(medicalRecord);
@@ -344,6 +347,31 @@ namespace Application.Services
                 _appointmentRepository.Update(appointment);
                 await _unitOfWork.SaveChangeAsync();
             }
+        }
+
+        public async Task<IEnumerable<PatientMedicalRecordDto>> GetAllMedicalRecordByPatient()
+        {
+            var accountId = await _accountHelper.GetAccountId();
+            var patient = await _patientRepository.GetAsync(s => s.AccountId == accountId);
+
+            var medicalRecord = await _patientMedicalRecordRepository.Query()
+               .Include(pmr => pmr.Appointments.OrderByDescending(a => a.Id))
+                        .ThenInclude(a => a.MedicalService)
+                .Include(pmr => pmr.Prescriptions)
+                    .ThenInclude(pr => pr.PrescriptionDetails)
+                        .ThenInclude(pd => pd.Medicine)
+                .Include(pmr => pmr.Staff)
+                    .ThenInclude(s => s.Account)
+                .Include(pmr => pmr.Patient)
+                    .ThenInclude(p => p.Account)
+                .Include(pmr => pmr.Symptoms)
+                .Include(pmr => pmr.TestResults)
+                    .ThenInclude(t => t.Staff) // Nhân viên xét nghiệm
+                        .ThenInclude(s => s.Account)
+                .Where(pmr => pmr.PatientId == patient.Id)
+                .Distinct()
+                .ToListAsync();
+            return _mapper.Map<IEnumerable<PatientMedicalRecordDto>>(medicalRecord);
         }
     }
 }

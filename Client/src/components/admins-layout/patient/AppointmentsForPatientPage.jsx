@@ -1,14 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, User, BriefcaseMedical, X, Info, CheckCircle, AlertTriangle, XCircle, DollarSign, Trash2, ShieldOff } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, User, UserCheck, X, Info, CheckCircle, AlertTriangle, XCircle, DollarSign, Trash2, ShieldOff, Stethoscope,
+  FileText
+ } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from "react-toastify";
 import api from "../contexts/Api";
+import { useNavigate } from 'react-router-dom';
 
 const AppointmentsForPatientPage = () => {
   const [appointments, setAppointments] = useState([]);
   const [currentFilterStatus, setCurrentFilterStatus] = useState('all');
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     fetchAppointments();
@@ -18,10 +22,16 @@ const AppointmentsForPatientPage = () => {
     try {
       const response = await api.get('/patients/appointments/me');
       if (response.data.status) {
-        setAppointments(response.data.data);
-      } else {
-        toast.error(response.data.message || 'Không thể tải lịch hẹn.');
-        console.error(response.data.message);
+        if (response.data.status) {
+          // Sắp xếp cho lịch hẹn mới nhất lên đầu
+          const sortedData = response.data.data.sort((a, b) => 
+            new Date(b.appointmentDate) - new Date(a.appointmentDate) || b.id - a.id
+          );
+          setAppointments(sortedData);
+        } else {
+          toast.error(response.data.message || 'Không thể tải lịch hẹn.');
+          console.error(response.data.message);
+        }
       }
     } catch (error) {
       toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi tải lịch hẹn.');
@@ -52,6 +62,28 @@ const AppointmentsForPatientPage = () => {
       case 5: return 'bg-red-100 text-red-700 border-red-200';        // Cancelled
       case 6: return 'bg-gray-100 text-gray-700 border-gray-200';      // NoShow
       default: return 'bg-gray-100 text-gray-700 border-gray-200';
+    }
+  };
+
+  // (CẬP NHẬT) Hàm xử lý tái khám (dựa theo trang bác sĩ)
+  const getRevisitStatusText = (revisitStatus) => {
+    switch (revisitStatus) {
+      case 1: return 'Tái khám';
+      case 2: return 'Hoàn thành tái khám';
+      default: return null; // Không hiển thị gì nếu là 0
+    }
+  };
+
+  /// <summary>
+  /// Trả về các lớp CSS Tailwind cho badge TÁI KHÁM.
+  /// </summary>
+  /// <param name="revisitStatus">Mã trạng thái (0, 1, 2).</param>
+  /// <returns>Chuỗi các lớp CSS.</returns>
+  const getRevisitStatusColorClass = (revisitStatus) => {
+    switch (revisitStatus) {
+      case 1: return 'bg-purple-100 text-purple-700 border-purple-200'; // Cần tái khám
+      case 2: return 'bg-green-100 text-green-700 border-green-200';   // Đã hoàn thành
+      default: return 'bg-gray-100 text-gray-700 border-gray-200';   // Không
     }
   };
 
@@ -92,7 +124,17 @@ const AppointmentsForPatientPage = () => {
     }
   };
 
-  const AppointmentCard = ({ appointment }) => (
+  // Hàm điều hướng
+  const navigateToMedicalRecord = (recordId) => {
+    if (!recordId) return;
+      navigate('/patient/medical-records', { 
+        state: { openRecordId: recordId } 
+      });
+    };
+
+  const AppointmentCard = ({ appointment }) => {
+    const revisitText = getRevisitStatusText(appointment.revisit);
+  return (   
     <div
       className="border border-gray-200 rounded-xl p-4 shadow-sm bg-white flex flex-col sm:flex-row items-start sm:items-center gap-4 relative"
     >
@@ -121,23 +163,50 @@ const AppointmentsForPatientPage = () => {
         <div className="w-14 h-14 bg-blue-50 rounded-lg flex items-center justify-center">
           <CalendarIcon className="w-6 h-6 text-blue-600" />
         </div>
+        <span className="mt-1.5 inline-block bg-blue-100 text-blue-800 text-xs font-semibold px-2.5 py-0.5 rounded-full border border-blue-200">
+          Mã LH: {appointment.id}
+        </span>
       </div>
 
       <div className="flex-1 w-full">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-2">
           <div>
-            <h3 className="font-semibold text-gray-900 text-lg">
-              {appointment.medicalService?.name || 'Chưa có dịch vụ'}
-            </h3>
+            <div className="flex items-baseline gap-2 mb-1">
+              <h3 className="font-semibold text-gray-900 text-lg">
+                {appointment.medicalService?.name || 'Chưa có dịch vụ'}
+              </h3>
+              {/* Hiển thị Tái khám */}
+              {revisitText && (
+                <span className={`px-2 py-0.5 rounded text-xs font-medium border self-center ${getRevisitStatusColorClass(appointment.revisit)}`}>
+                  {revisitText}
+                </span>
+              )}
+            </div>
             <p className="text-sm text-gray-600 flex items-center gap-1">
               <User className="w-4 h-4 inline-block text-gray-500" />
               BS. {appointment.staff?.fullName || 'Chưa phân công'}
             </p>
           </div>
-          <span className={`mt-2 mr-4 sm:mt-0 px-3 py-1 rounded-full text-xs font-medium border ${getStatusColorClass(appointment.status)}`}>
-            {getStatusText(appointment.status)}
-          </span>
-        </div>
+
+          {/* Bọc nút HSBA và Status */}
+          <div className="flex items-center gap-2 mt-2 sm:mt-0 pr-10 sm:pr-0">
+            {appointment.patientMedicalRecordId && (
+            <button
+              onClick={(e) => {
+              e.stopPropagation();
+              navigateToMedicalRecord(appointment.patientMedicalRecordId);
+              }}
+              className="px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-700 hover:bg-purple-200 transition-colors flex items-center gap-1"
+              title="Xem hồ sơ bệnh án"
+            >
+              <FileText className="w-4 h-4" /> HSBA
+            </button>
+            )}
+            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColorClass(appointment.status)}`}>
+              {getStatusText(appointment.status)}
+            </span>
+            </div>
+          </div>
         <div className="grid grid-cols-2 gap-2 text-sm text-gray-600">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-gray-500" />
@@ -154,7 +223,8 @@ const AppointmentsForPatientPage = () => {
         </div>
       </div>
     </div>
-  );
+  )
+};
 
 
   return (
@@ -174,39 +244,46 @@ const AppointmentsForPatientPage = () => {
                 ${currentFilterStatus === 'all' ? 'bg-blue-600 text-white shadow-md' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}
               `}
             >
-              Tất cả
+              <Info className="w-4 h-4 inline-block mr-1" /> Tất cả
             </button>
+
             <button
               onClick={() => handleStatusFilterChange('0')}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200
                 ${currentFilterStatus === '0' ? 'bg-yellow-500 text-white shadow-md' : 'bg-yellow-50 text-yellow-700 hover:bg-yellow-100'}
               `}
             >
-              Chờ xác nhận
+              <AlertTriangle className="w-4 h-4 inline-block mr-1" /> Chờ xác nhận
             </button>
             <button
               onClick={() => handleStatusFilterChange('1')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200
-                ${currentFilterStatus === '1' ? 'bg-green-600 text-white shadow-md' : 'bg-green-50 text-green-700 hover:bg-green-100'}
-              `}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${currentFilterStatus === '1' ? 'bg-green-600 text-white shadow-md' : 'bg-green-50 text-green-700 hover:bg-green-100'}`}
             >
-              Đã xác nhận
-            </button>
-            <button
-              onClick={() => handleStatusFilterChange('3')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200
-                ${currentFilterStatus === '3' ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}
-              `}
-            >
-              Hoàn thành
+              <CheckCircle className="w-4 h-4 inline-block mr-1" /> Đã xác nhận
             </button>
             <button
               onClick={() => handleStatusFilterChange('2')}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200
-                ${currentFilterStatus === '2' ? 'bg-red-600 text-white shadow-md' : 'bg-red-50 text-red-700 hover:bg-red-100'}
-              `}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${currentFilterStatus === '2' ? 'bg-cyan-600 text-white shadow-md' : 'bg-cyan-50 text-cyan-700 hover:bg-cyan-100'}`}
             >
-              Đã hủy bởi nhân viên
+              <UserCheck className="w-4 h-4 inline-block mr-1" />Đã đến
+            </button>
+            <button
+              onClick={() => handleStatusFilterChange('3')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${currentFilterStatus === '3' ? 'bg-indigo-600 text-white shadow-md' : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100'}`}
+            >
+              <Stethoscope className="w-4 h-4 inline-block mr-1" /> Đang khám
+            </button>
+            <button
+              onClick={() => handleStatusFilterChange('4')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${currentFilterStatus === '4' ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'}`}
+            >
+              <CheckCircle className="w-4 h-4 inline-block mr-1" /> Đã hoàn thành
+            </button>
+            <button
+              onClick={() => handleStatusFilterChange('5')}
+              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors duration-200 ${currentFilterStatus === '5' ? 'bg-red-600 text-white shadow-md' : 'bg-red-50 text-red-700 hover:bg-red-100'}`}
+            >
+            <XCircle className="w-4 h-4 inline-block mr-1" /> Đã hủy bởi nhân viên
             </button>
           </div>
         </div>

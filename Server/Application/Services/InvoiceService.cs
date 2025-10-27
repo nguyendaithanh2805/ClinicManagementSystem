@@ -112,16 +112,22 @@ namespace Application.Services
             var accountId = await _accountHelper.GetAccountId();
             var patient = await _patientRepository.GetAsync(s => s.AccountId == accountId);
 
-            return _mapper.Map<IEnumerable<InvoiceDto>>(await _invoiceRepository.Query()
+            return _mapper.Map<IEnumerable<InvoiceDto>>(
+                await _invoiceRepository.Query()
+                .Include(i => i.PatientMedicalRecord)
+                    .ThenInclude(pmr => pmr.Patient)
+                        .ThenInclude(p => p.Account)
                 .Include(i => i.PatientMedicalRecord)
                     .ThenInclude(pmr => pmr.Appointments)
                         .ThenInclude(a => a.MedicalService)
                             .ThenInclude(m => m.Specialty)
                 .Include(i => i.PatientMedicalRecord)
-                    .ThenInclude(pmr => pmr.Prescriptions)
-                        .ThenInclude(p => p.PrescriptionDetails)
-                            .ThenInclude(pd => pd.Medicine)
+                    .ThenInclude(pmr => pmr.Appointments)
+                        .ThenInclude(a => a.Prescriptions)
+                            .ThenInclude(p => p.PrescriptionDetails)
+                                .ThenInclude(pd => pd.Medicine)
                 .OrderByDescending(i => i.Id)
+                .Where(i => i.PatientMedicalRecord.PatientId == patient.Id)
                 .ToListAsync());
         }
 

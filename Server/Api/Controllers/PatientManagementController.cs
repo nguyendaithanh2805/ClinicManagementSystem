@@ -15,12 +15,14 @@ namespace Api.Controllers
         private readonly IPatientService _patientService;
         private readonly IAppointmentService _appointmentService;
         private readonly IInvoiceService _invoiceService;
+        private readonly IMedicalRecordService _medicalRecordService;
 
-        public PatientManagementController(IPatientService patientService, IAppointmentService appointmentService, IInvoiceService invoiceService)
+        public PatientManagementController(IPatientService patientService, IAppointmentService appointmentService, IInvoiceService invoiceService, IMedicalRecordService medicalRecordService)
         {
             _patientService = patientService;
             _appointmentService = appointmentService;
             _invoiceService = invoiceService;
+            _medicalRecordService = medicalRecordService;
         }
 
         [HttpGet("appointments/me")]
@@ -43,7 +45,7 @@ namespace Api.Controllers
         {
             try
             {
-                return Ok(new ApiResponse<IEnumerable<InvoiceDto>>(true, "Lấy dữ liệu thành công", await _invoiceService.GetAllInvoiceByPatient())); ;
+                return Ok(new ApiResponse<IEnumerable<InvoiceDto>>(true, "Lấy dữ liệu thành công", await _invoiceService.GetAllInvoiceByPatient()));
             }
             catch (Exception ex)
             {
@@ -57,7 +59,7 @@ namespace Api.Controllers
         {
             try
             {
-                return Ok(new ApiResponse<IEnumerable<PatientMedicalRecordDto>>(true, "Lấy dữ liệu thành công", await _patientService.GetAllMedicalRecordByPatient()));
+                return Ok(new ApiResponse<IEnumerable<PatientMedicalRecordDto>>(true, "Lấy dữ liệu thành công", await _medicalRecordService.GetAllMedicalRecordByPatient()));
             }
             catch (Exception ex)
             {

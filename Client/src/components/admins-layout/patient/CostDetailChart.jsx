@@ -43,17 +43,18 @@ const CostDetailChart = ({ invoices }) => {
   const chartData = [...invoices]
     .sort((a, b) => new Date(a.paymentDate) - new Date(b.paymentDate))
     .map(invoice => {
-      const totalPrescriptionCost = invoice.prescription.prescriptionDetails.reduce(
+      const prescriptionDetails = invoice.patientMedicalRecord?.prescription?.prescriptionDetails || [];
+      const totalPrescriptionCost = prescriptionDetails.reduce(
         (sum, detail) => sum + detail.amount, 0
       );
       
       return {
         date: format(new Date(invoice.paymentDate), 'dd/MM'),
-        serviceCost: invoice.appointment.medicalService.cost,
+        serviceCost: invoice.patientMedicalRecord?.appointment.medicalService.cost,
         prescriptionCost: totalPrescriptionCost,
         totalAmount: invoice.totalAmount,
-        serviceName: invoice.appointment.medicalService.name,
-        prescriptionDetails: invoice.prescription.prescriptionDetails,
+        serviceName: invoice.patientMedicalRecord.appointments.medicalService.name,
+        prescriptionDetails: invoice.patientMedicalRecord.prescription.prescriptionDetails,
       };
     });
 

@@ -36,6 +36,7 @@ const MyAccountPage = () => {
     try {
       const response = await api.get('/patients/accounts/me');
       if (response.data.status) {
+        console.log(response.data.data)
         setPatientData(response.data.data);
         setFormData({
           username: response.data.data.account?.username || '',
@@ -219,7 +220,7 @@ const MyAccountPage = () => {
             <User className="w-5 h-5 text-blue-500 flex-shrink-0" />
             <strong className="font-semibold w-32 text-medical-700">Tên đăng nhập</strong>
             <p className="flex-1 px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-medical-800">
-            {patientData.account?.username || 'Không có thông tin'}
+            {patientData.account?.username || 'Chưa có thông tin'}
             </p>
           </div>
 
@@ -236,7 +237,7 @@ const MyAccountPage = () => {
               />
             ) : (
               <p className="flex-1 px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-medical-800">
-                {patientData.fullName || 'Không có thông tin'}
+                {patientData.fullName || 'Chưa có thông tin'}
               </p>
             )}
           </div>
@@ -254,7 +255,7 @@ const MyAccountPage = () => {
               />
             ) : (
               <p className="flex-1 px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-medical-800">
-                {patientData.dateOfBirth ? format(parseISO(patientData.dateOfBirth), 'dd/MM/yyyy', { locale: vi }) : 'Không có thông tin'}
+                {patientData.dateOfBirth ? format(parseISO(patientData.dateOfBirth), 'dd/MM/yyyy', { locale: vi }) : 'Chưa có thông tin'}
               </p>
             )}
           </div>
@@ -273,7 +274,7 @@ const MyAccountPage = () => {
               />
             ) : (
               <p className="flex-1 px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-medical-800">
-                {patientData.address || 'Không có thông tin'}
+                {patientData.address || 'Chưa có thông tin'}
               </p>
             )}
           </div>
@@ -291,7 +292,7 @@ const MyAccountPage = () => {
               />
             ) : (
               <p className="flex-1 px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-medical-800">
-                {patientData.account?.phoneNumber || 'Không có thông tin'}
+                {patientData.account?.phoneNumber || 'Chưa có thông tin'}
               </p>
             )}
           </div>
@@ -309,7 +310,7 @@ const MyAccountPage = () => {
               />
             ) : (
               <p className="flex-1 px-4 py-2 border border-gray-200 rounded-lg bg-gray-50 text-medical-800">
-                {patientData.account?.email || 'Không có thông tin'}
+                {patientData.account?.email || 'Chưa có thông tin'}
               </p>
             )}
           </div>

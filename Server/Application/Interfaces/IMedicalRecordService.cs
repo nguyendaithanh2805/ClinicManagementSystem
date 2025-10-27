@@ -15,5 +15,6 @@ namespace Application.Interfaces
         Task ConfirmCompleted(int medicalRecordId);
         Task ConfirmCompletedRevisit(int medicalRecordId);
         Task ConfirmIsRevisit(int medicalRecordId, ConfirmIsRevisitAppointment confirmIsRevisitAppointment);
+        Task<IEnumerable<PatientMedicalRecordDto>> GetAllMedicalRecordByPatient();
     }
 }
