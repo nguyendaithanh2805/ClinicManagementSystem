@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Security.Claims;
+using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
@@ -9,28 +10,23 @@ namespace Api.ChatHub
     [Authorize] // Yêu cầu xác thực JWT để kết nối đến Hub
     public class ChatHub : Hub
     {
-        // Dictionary lưu trữ ánh xạ UserId với ConnectionId của SignalR
-        // Giúp gửi tin nhắn đến một người dùng cụ thể
-        private static readonly ConcurrentDictionary<int, string> _connections = new();
-
+        private readonly IConnectionManagementService _connectionManagementService;
         // Dictionary lưu trữ tin nhắn offline cho từng UserId
         // Tin nhắn sẽ được gửi khi người dùng đó online trở lại
         private static readonly ConcurrentDictionary<int, List<(int SenderId, string Message, DateTime CreatedAt)>> _offlineMessages = new();
+        private readonly IAccountHelper _accountHelper;
 
-        // Hàm hỗ trợ lấy UserId từ JWT Claims của người dùng hiện tại
-        private int GetUserId()
+        public ChatHub(IConnectionManagementService connectionManagementService, IAccountHelper accountHelper)
         {
-            var claim = Context.User?.FindFirst(ClaimTypes.NameIdentifier);
-            if (claim is null)
-                throw new HubException("Không tìm thấy Claim NameIdentifier trong JWT.");
-            return int.Parse(claim.Value);
+            _connectionManagementService = connectionManagementService;
+            _accountHelper = accountHelper;
         }
 
         // Xử lý khi có client kết nối đến Hub
         public override async Task OnConnectedAsync()
         {
-            var userId = GetUserId();
-            _connections[userId] = Context.ConnectionId; // Lưu trữ ConnectionId của người dùng
+            var userId = await _accountHelper.GetAccountId();
+            _connectionManagementService.AddConnection(userId, Context.ConnectionId); // Lưu trữ ConnectionId của người dùng
             
             // Gửi thông báo đến TẤT CẢ các client rằng người dùng này đã online
             await Clients.All.SendAsync("UserStatusChanged", userId, true);
@@ -52,8 +48,8 @@ namespace Api.ChatHub
         // Xử lý khi có client ngắt kết nối khỏi Hub
         public override async Task OnDisconnectedAsync(Exception? exception)
         {
-            var userId = GetUserId();
-            _connections.TryRemove(userId, out _); // Xóa ConnectionId của người dùng
+            var userId = await _accountHelper.GetAccountId();
+            _connectionManagementService.RemoveConnection(userId); // Xóa ConnectionId của người dùng
             
             // Gửi thông báo đến TẤT CẢ các client rằng người dùng này đã offline
             await Clients.All.SendAsync("UserStatusChanged", userId, false);
@@ -65,10 +61,11 @@ namespace Api.ChatHub
         // Phương thức được gọi bởi client để gửi tin nhắn đến một người dùng cụ thể
         public async Task SendMessageToUser(int receiverId, string message)
         {
-            var senderId = GetUserId();
+            var senderId = await _accountHelper.GetAccountId();
 
+            var receiverConnectionId = _connectionManagementService.GetConnectionId(receiverId);
             // Kiểm tra xem người nhận có đang online không
-            if (_connections.TryGetValue(receiverId, out var receiverConnectionId))
+            if (receiverConnectionId != null)
             {
                 // Nếu online, gửi tin nhắn trực tiếp đến người nhận
                 await Clients.Client(receiverConnectionId)

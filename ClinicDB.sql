@@ -172,10 +172,27 @@ CREATE TABLE TestResult (
 );
 GO
 
+CREATE TABLE [Notification] (
+	Id			INT				IDENTITY(1,1),
+	AccountId	INT				NOT NULL,
+	Title		NVARCHAR(200)	NOT NULL,
+	Message		NVARCHAR(255)	NOT NULL,
+	Type		NVARCHAR(200)	NOT NULL,
+	CreatedAt	DATETIME		NOT NULL,
+	IsRead		BIT				NOT NULL DEFAULT 0
+	CONSTRAINT PK_Notification PRIMARY KEY (Id)
+);
+GO
+
 -- 3. CREATE RELATIONSHIP
 ALTER TABLE MedicalService
 ADD CONSTRAINT FK_MedicalService_Specialty FOREIGN KEY (specialtyId) REFERENCES Specialty(Id);
 GO
+
+ALTER TABLE [Notification]
+ADD CONSTRAINT FK_Notification_Account FOREIGN KEY (AccountId) REFERENCES Account(Id);
+GO
+
 
 ALTER TABLE Staff
 ADD CONSTRAINT FK_Staff_Account FOREIGN KEY (AccountId) REFERENCES Account(Id);

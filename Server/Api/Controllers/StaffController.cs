@@ -149,7 +149,7 @@ namespace Api.Controllers
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));
             }
-            catch (DbUpdateException ex)
+            catch (DbUpdateException)
             {
                 // Trường hợp lỗi khác
                 return BadRequest(new ApiResponse<string>(false, "Không thể xóa do tài khoản này đang thao tác với bệnh nhân", null));

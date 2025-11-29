@@ -127,6 +127,9 @@ builder.Services.AddScoped<IFileStorageService, FileStorageService>();
 builder.Services.AddScoped<ITestResultService, TestResultService>();
 builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddHostedService<ChatCleanupService>();
+builder.Services.AddSingleton<IConnectionManagementService, ConnectionManagementService>();
+builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
+builder.Services.AddScoped<IService<NotificationDto>, NotificationService>();
 
 // Handle when validation returns an invalid format
 builder.Services.Configure<ApiBehaviorOptions>(options =>

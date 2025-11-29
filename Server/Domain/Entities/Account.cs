@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 
 namespace Domain.Entities;
 
@@ -22,4 +23,7 @@ public partial class Account
     public virtual Role Role { get; set; } = null!;
 
     public virtual Staff? Staff { get; set; }
+
+    [JsonIgnore]
+    public virtual ICollection<Notification> Notifications { get; set; } = new List<Notification>();
 }

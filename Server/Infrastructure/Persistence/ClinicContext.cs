@@ -39,9 +39,25 @@ public partial class ClinicContext : DbContext
     public virtual DbSet<Symptom> Symptoms { get; set; }
 
     public virtual DbSet<TestResult> TestResults { get; set; }
+    public virtual DbSet<Notification> Notifications { get; set; }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<Notification>(entity =>
+        {
+            entity.ToTable("Notification");
+            entity.Property(e => e.Title).HasMaxLength(200);
+            entity.Property(e => e.Message).HasMaxLength(255);
+            entity.Property(e => e.Type).HasMaxLength(200);
+            entity.Property(e => e.CreatedAt).HasColumnType("datetime");
+            entity.Property(e => e.IsRead);
+
+            entity.HasOne(d => d.Account).WithMany(p => p.Notifications)
+                .HasForeignKey(d => d.AccountId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_Notification_Account");
+        });
+
         modelBuilder.Entity<Account>(entity =>
         {
             entity.ToTable("Account");

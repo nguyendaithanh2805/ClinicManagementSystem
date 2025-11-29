@@ -33,6 +33,7 @@ import StaffAssignmentPage from './components/admins-layout/admin/StaffAssignmen
 import MedicalServicesPage from './components/admins-layout/admin/MedicalServicesPage';
 import MedicinesPage from './components/admins-layout/admin/MedicinesPage';
 import AccountsPage from './components/admins-layout/admin/AccountsPage';
+import { SignalRConnectionProvider } from './components/admins-layout/contexts/SignalRConnectionContext';
 
 function App() {
   return (
@@ -53,64 +54,66 @@ function AppContent() {
   }, [auth]);
   if (loading) return <LoadingSpinner />; 
   return (
-    <NotificationProvider>
-      <ChatProvider>
-        <BrowserRouter>
-          <Routes>
-            {/* For admin */}             
-            {/* Patient Routes */}
-            <Route path="/patient" element={
-              <ProtectedRoute allowedRoles={['Patient']}>
-                <MainLayout />
-              </ProtectedRoute>
-            }>
-            <Route path="patient-dashboard" element={<PatientDashboardContent />} />
-              <Route path="appointments" element={<AppointmentsForPatientPage /> } />
-              <Route path="medical-records" element={ <MedicalRecordsPage /> } />
-              <Route path="invoices" element={ <InvoicesPage /> } />
-              <Route path="drug-analyzer" element={ <DrugAnalyzerPage /> } />
-              <Route path="my-account" element={ <MyAccountPage /> } />
-            </Route>
+    <SignalRConnectionProvider>
+      <NotificationProvider>
+        <ChatProvider>
+          <BrowserRouter>
+            <Routes>
+              {/* For admin */}             
+              {/* Patient Routes */}
+              <Route path="/patient" element={
+                <ProtectedRoute allowedRoles={['Patient']}>
+                  <MainLayout />
+                </ProtectedRoute>
+              }>
+              <Route path="patient-dashboard" element={<PatientDashboardContent />} />
+                <Route path="appointments" element={<AppointmentsForPatientPage /> } />
+                <Route path="medical-records" element={ <MedicalRecordsPage /> } />
+                <Route path="invoices" element={ <InvoicesPage /> } />
+                <Route path="drug-analyzer" element={ <DrugAnalyzerPage /> } />
+                <Route path="my-account" element={ <MyAccountPage /> } />
+              </Route>
 
-            {/* Staff Routes */}
-            <Route path="/staff" element={
-              <ProtectedRoute allowedRoles={['Doctor','Receptionist', 'LabTechnician']}>
-                <MainLayout />
-              </ProtectedRoute>
-            }>
-              {/* Receptionist Routes */}
-              <Route path="receptionist-dashboard" element={<StaffDashboardContent />} />
-              <Route path="appointments" element={<AppointmentsPage />} />
-              <Route path="payments" element={<PaymentsPage />} />
-              <Route path="patients" element={ <PatientsPage /> } />
-              <Route path="medical-records" element={ <MedicalRecordsPage /> } />
+              {/* Staff Routes */}
+              <Route path="/staff" element={
+                <ProtectedRoute allowedRoles={['Doctor','Receptionist', 'LabTechnician']}>
+                  <MainLayout />
+                </ProtectedRoute>
+              }>
+                {/* Receptionist Routes */}
+                <Route path="receptionist-dashboard" element={<StaffDashboardContent />} />
+                <Route path="appointments" element={<AppointmentsPage />} />
+                <Route path="payments" element={<PaymentsPage />} />
+                <Route path="patients" element={ <PatientsPage /> } />
+                <Route path="medical-records" element={ <MedicalRecordsPage /> } />
 
-              {/* Doctor Routes */}
-              <Route path="doctor-dashboard" element={<DoctorDashboardContent />} />
-              <Route path="schedule" element={ <AppointmentPageForDoctor /> } />
-              <Route path="patient-medical-records" element={ <MedicalRecordPageForDoctor/> } />
-              <Route path="predict-diasease" element={ <PredictDiasease/> } />
-             
-              <Route path="lab-dashboard" element={<LabDashboardContent />} />
-              <Route path="test-queue" element={<LabTechnicianPage />} />
-            </Route>
+                {/* Doctor Routes */}
+                <Route path="doctor-dashboard" element={<DoctorDashboardContent />} />
+                <Route path="schedule" element={ <AppointmentPageForDoctor /> } />
+                <Route path="patient-medical-records" element={ <MedicalRecordPageForDoctor/> } />
+                <Route path="predict-diasease" element={ <PredictDiasease/> } />
+              
+                <Route path="lab-dashboard" element={<LabDashboardContent />} />
+                <Route path="test-queue" element={<LabTechnicianPage />} />
+              </Route>
 
-            {/* Admin Routes */}
-            <Route path="/admin" element={
-              <ProtectedRoute allowedRoles={['Admin']}>
-                <MainLayout />
-              </ProtectedRoute>
-            }> 
-              <Route path="admin-dashboard" element={<AdminDashboardContent />} />
-              <Route path="assignment-staff" element={<StaffAssignmentPage />} />
-              <Route path="medical-services" element={<MedicalServicesPage />} />
-              <Route path="medicines" element={<MedicinesPage />} />
-              <Route path="employee-accounts" element={<AccountsPage />} />
-            </Route>
-          </Routes>
-        </BrowserRouter>
-      </ChatProvider>
-    </NotificationProvider>
+              {/* Admin Routes */}
+              <Route path="/admin" element={
+                <ProtectedRoute allowedRoles={['Admin']}>
+                  <MainLayout />
+                </ProtectedRoute>
+              }> 
+                <Route path="admin-dashboard" element={<AdminDashboardContent />} />
+                <Route path="assignment-staff" element={<StaffAssignmentPage />} />
+                <Route path="medical-services" element={<MedicalServicesPage />} />
+                <Route path="medicines" element={<MedicinesPage />} />
+                <Route path="employee-accounts" element={<AccountsPage />} />
+              </Route>
+            </Routes>
+          </BrowserRouter>
+        </ChatProvider>
+      </NotificationProvider>
+    </SignalRConnectionProvider>
   );
 }
 

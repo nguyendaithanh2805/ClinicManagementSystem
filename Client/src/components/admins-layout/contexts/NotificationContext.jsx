@@ -1,4 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useSignalRConnection } from './SignalRConnectionContext';
+import api from "../../admins-layout/contexts/Api";
+import { toast } from "react-toastify";
 
 const NotificationContext = createContext();
 
@@ -11,76 +14,99 @@ export const useNotifications = () => {
 };
 
 export const NotificationProvider = ({ children }) => {
+  const { connection, on, off } = useSignalRConnection();
   const [notifications, setNotifications] = useState([]);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
 
-  useEffect(() => {
-    // Mock notifications data
-    const mockNotifications = [
-      {
-        id: 'n001',
-        title: 'Lịch khám sắp tới',
-        message: 'Bạn có lịch khám với BS. Trần Thị Bình vào 14:30 ngày mai',
-        type: 'appointment',
-        priority: 'high',
-        timestamp: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        read: false
-      },
-      {
-        id: 'n002',
-        title: 'Kết quả xét nghiệm',
-        message: 'Kết quả xét nghiệm máu của bạn đã có. Vui lòng xem chi tiết.',
-        type: 'test_result',
-        priority: 'medium',
-        timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-        read: false
-      },
-      {
-        id: 'n003',
-        title: 'Nhắc nhở uống thuốc',
-        message: 'Đã đến giờ uống thuốc huyết áp. Liều: 1 viên sau bữa sáng.',
-        type: 'medication',
-        priority: 'high',
-        timestamp: new Date(),
-        read: true
-      }
-    ];
-    
-    setNotifications(mockNotifications);
-  }, []);
-
-  const markAsRead = (notificationId) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, read: true }
-          : notification
-      )
-    );
+  // Hàm bật/tắt dropdown
+  const toggleDropdown = () => {
+      setIsDropdownOpen(prev => !prev);
   };
 
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, read: true }))
-    );
-  };
-
-  const addNotification = (notification) => {
+  const addNotification = (serverNotification) => {
     const newNotification = {
-      id: Date.now().toString(),
-      timestamp: new Date(),
-      read: false,
-      ...notification
+      id: serverNotification.id,
+      title: serverNotification.title,
+      message: serverNotification.message,
+      type: serverNotification.type,
+      createdAt: serverNotification.createdAt,
+      isRead: serverNotification.isRead,
     };
     setNotifications(prev => [newNotification, ...prev]);
+    toast.info("Bạn có thông báo mới")
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const fetchNotifications = async () => {
+    try {
+      const response = await api.get('/notifications');
+      if (response.data.status) {
+        setNotifications(response.data.data);
+      } else {
+        toast.error(response.data.message || 'Không thể tải lịch hẹn cá nhân.');
+        console.error(response.data.message);
+      }
+    } catch (error) {
+      console.error("Lỗi khi tải thông báo:", error);
+    }
+  };
+  useEffect(() => {
+    // A. Hàm lấy thông báo cũ
+    fetchNotifications();
+
+    // B. Lắng nghe sự kiện SignalR
+    if (connection) {
+        // Đăng ký listener khi connection đã có
+        on("ReceiveNotification", addNotification);
+    }
+
+    // C. Dọn dẹp
+    return () => {
+        // Chỉ xóa listener, KHÔNG DỪNG KẾT NỐI
+        if (connection) {
+            off("ReceiveNotification"); 
+        }
+    };
+    }, [connection, on, off]);
+
+  // Các hàm này giờ chỉ cập nhật local state
+  const markAsRead = async (notificationId) => {
+    // 1. Tìm bản ghi hiện tại VÀ chuẩn bị dữ liệu gửi đi
+    const notificationToUpdate = notifications.find(n => n.id === notificationId);
+    if (!notificationToUpdate || notificationToUpdate.isRead) return;
+
+    const dtoForApi = {
+        Id: notificationToUpdate.id,
+        AccountId: notificationToUpdate.accountId,
+        Title: notificationToUpdate.title,
+        Message: notificationToUpdate.message,
+        Type: notificationToUpdate.type,
+        CreatedAt: notificationToUpdate.createdAt,
+        IsRead: notificationToUpdate.isRead,
+    };
+
+    try {
+        const response = await api.put(`/notifications/${notificationId}`, dtoForApi);
+        if (response.data.status) {
+           setNotifications(prev => 
+              prev.map(n => n.id === notificationId ? { ...n, isRead: true } : n)
+          );
+        }
+    } catch (error) {
+        console.error("Lỗi khi cập nhật thông báo:", error);
+        setNotifications(prev => 
+            prev.map(n => n.id === notificationId ? { ...n, isRead: false } : n)
+        );
+    }
+};
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
 
   const value = {
     notifications,
     unreadCount,
     markAsRead,
-    markAllAsRead,
+    isDropdownOpen,
+    toggleDropdown,
     addNotification
   };
 
