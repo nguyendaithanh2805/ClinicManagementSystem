@@ -5,6 +5,8 @@ using Application.Interfaces;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
 
 namespace Api.Controllers
 {
@@ -77,6 +79,7 @@ namespace Api.Controllers
         }
 
         [HttpPut("{id:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Update([FromRoute] int id, [FromBody] MedicalServiceDto MedicalServiceDto)
         {
             try
@@ -101,6 +104,7 @@ namespace Api.Controllers
         }
 
         [HttpDelete("{id:int}")]
+        [Authorize(Roles = "Admin")]
         public async Task<IActionResult> Delete([FromRoute] int id)
         {
             try
@@ -111,6 +115,17 @@ namespace Api.Controllers
             catch (NotFoundException ex)
             {
                 return BadRequest(new ApiResponse<string>(false, ex.Message, null));
+            }
+            catch (DbUpdateException ex)
+            {
+                // Kiểm tra nếu lỗi do ràng buộc khóa ngoại PrescriptionDetail
+                if (ex.InnerException is SqlException sqlEx && sqlEx.Message.Contains("FK_Appointment_MedicalService"))
+                {
+                    return BadRequest(new ApiResponse<string>(false, "Dịch vụ này đang có bệnh nhân khám", null));
+                }
+
+                // Trường hợp lỗi khác
+                return BadRequest(new ApiResponse<string>(false, "Không thể xóa do lỗi cơ sở dữ liệu", null));
             }
             catch (Exception ex)
             {

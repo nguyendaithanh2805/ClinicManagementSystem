@@ -27,11 +27,11 @@ const LoginPage = () => {
 
       // DashboardPage sẽ chỉ được gọi khi URL = /dashboard.
       case "Doctor":
-        return "/staff/doctor-dashboard"
+        return "/staff/schedule"
       case "Receptionist":
-        return "/staff/receptionist-dashboard"
+        return "/staff/appointments"
       case "LabTechnician":
-        return "/staff/lab-dashboard"
+        return "/staff/test-queue"
       case "Admin":
         return "/admin/admin-dashboard";
       default:

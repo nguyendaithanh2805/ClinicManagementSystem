@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useNotifications } from './contexts/NotificationContext';
 import { Bell, X, Clock, CheckCircle, AlertCircle, Calendar, TestTube, Pill } from 'lucide-react';
-import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 
 const NotificationPanel = () => {

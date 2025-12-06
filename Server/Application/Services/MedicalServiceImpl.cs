@@ -61,7 +61,10 @@ namespace Application.Services
             if (medicalService is null)
                 throw new NotFoundException("Không tìm thấy dịch vụ  y tế, không thể cập nhật.");
 
-            
+            medicalService.SpecialtyId = dto.SpecialtyId;
+            medicalService.Name = dto.Name;
+            medicalService.Cost = dto.Cost;
+
             _medicalServiceRepository.Update(medicalService);
             await _unitOfWork.SaveChangeAsync();
 

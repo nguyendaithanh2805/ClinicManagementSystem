@@ -15,6 +15,8 @@ namespace Application.DTOs
         public int? SpecialtyId { get; set; }
 
         public string? FullName { get; set; }
+        public string? Email { get; set; }
+        public string? PhoneNumber { get; set; }
 
         public string? Expertise { get; set; }
         public virtual AccountDto? Account { get; set; }

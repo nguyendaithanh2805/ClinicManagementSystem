@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom/client';
 import { useAuth } from '../contexts/AuthContext';
 import {
-  FileText, Search, Filter, Download, Eye, Calendar, User, CalendarDays, Heart, TestTube, Pill, AlertCircle, CheckCircle, Stethoscope,
+  FileText, Search, AlertTriangle, Filter, Download, Eye, Calendar, User, CalendarDays, Heart, TestTube, Pill, AlertCircle, CheckCircle, Stethoscope,
   Info, ListTodo, ClipboardCheck, Microscope, X, Clock, XCircle, CircleCheckBig, UserCheck, UserX, BriefcaseMedical
 } from 'lucide-react';
 import { format, parseISO, isValid } from 'date-fns';
@@ -364,8 +364,8 @@ const MedicalRecordsPage = () => {
             {/* Hàng trên: Tên, Trạng thái, Nút Xem */}
             <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-2">
               <div>
-                <h3 className="font-bold text-gray-900 text-lg sm:text-xl leading-tight mb-1"> {/* Tăng cỡ chữ */}
-                  {record.patient?.fullName || "Bệnh nhân chưa có tên"}
+                <h3 className="font-bold text-gray-900 text-lg sm:text-xl leading-tight mb-1">
+                  {record.patientName || "Bệnh nhân chưa có tên"}
                 </h3>
                 {/* Nhóm trạng thái */}
                 <div className="flex items-center gap-2 flex-wrap">
@@ -703,14 +703,6 @@ const MedicalRecordsPage = () => {
 
                       {/* Details */}
                       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm">
-                        <p className="flex items-center gap-2 text-gray-700 sm:col-span-2">
-                          <User className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                          <span className="font-medium text-gray-600 w-20">Bệnh nhân:</span>
-                          <span className="text-gray-900 font-semibold">
-                            {selectedRecordDetail.patient?.fullName || 'N/A'}
-                          </span>
-                        </p>
-
                         <p className="flex items-center gap-2 text-gray-700">
                           <CalendarDays className="w-4 h-4 text-gray-400 flex-shrink-0" />
                           <span className="font-medium text-gray-600 w-20">Ngày:</span>

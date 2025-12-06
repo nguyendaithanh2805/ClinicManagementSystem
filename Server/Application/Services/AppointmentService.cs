@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
 using Application.DTOs;
@@ -26,8 +28,10 @@ namespace Application.Services
         private readonly IMedicalRecordService _medicalRecordService;
         private readonly IRepository<Account> _accountRepository;
         private readonly IRepository<PatientMedicalRecord> _medicalRecordRepository;
+        private readonly IRepository<Notification> _notificationRepository;
+        private readonly INotificationService _notificationService;
 
-        public AppointmentService(IRepository<Appointment> appointmentRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Invoice> invoiceRepository, IInvoiceService invoiceService, IRepository<Patient> patientRepository, IRepository<Staff> staffRepository, IMedicalRecordService medicalRecordService, IRepository<Account> accountRepository, IRepository<PatientMedicalRecord> medicalRecordRepository)
+        public AppointmentService(IRepository<Appointment> appointmentRepository, IUnitOfWork unitOfWork, IMapper mapper, IAccountHelper accountHelper, IRepository<Invoice> invoiceRepository, IInvoiceService invoiceService, IRepository<Patient> patientRepository, IRepository<Staff> staffRepository, IMedicalRecordService medicalRecordService, IRepository<Account> accountRepository, IRepository<PatientMedicalRecord> medicalRecordRepository, IRepository<Notification> notificationRepository, INotificationService notificationService)
         {
             _appointmentRepository = appointmentRepository;
             _unitOfWork = unitOfWork;
@@ -40,6 +44,8 @@ namespace Application.Services
             _medicalRecordService = medicalRecordService;
             _accountRepository = accountRepository;
             _medicalRecordRepository = medicalRecordRepository;
+            _notificationRepository = notificationRepository;
+            _notificationService = notificationService;
         }
 
         public async Task<AppointmentDto> AddAsync(AppointmentDto dto)
@@ -210,11 +216,6 @@ namespace Application.Services
                 && dto.StaffId != appointment.StaffId)
                 throw new ErrorException("Không thể thay đổi bác sĩ cho lịch hẹn đánh dấu trạng thái là hủy");
 
-            //if (appointment.Status == AppointmentStatus.Confirmed && 
-            //    dto.StaffId != appointment.StaffId && 
-            //    dto.Status != AppointmentStatus.Cancelled)
-            //    throw new Exception("Lịch hẹn này đã xác nhận, không thể thay đổi bác sĩ.");
-
             if (appointment.Status == AppointmentStatus.Pending
                 && dto.StaffId is null
                 && dto.Status != AppointmentStatus.Cancelled)
@@ -224,10 +225,55 @@ namespace Application.Services
             {
                 await _unitOfWork.BeginTransactionAsync();
 
+                if (dto.Status == AppointmentStatus.Confirmed && dto.StaffId is not null)
+                {
+                    var patient = await _patientRepository.GetByIdAsync(dto.PatientId);
+                    var staff = await _staffRepository.GetByIdAsync((int)dto.StaffId);
+
+                    // 1. TẠO THÔNG BÁO CHO BN
+                    var patientNotification = new Notification
+                    {
+                        AccountId = patient.AccountId,
+                        Title = "Lịch khám đã được xác nhận",
+                        Message = $"Lịch khám của bạn với BS. {staff.FullName} đã được xác nhận.",
+                        Type = "appointment",
+                        CreatedAt = DateTime.UtcNow,
+                        IsRead = false
+                    };
+                    await _notificationRepository.AddAsync(patientNotification);
+                    await _notificationService.SendRealtimePush(patientNotification);
+
+                    // 2. TẠO THÔNG BÁO CHO BÁC SĨ
+                    var doctorNotification = new Notification
+                    {
+                        AccountId = staff.AccountId,
+                        Title = "Lịch hẹn mới",
+                        Message = $"Bạn có lịch hẹn với bệnh nhân {patient.FullName} đã được xác nhận.",
+                        Type = "appointment",
+                        CreatedAt = DateTime.UtcNow,
+                        IsRead = false
+                    };
+                    await _notificationRepository.AddAsync(doctorNotification);
+                    await _notificationService.SendRealtimePush(doctorNotification);
+                }
 
                 if (appointment.Status == AppointmentStatus.Confirmed &&
                     dto.Status == AppointmentStatus.CheckedIn)
                 {
+                    var patient = await _patientRepository.GetByIdAsync(dto.PatientId);
+                    var staff = await _staffRepository.GetByIdAsync((int)dto.StaffId);
+                    var doctorNotification = new Notification
+                    {
+                        AccountId = staff.AccountId,
+                        Title = "Bệnh nhân đã đến",
+                        Message = $"Bệnh nhân {patient.FullName} đã đến phòng khám [Mã LH: {appointment.Id}].",
+                        Type = "appointment",
+                        CreatedAt = DateTime.UtcNow,
+                        IsRead = false
+                    };
+                    await _notificationRepository.AddAsync(doctorNotification);
+                    await _notificationService.SendRealtimePush(doctorNotification);
+
                     // A. Kiểm tra xem bệnh nhân này đã có HSBN nào liên quan tới lịch hẹn này chưa
                     // B. Nếu chưa thì khi 'xác nhận đã đến' sẽ tạo mới HSBA, cập nhật pmrId vào lịch hẹn
                     if (appointment.PatientMedicalRecordId is null)
@@ -260,17 +306,6 @@ namespace Application.Services
                         }    
                     }
                 }
-
-                //// Lịch hẹn đã xác nhận thì tạo hóa đơn tạm
-
-                //if (dto.Status == AppointmentStatus.Confirmed)
-                //{
-                //    var invoice = new InvoiceDto
-                //    {
-                //        AppointmentId = appointment.Id,
-                //    };
-                //    await _invoiceService.AddAsync(invoice);
-                //}
 
                 ////// Trong quá trình khám (Bệnh nhân đã đến hoặc đang khám), nếu lỡ xảy ra gì đó mà muốn hủy khám đột ngột -> Xóa hồ sơ bệnh án
 

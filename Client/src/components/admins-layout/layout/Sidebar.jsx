@@ -17,7 +17,8 @@ import {
   ChevronLeft,
   ChevronRight,
   CircleDollarSign,
-  Brain
+  Brain,
+  BriefcaseMedical
 } from 'lucide-react';
 import { FaRegUserCircle } from "react-icons/fa";
 
@@ -41,7 +42,6 @@ const Sidebar = () => {
       
       case 'Doctor':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/doctor-dashboard' },
           { icon: Calendar, label: 'Lịch hẹn', path: '/staff/schedule' },
           { icon: FileText, label: 'Hồ sơ Bệnh nhân', path: '/staff/patient-medical-records' },
           { icon: Brain, label: 'Chẩn đoán bệnh', path: '/staff/predict-diasease' }
@@ -49,7 +49,6 @@ const Sidebar = () => {
       
       case 'Receptionist':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/receptionist-dashboard' },
           { icon: Calendar, label: 'Lịch hẹn', path: '/staff/appointments' },
           { icon: Users, label: 'Bệnh nhân', path: '/staff/patients' },
           { icon: FileText, label: 'Thanh toán', path: '/staff/payments' }
@@ -63,11 +62,11 @@ const Sidebar = () => {
       
       case 'Admin':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/admin-dashboard' },
-          { icon: Users, label: 'Quản lý người dùng', path: '/admin/user-management' },
-          { icon: Shield, label: 'Hệ thống', path: '/admin/system-management' },
-          { icon: Activity, label: 'Hoạt động', path: '/admin/activity-logs' },
-          { icon: BarChart3, label: 'Thống kê', path: '/admin/analytics' },
+          { icon: Home, label: 'Trang chủ', path: '/admin/admin-dashboard' },
+          { icon: Users, label: 'Phân công nhân viên', path: '/admin/assignment-staff' },
+          { icon: BriefcaseMedical, label: 'Dịch vụ y tế', path: '/admin/medical-services' },
+          { icon: Pill , label: 'Thuốc', path: '/admin/medicines' },
+          { icon: Users, label: 'Tài khoản nhân viên', path: '/admin/employee-accounts' },
         ];
     }
   };

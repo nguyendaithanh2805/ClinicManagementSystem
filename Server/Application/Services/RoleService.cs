@@ -32,9 +32,9 @@ namespace Application.Services
             throw new NotImplementedException();
         }
 
-        public Task<IEnumerable<RoleDto>> GetAllAsync()
+        public async Task<IEnumerable<RoleDto>> GetAllAsync()
         {
-            throw new NotImplementedException();
+            return _mapper.Map<IEnumerable<RoleDto>>(await _roleRepository.GetAllAsync());
         }
 
         public async Task<RoleDto> GetByIdAsync(int id)

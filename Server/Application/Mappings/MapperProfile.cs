@@ -30,6 +30,8 @@ namespace Application.Mappings
 
             CreateMap<Role, RoleDto>().ReverseMap();
 
+            CreateMap<Notification, NotificationDto>().ReverseMap();
+
             CreateMap<MedicalService, MedicalServiceDto>().ReverseMap();
             CreateMap<Medicine, MedicineDto>().ReverseMap();
 

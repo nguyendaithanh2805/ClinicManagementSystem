@@ -1,6 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { decodeJwt } from '../../../utils/jwtHelper'
 
 // Tạo context để chia sẻ dữ liệu đăng nhập cho toàn ứng dụng
 const AuthContext = createContext();

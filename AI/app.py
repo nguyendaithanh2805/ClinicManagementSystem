@@ -1,215 +1,171 @@
 import os
-import pickle
 import numpy as np
 import pandas as pd
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+import joblib 
+import warnings
 
-# --- Cấu hình PYTHONPATH để import các module từ DL và ML ---
-# Điều này giúp Python tìm thấy medicine_analyzer.py
+warnings.filterwarnings('ignore') # Tắt cảnh báo khi tải mô hình
+
+# --- Cấu hình PYTHONPATH ---
 import sys
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'DL'))
-sys.path.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), 'ML'))
+current_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Import logic from medicine_analyzer.py (located in AI/DL/)
-from medicine_analyzer import analyze_medicine_image
+# Thêm đường dẫn để import các module từ DL/ và ML/
+sys.path.append(os.path.join(current_dir, 'DL'))
+sys.path.append(os.path.join(current_dir, 'ML'))
+
+# Import hàm phân tích ảnh từ module DL
+try:
+    from medicine_analyzer import analyze_medicine_image
+except ImportError:
+    # Nếu module không tồn tại, tính năng /analyze sẽ bị vô hiệu hóa
+    print("Cảnh báo: Không tìm thấy module 'medicine_analyzer'. Endpoint /analyze sẽ không hoạt động.")
+    analyze_medicine_image = None
 
 app = Flask(__name__)
 CORS(app)
 
-# ============================================
-# 📂 CẤU HÌNH ĐƯỜNG DẪN
-# ============================================
-BASE_DIR = os.path.dirname(os.path.abspath(__file__)) # AI/
-MODELS_DIR = os.path.join(BASE_DIR, "ML", "models") # AI/ML/models/
+# --- CẤU HÌNH ĐƯỜNG DẪN & TẢI MÔ HÌNH ML ---
+MODEL_FILE = os.path.join(current_dir, 'ML', 'random_forest_model.joblib')
+ENCODER_FILE = os.path.join(current_dir, 'ML', 'label_encoder.joblib')
+TREATMENT_MAP_FILE = os.path.join(current_dir, 'ML', 'diagnosis_treatment_map.joblib')
 
-# ============================================
-# 🧠 HÀM TẢI MÔ HÌNH VÀ CÁC FILE MAPPING CHO DỰ ĐOÁN BỆNH
-# ============================================
-def load_diagnosis_models():
-    """
-    Tải toàn bộ mô hình, mapping và danh sách đặc trưng phục vụ dự đoán bệnh.
-    Trả về tuple chứa mô hình chẩn đoán, điều trị, các map và danh sách đặc trưng.
-    """
+# Khởi tạo biến toàn cục
+model = None
+label_encoder = None
+diagnosis_treatment_map = None
+
+# Kiểm tra sự tồn tại và tải các file mô hình khi khởi động
+MODEL_FILES_EXIST = os.path.exists(MODEL_FILE) and \
+                    os.path.exists(ENCODER_FILE) and \
+                    os.path.exists(TREATMENT_MAP_FILE)
+
+if MODEL_FILES_EXIST:
     try:
-        # Bệnh (Diagnosis)
-        with open(os.path.join(MODELS_DIR, "diagnosis_map_vn.pkl"), "rb") as f:
-            diagnosis_map = pickle.load(f)
-        reverse_diagnosis_map = (
-            diagnosis_map if all(isinstance(k, (int, np.integer)) for k in diagnosis_map.keys())
-            else {v: k for k, v in diagnosis_map.items()}
-        )
-
-        # Điều trị (Treatment)
-        with open(os.path.join(MODELS_DIR, "treatment_map_vn.pkl"), "rb") as f:
-            treatment_map = pickle.load(f)
-        reverse_treatment_map = (
-            treatment_map if all(isinstance(k, (int, np.integer)) for k in treatment_map.keys())
-            else {v: k for k, v in treatment_map.items()}
-        )
-
-        # Giới tính
-        with open(os.path.join(MODELS_DIR, "gender_map_vn.pkl"), "rb") as f:
-            gender_map_loaded = pickle.load(f)
-        gender_map = (
-            {v: k for k, v in gender_map_loaded.items()}
-            if all(isinstance(k, (int, np.integer)) for k in gender_map_loaded.keys())
-            else gender_map_loaded
-        )
-
-        # Triệu chứng & yếu tố nguy cơ
-        with open(os.path.join(MODELS_DIR, "symptoms_list_vn.pkl"), "rb") as f:
-            all_symptoms = pickle.load(f)
-        with open(os.path.join(MODELS_DIR, "risk_factors_list_vn.pkl"), "rb") as f:
-            all_risk_factors = pickle.load(f)
-
-        # Mô hình dự đoán
-        with open(os.path.join(MODELS_DIR, "diagnosis_model_v2.pkl"), "rb") as f:
-            model_diagnosis = pickle.load(f)
-        with open(os.path.join(MODELS_DIR, "treatment_model_v2.pkl"), "rb") as f:
-            model_treatment = pickle.load(f)
-
-        print("✅ Đã tải thành công tất cả mô hình và mapping cho dự đoán bệnh.")
-        return (
-            model_diagnosis, model_treatment,
-            reverse_diagnosis_map, reverse_treatment_map,
-            gender_map, all_symptoms, all_risk_factors
-        )
-
-    except FileNotFoundError as e:
-        print(f"❌ Không tìm thấy file mô hình/mapping trong {MODELS_DIR}: {e}")
-        exit()
+        model = joblib.load(MODEL_FILE)
+        label_encoder = joblib.load(ENCODER_FILE)
+        diagnosis_treatment_map = joblib.load(TREATMENT_MAP_FILE)
+        print("✅ Tải mô hình và dữ liệu hỗ trợ thành công.")
     except Exception as e:
-        print(f"❌ Lỗi khi tải mô hình hoặc mapping dự đoán bệnh: {e}")
-        exit()
+        print(f"❌ LỖI: Không thể tải các file mô hình. Chi tiết: {e}")
+        model = label_encoder = diagnosis_treatment_map = None 
+else:
+    print("❌ LỖI: Không tìm thấy các file mô hình (.joblib). Vui lòng kiểm tra thư mục ML/.")
 
-# --- Tải mô hình và dữ liệu cho dự đoán bệnh ---
-(
-    model_diagnosis, model_treatment,
-    reverse_diagnosis_map, reverse_treatment_map,
-    gender_map, all_symptoms, all_risk_factors
-) = load_diagnosis_models()
-
-# Xác định danh sách cột đặc trưng cho mô hình dự đoán bệnh
-feature_cols = (
-    [f"Triệu chứng_{s}" for s in all_symptoms] +
-    [f"Yếu tố nguy cơ_{r}" for r in all_risk_factors] +
-    ["Mã giới tính", "Tuổi"]
-)
-
-# Danh sách triệu chứng cứng cho endpoint /symptoms
-SYMPTOMS = [
-    "Đau họng", "Mờ mắt", "Chóng mặt", "Sốt cao", "Mệt mỏi", "Đau thượng vị", "Đau tay",
-    "Ngứa da", "Đau lưng dưới", "Hắt hơi", "Nghẹt mũi", "Đau lưng", "Khát nước", "Ngứa da tay",
-    "Khó thở", "Đau đầu", "Sốt", "Đau dạ dày", "Đau ngực", "Buồn nôn", "Nôn mửa", "Tiêu chảy",
-    "Táo bón", "Đau bụng", "Sưng khớp", "Khó tiêu", "Ho khan", "Ho có đờm", "Đau ngực khi thở",
-    "Sưng chân", "Mất ngủ", "Đau vai gáy", "Chán ăn", "Sút cân không rõ nguyên nhân", "Da nhợt nhạt",
-    "Mỏi mắt", "Phát ban", "Da khô", "Tiểu khó", "Chảy nước mũi", "Cứng lưng", "Tiểu nhiều",
-    "Ợ nóng", "Tiểu buốt", "Đau bụng dưới", "Cứng khớp buổi sáng", "Thở khò khè", "Vàng da",
-    "Nhạy cảm với ánh sáng", "Yếu một bên cơ thể", "Khó nói", "Đau cơ", "Ớn lạnh", "Nhức mỏi toàn thân",
-    "Lo lắng", "Bồn chồn", "Khó tập trung", "Mất hứng thú", "Khóc không rõ lý do", "Đau vùng chậu",
-    "Tiểu gắt", "Tiểu ra máu", "Đau bụng kinh dữ dội", "Tiểu đêm", "Khô họng", "Hôi miệng",
-    "Đau đầu căng thẳng", "Mất vị giác", "Mất khứu giác", "Khàn tiếng", "Sưng hạch bạch huyết",
-    "Tê bì chân tay", "Tăng cân không rõ nguyên nhân", "Móng tay giòn", "Rụng tóc", "Chóng mặt khi đứng lên",
-    "Đau khớp gối", "Sưng khớp ngón chân", "Đau hạ sườn phải", "Đau vai", "Đau thần kinh tọa",
-    "Ợ hơi", "Đầy bụng", "Rối loạn giấc ngủ", "Thường xuyên cáu kỉnh", "Chảy máu cam", "Ho ra máu",
-    "Môi khô", "Lưỡi trắng", "Hơi thở có mùi", "Ù tai", "Nhìn đôi", "Mờ một bên mắt", "Co giật",
-    "Liệt mặt", "Mất thăng bằng", "Khó nuốt"
+# Danh sách cột dữ liệu đầu vào mong đợi của mô hình
+EXPECTED_COLUMNS = [
+    'Tuổi', 'Giới_tính', 'Ho', 'Khó_thở', 'Sốt', 'Đau_ngực', 'Mệt_mỏi', 'Buồn_nôn', 
+    'Nôn', 'Đau_bụng', 'Tiêu_chảy', 'Táo_bón', 'Phát_ban', 'Ngứa', 'Mụn_mủ', 
+    'Vảy_da', 'Đỏ_da', 'Vàng_da', 'Chảy_máu', 'Đau_khớp', 'Sưng_khớp', 
+    'Quấy_khóc', 'Đau_bụng_khu_trú', 'Ăn_không_tiêu', 'Sụt_cân', 'Đau_đầu', 
+    'Chóng_mặt', 'Chuyên_khoa'
 ]
 
+# Ngưỡng độ tin cậy thấp (thí dụ: 70%)
+CONFIDENCE_THRESHOLD = 70.0 
 
-# ============================================
-# 🌐 CÁC API ENDPOINT CHO DỰ ĐOÁN BỆNH
-# ============================================
+# --- API ENDPOINT CHÍNH ---
 
 @app.route('/symptoms', methods=['GET'])
 def get_symptoms():
-    """Trả về danh sách các triệu chứng được hỗ trợ."""
-    return jsonify({"supported_symptoms": SYMPTOMS})
-
+    """Trả về danh sách các triệu chứng nhị phân (0/1) mà mô hình sử dụng."""
+    
+    # Loại bỏ các cột không phải là triệu chứng
+    non_symptom_cols = ['Tuổi', 'Giới_tính', 'Chuyên_khoa']
+    symptoms_list_with_underscore = [col for col in EXPECTED_COLUMNS if col not in non_symptom_cols]
+    
+    # Loại bỏ dấu gạch dưới để hiển thị trên frontend
+    symptoms_list_for_fe = [col.replace('_', ' ') for col in symptoms_list_with_underscore]
+    
+    return jsonify({
+        'status': 'success',
+        'symptoms': symptoms_list_for_fe, 
+    })
+    
 @app.route('/predict_diagnosis', methods=['POST'])
-def predict_diagnosis_endpoint():
-    """
-    Dự đoán bệnh và phương pháp điều trị dựa trên:
-    - Triệu chứng
-    - Yếu tố nguy cơ
-    - Giới tính
-    - Tuổi
-    """
-    data = request.get_json(force=True)
+def diagnose_diagnosis_endpoint():
+    """Nhận dữ liệu triệu chứng (JSON) và dự đoán bệnh, trả về chẩn đoán và gợi ý điều trị."""
+    
+    if model is None or label_encoder is None or diagnosis_treatment_map is None:
+        return jsonify({'error': 'Mô hình hoặc dữ liệu hỗ trợ chưa được tải.'}), 500
 
-    # --- Đọc dữ liệu đầu vào ---
-    symptoms = data.get('symptoms', [])
-    risks = data.get('risk_factors', [])
-    gender = data.get('gender')
-    age = data.get('age')
-
-    # --- Kiểm tra hợp lệ ---
-    if not gender or age is None:
-        return jsonify({"error": "Vui lòng cung cấp giới tính và tuổi."}), 400
-
-    gender_code = gender_map.get(gender)
-    if gender_code is None:
-        return jsonify({"error": f"Giới tính '{gender}' không hợp lệ. Dùng 'Nam' hoặc 'Nữ'."}), 400
-
-    # --- Chuẩn bị DataFrame ---
-    input_df = pd.DataFrame(0, index=[0], columns=feature_cols)
-
-    for s in symptoms:
-        col = f"Triệu chứng_{s}"
-        if col in input_df.columns:
-            input_df[col] = 1
-
-    for r in risks:
-        col = f"Yếu tố nguy cơ_{r}"
-        if col in input_df.columns:
-            input_df[col] = 1
-
-    input_df["Mã giới tính"] = gender_code
-    input_df["Tuổi"] = age
-
-    # --- Dự đoán ---
     try:
-        # Dự đoán xác suất
-        proba = model_diagnosis.predict_proba(input_df)  # shape: (1, n_classes)
-        max_prob = np.max(proba)                         # Xác suất nhãn dự đoán cao nhất
-        predicted_class = model_diagnosis.classes_[np.argmax(proba)]
+        data = request.get_json(force=True)
+        gender_input = data.get('Giới_tính', 'Nam')
+        
+        # Mã hóa 'Giới tính' thành giá trị số (1.0 hoặc 0.0)
+        encoded_gender = 1.0 if gender_input == 'Nam' else 0.0 
+        data['Giới_tính'] = encoded_gender
+        
+        # Xử lý các khóa triệu chứng: thay thế khoảng trắng bằng dấu gạch dưới để khớp với EXPECTED_COLUMNS
+        processed_data_for_df = {}
+        for key, value in data.items():
+            new_key = key.replace(' ', '_') 
+            processed_data_for_df[new_key] = value
+        
+        data_for_predict = {}
+        
+        for col in EXPECTED_COLUMNS:
+            value = processed_data_for_df.get(col)
+            
+            # Cấu trúc lại input theo đúng EXPECTED_COLUMNS và điền 0.0 cho các triệu chứng thiếu
+            if col in ['Tuổi', 'Giới_tính'] or col in [s.replace(' ', '_') for s in data.keys()]:
+                # 1. Nếu cột là Tuổi, Giới tính, hoặc Triệu chứng có trong request: dùng giá trị đó
+                # Dữ liệu triệu chứng/số (0/1) đã được gửi lên
+                data_for_predict[col] = [value]
+            elif col == 'Chuyên_khoa':
+                # 2. Cột Chuyên khoa: Lấy giá trị chuỗi và đảm bảo nó là chuỗi/object
+                specialty = processed_data_for_df.get('Chuyên_khoa', 'missing')
+                data_for_predict[col] = [specialty] 
+            else:
+                # 3. Các triệu chứng nhị phân bị thiếu (không được gửi lên): mặc định là 0.0
+                data_for_predict[col] = [0.0]
 
-        # Cảnh báo theo threshold 0.8 (80%)
-        warning = None
-        if max_prob < 0.8:
-            warning = (
-                "Độ tin cậy dự đoán chưa cao (xác suất < 80%). "
-                "Kết quả chỉ mang tính tham khảo. "
-                "Khuyến nghị xem xét thêm các triệu chứng "
-            )
-
-        # Dự đoán điều trị bình thường
-        treatment_code = model_treatment.predict(input_df)[0]
-
-        # Trả về kết quả
-        result = {
-            "predicted_diagnosis_code": int(predicted_class),
-            "predicted_diagnosis_name": reverse_diagnosis_map.get(predicted_class, "Không xác định"),
-            "predicted_treatment_code": int(treatment_code),
-            "predicted_treatment_name": reverse_treatment_map.get(treatment_code, "Không xác định"),
-            "warning": warning
+        # Tạo DataFrame cuối cùng với thứ tự cột và kiểu dữ liệu phù hợp
+        input_df_final = pd.DataFrame(data_for_predict, columns=EXPECTED_COLUMNS)
+        
+        # --- CẬP NHẬT: Thực hiện dự đoán xác suất và tìm độ tin cậy ---
+        prediction_proba = model.predict_proba(input_df_final)
+        # Lấy xác suất cao nhất (độ tin cậy)
+        confidence = np.max(prediction_proba) * 100 
+        # Lấy index của xác suất cao nhất
+        prediction_index = np.argmax(prediction_proba)
+        
+        # Giải mã kết quả dự đoán thành tên bệnh
+        prediction_diagnosis = label_encoder.inverse_transform([prediction_index])[0]
+        
+        # Lấy gợi ý điều trị từ map
+        treatment_suggestion = diagnosis_treatment_map.get(
+            prediction_diagnosis, 
+            "Không có gợi ý điều trị cụ thể trong cơ sở dữ liệu."
+        )
+        
+        low_confidence = confidence < CONFIDENCE_THRESHOLD
+        response = {
+            'diagnosis': prediction_diagnosis,
+            'treatment_suggestion': treatment_suggestion,
+            'confidence': round(confidence, 2), # Độ tin cậy (ví dụ: 85.50)
+            'low_confidence_warning': 1 if low_confidence else 0
         }
-
-        return jsonify(result)
+        
+        return jsonify(response)
 
     except Exception as e:
-        return jsonify({"error": f"Lỗi khi dự đoán bệnh: {str(e)}"}), 500
+        # Xử lý lỗi trong quá trình xử lý dữ liệu hoặc dự đoán
+        print(f"Lỗi khi dự đoán: {e}")
+        return jsonify({'error': f'Lỗi nội bộ server: {str(e)}. Vui lòng kiểm tra định dạng dữ liệu đầu vào.'}), 500
 
-# ============================================
-# 🌐 CÁC API ENDPOINT CHO PHÂN TÍCH ẢNH THUỐC
-# ============================================
+# --- API ENDPOINT PHÂN TÍCH ẢNH THUỐC ---
 
-@app.route("/analyze_medicine_image", methods=["POST"])
+@app.route("/analyze", methods=["POST"])
 def analyze_medicine_image_endpoint():
-    """
-    Endpoint nhận ảnh thuốc và prompt từ client React để phân tích.
-    """
+    """Nhận ảnh thuốc (multipart/form-data) và prompt để phân tích bằng mô hình Gemini."""
+    
+    if analyze_medicine_image is None:
+        return jsonify({"error": "Chức năng phân tích ảnh thuốc không khả dụng."}), 501
+
     try:
         if "image" not in request.files:
             return jsonify({"error": "Thiếu file ảnh 'image'"}), 400
@@ -219,18 +175,21 @@ def analyze_medicine_image_endpoint():
 
         image_bytes = image_file.read()
 
-        # Gọi hàm analyze_medicine_image từ module medicine_analyzer
+        # Gọi hàm phân tích ảnh từ module medicine_analyzer
         result = analyze_medicine_image(image_bytes, user_prompt)
         return jsonify(result)
 
     except Exception as e:
+        # Xử lý lỗi trong quá trình phân tích ảnh
+        print(f"Lỗi khi phân tích ảnh: {e}")
         return jsonify({"error": f"Lỗi khi phân tích ảnh thuốc: {str(e)}"}), 500
 
-# ============================================
-# 🚀 CHẠY ỨNG DỤNG
-# ============================================
+# --- CHẠY ỨNG DỤNG ---
 if __name__ == '__main__':
-    """Chạy ứng dụng Flask ở chế độ production."""
-    print(f"Starting Flask app from: {BASE_DIR}")
-    print(f"Looking for models in: {MODELS_DIR}")
+    """Khởi động ứng dụng Flask."""
+    print(f"Starting Flask app from: {current_dir}") 
+    print(f"Trạng thái mô hình dự đoán: {'Đã tải' if model else 'Chưa tải'}")
+    print(f"API CHẨN ĐOÁN: POST tới /predict_diagnosis")
+    print(f"API PHÂN TÍCH ẢNH: POST tới /analyze")
+    
     app.run(host='0.0.0.0', port=5000, debug=False)

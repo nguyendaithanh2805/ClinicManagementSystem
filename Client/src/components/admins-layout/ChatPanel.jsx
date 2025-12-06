@@ -7,7 +7,6 @@ import { vi } from 'date-fns/locale';
 
 // Component chính hiển thị giao diện chat
 const ChatPanel = () => {
-  const { user } = useAuth(); // Lấy thông tin người dùng hiện tại
   const {
     chats,
     activeChat,
@@ -44,7 +43,6 @@ const ChatPanel = () => {
   // Xử lý gửi tin nhắn
   const handleSendMessage = async () => {
     if (!message.trim() || !activeChat) return; // Không gửi tin nhắn rỗng hoặc khi không có activeChat
-
     await sendMessage(activeChat.participantId, message.trim()); // Gọi hàm gửi tin nhắn từ ChatContext
     setMessage(''); // Xóa nội dung input sau khi gửi
     scrollToBottom(); // Cuộn xuống cuối để xem tin nhắn vừa gửi
