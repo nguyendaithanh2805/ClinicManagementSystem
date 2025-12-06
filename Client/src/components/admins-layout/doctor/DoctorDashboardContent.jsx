@@ -29,7 +29,7 @@ const DoctorDashboard = () => {
       } catch (err) {
         setError("Không thể tải dữ liệu dashboard. Vui lòng thử lại.");
         toast.error("Lỗi khi tải dữ liệu dashboard.");
-        console.error("Dashboard fetch error:", err);
+        console.error("Dashboard fetch error:", error);
       } finally {
         setLoading(false);
       }

@@ -42,7 +42,6 @@ const Sidebar = () => {
       
       case 'Doctor':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/doctor-dashboard' },
           { icon: Calendar, label: 'Lịch hẹn', path: '/staff/schedule' },
           { icon: FileText, label: 'Hồ sơ Bệnh nhân', path: '/staff/patient-medical-records' },
           { icon: Brain, label: 'Chẩn đoán bệnh', path: '/staff/predict-diasease' }
@@ -50,7 +49,6 @@ const Sidebar = () => {
       
       case 'Receptionist':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/receptionist-dashboard' },
           { icon: Calendar, label: 'Lịch hẹn', path: '/staff/appointments' },
           { icon: Users, label: 'Bệnh nhân', path: '/staff/patients' },
           { icon: FileText, label: 'Thanh toán', path: '/staff/payments' }
@@ -64,7 +62,7 @@ const Sidebar = () => {
       
       case 'Admin':
         return [
-          { icon: Home, label: 'Trang chủ', path: '/staff/admin-dashboard' },
+          { icon: Home, label: 'Trang chủ', path: '/admin/admin-dashboard' },
           { icon: Users, label: 'Phân công nhân viên', path: '/admin/assignment-staff' },
           { icon: BriefcaseMedical, label: 'Dịch vụ y tế', path: '/admin/medical-services' },
           { icon: Pill , label: 'Thuốc', path: '/admin/medicines' },

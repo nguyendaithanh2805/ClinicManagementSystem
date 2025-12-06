@@ -97,6 +97,16 @@ export const ChatProvider = ({ children }) => {
                 chat.participantId === userId ? { ...chat, isOnline } : chat
             )
         );
+
+        setActiveChat(prevActiveChat => {
+        if (prevActiveChat && prevActiveChat.participantId === userId) {
+            return {
+                ...prevActiveChat,
+                isOnline: isOnline
+            };
+        }
+        return prevActiveChat;
+    });
     }, []);
 
 
@@ -256,7 +266,6 @@ export const ChatProvider = ({ children }) => {
             lastMessage: '',
             lastMessageTime: new Date(),
             unreadCount: 0,
-            isOnline: participantData.isOnline || false,
             messages: []
         };
 

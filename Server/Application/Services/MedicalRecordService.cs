@@ -144,6 +144,9 @@ namespace Application.Services
                 medicalRecord.Status = true; // Xác nhận HSBA đã hoàn thành
                 _patientMedicalRecordRepository.Update(medicalRecord);
 
+                appointment.Status = AppointmentStatus.Completed;
+                _appointmentRepository.Update(appointment);
+
                 // Tạo hóa đơn với pmrId
                 var invoiceDto = new InvoiceDto
                 {
