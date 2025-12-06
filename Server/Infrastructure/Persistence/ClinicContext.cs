@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Application.DTOs;
 using Domain.Entities;
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +41,7 @@ public partial class ClinicContext : DbContext
 
     public virtual DbSet<TestResult> TestResults { get; set; }
     public virtual DbSet<Notification> Notifications { get; set; }
-
+    public virtual DbSet<PaymentTransaction> PaymentTransactions { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Notification>(entity =>
@@ -57,6 +58,41 @@ public partial class ClinicContext : DbContext
                 .OnDelete(DeleteBehavior.Cascade)
                 .HasConstraintName("FK_Notification_Account");
         });
+
+        modelBuilder.Entity<PaymentTransaction>(entity =>
+        {
+            entity.ToTable("PaymentTransaction");
+
+            entity.HasKey(e => e.Id)
+                  .HasName("PK_PaymentTransaction");
+
+            entity.Property(e => e.Id)
+                  .ValueGeneratedOnAdd();
+
+            entity.Property(e => e.InvoiceId)
+                  .IsRequired();
+
+            entity.Property(e => e.Status)
+                  .IsRequired();
+            entity.Property(e => e.Amount)
+                  .HasColumnType("decimal(15, 0)")
+                  .IsRequired();
+
+            entity.Property(e => e.TransactionNo)
+                  .HasMaxLength(255)
+                  .IsRequired();
+
+            entity.Property(e => e.CreatedAt)
+                  .HasColumnType("datetime")
+                  .IsRequired();
+
+            entity.HasOne(e => e.Invoice)
+                  .WithMany()
+                  .HasForeignKey(e => e.InvoiceId)
+                  .OnDelete(DeleteBehavior.Cascade)
+                  .HasConstraintName("FK_PaymentTransaction_Invoice"); ;
+        });
+
 
         modelBuilder.Entity<Account>(entity =>
         {

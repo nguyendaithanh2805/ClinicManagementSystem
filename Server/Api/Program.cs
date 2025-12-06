@@ -130,6 +130,10 @@ builder.Services.AddHostedService<ChatCleanupService>();
 builder.Services.AddSingleton<IConnectionManagementService, ConnectionManagementService>();
 builder.Services.AddScoped<INotificationService, SignalRNotificationService>();
 builder.Services.AddScoped<IService<NotificationDto>, NotificationService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+
+builder.Services.Configure<VnPayConfig>(
+    builder.Configuration.GetSection("VnPayConfig"));
 
 // Handle when validation returns an invalid format
 builder.Services.Configure<ApiBehaviorOptions>(options =>
@@ -159,7 +163,7 @@ if (app.Environment.IsDevelopment())
     app.MapOpenApi();
 }
 
-app.UseHttpsRedirection();
+//app.UseHttpsRedirection();
 app.UseRouting();
 
 app.UseCors(MyAllowSpecificOrigins);

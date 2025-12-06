@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { CreditCard, DollarSign, BriefcaseMedical, Filter, Search, Calendar, CheckCircle, XCircle, User, FileText, ChevronLeft, ChevronRight, X, Printer, Download } from 'lucide-react';
+import { CreditCard, Loader2, DollarSign, BriefcaseMedical, Filter, Search, Calendar, CheckCircle, XCircle, User, FileText, ChevronLeft, ChevronRight, X, Printer, Download } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from "react-toastify";
@@ -20,7 +20,7 @@ const InvoicesPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   const [showPdfPreviewModal, setShowPdfPreviewModal] = useState(false);
-
+  const [processingInvoiceId, setProcessingInvoiceId] = useState(null);
   const pdfContentRef = useRef();
 
   const Pill = () => (
@@ -49,6 +49,34 @@ const InvoicesPage = () => {
     </svg>
   );
 
+  const { relevantAppointment, relevantPrescriptionDetails } = useMemo(() => {
+    if (!selectedInvoice) {
+        return { relevantAppointment: null, relevantPrescriptionDetails: [] };
+    }
+
+    // 1. Tìm Appointment liên quan
+    const app = selectedInvoice.patientMedicalRecord?.appointments?.find(app => {
+        const serviceCost = app.medicalService?.cost || 0;
+        
+        // Tính tổng tiền thuốc CHỈ cho lịch hẹn (app) này
+        const prescriptionCostForThisApp = app.prescriptions?.reduce((presSum, pres) => {
+            // Lấy tổng tiền từ các chi tiết của đơn thuốc
+            const detailsSum = pres.prescriptionDetails?.reduce((detSum, det) => detSum + det.amount, 0) || 0;
+            return presSum + detailsSum;
+        }, 0) || 0;
+        
+        // So sánh tổng chi phí của Appointment này với totalAmount của Invoice
+        return Math.abs((serviceCost + prescriptionCostForThisApp) - selectedInvoice.totalAmount) < 0.01; 
+    });
+
+    // 2. Lấy chi tiết thuốc CHỈ từ các đơn thuốc (prescriptions) thuộc về relevantAppointment
+    const details = app?.prescriptions?.flatMap(p => p.prescriptionDetails) || [];
+
+    return { 
+        relevantAppointment: app, 
+        relevantPrescriptionDetails: details 
+    };
+}, [selectedInvoice]);
 
   useEffect(() => {
     fetchInvoices();
@@ -71,6 +99,31 @@ const InvoicesPage = () => {
     } catch (error) {
       toast.error(error.response.data.message || 'Lỗi khi kết nối đến máy chủ khi tải hóa đơn.');
       console.error('Lỗi khi lấy hóa đơn:', error);
+    }
+  };
+
+  const handlePayment = async (e, invoice) => {
+    e.stopPropagation(); 
+
+    if (processingInvoiceId) return;
+
+    setProcessingInvoiceId(invoice.id);
+    try {
+      const response = await api.post('/vnpay/create-payment-url', {
+        invoiceId: invoice.id,
+        amount: invoice.totalAmount
+      });
+
+      if (response.data && response.data.paymentUrl) {
+        window.location.href = response.data.paymentUrl;
+      } else {
+        toast.error("Không nhận được đường dẫn thanh toán từ hệ thống.");
+      }
+    } catch (error) {
+      console.error("Lỗi tạo thanh toán:", error);
+      toast.error(error.response?.data?.message || "Lỗi khi tạo yêu cầu thanh toán.");
+    } finally {
+      setProcessingInvoiceId(null);
     }
   };
 
@@ -214,6 +267,24 @@ const InvoicesPage = () => {
               <p className="font-bold text-medical-900 text-lg mt-1">
                 {formatCurrency(invoice.totalAmount, 'VND')}
               </p>
+
+              {!invoice.status && (
+                <button
+                    onClick={(e) => handlePayment(e, invoice)}
+                    disabled={processingInvoiceId === invoice.id}
+                    className="mt-2 flex items-center px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg hover:bg-blue-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    {processingInvoiceId === invoice.id ? (
+                        <>
+                           <Loader2 className="w-3 h-3 mr-1 animate-spin" /> Đang xử lý...
+                        </>
+                    ) : (
+                        <>
+                           Thanh toán ngay <CreditCard className="w-3 h-3 ml-1" />
+                        </>
+                    )}
+                </button>
+              )}
             </div>
           </div>
 
@@ -222,12 +293,6 @@ const InvoicesPage = () => {
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
                 <span>{formatDbUtcToVnTime(invoice.paymentDate)}</span>
-              </div>
-            )}
-            {invoice.patientMedicalRecord?.patient?.fullName && (
-              <div className="flex items-center gap-2">
-                <User className="w-4 h-4" />
-                <span>Bệnh nhân: {invoice.patientMedicalRecord.patient.fullName}</span>
               </div>
             )}
           </div>
@@ -350,32 +415,6 @@ const InvoicesPage = () => {
 
       {/* Invoice Detail Modal */}
       {selectedInvoice && (() => {
-        // --- LOGIC XÁC ĐỊNH ĐƠN THUỐC LIÊN QUAN ---
-        // 1. Tìm Appointment liên quan đến Invoice này. 
-        //    Cách tìm phụ thuộc vào backend đã sửa thế nào. 
-        //    Giả sử cách đáng tin cậy nhất là tìm Appointment có tổng tiền (dịch vụ + thuốc) khớp với Invoice.totalAmount
-        //    (HOẶC nếu backend thêm AppointmentId vào Invoice thì dùng nó)
-        
-        const relevantAppointment = selectedInvoice.patientMedicalRecord?.appointments?.find(app => {
-            const serviceCost = app.medicalService?.cost || 0;
-            // Tính tổng tiền thuốc CHỈ cho lịch hẹn (app) này
-            const prescriptionCostForThisApp = app.prescriptions?.reduce((presSum, pres) => {
-              // Chỉ tính các đơn thuốc thuộc LỊCH HẸN NÀY (quan trọng nếu 1 PMR có nhiều App)
-              if (pres.appointmentId === app.id) {
-                 const detailsSum = pres.prescriptionDetails?.reduce((detSum, det) => detSum + det.amount, 0) || 0;
-                 return presSum + detailsSum;
-              }
-              return presSum; 
-            }, 0) || 0;
-            // So sánh tổng chi phí của Appointment này với totalAmount của Invoice
-            return Math.abs((serviceCost + prescriptionCostForThisApp) - selectedInvoice.totalAmount) < 0.01; 
-        });
-
-        // 2. Lấy chi tiết thuốc CHỈ từ các đơn thuốc (prescriptions) thuộc về relevantAppointment
-        const relevantPrescriptionDetails = relevantAppointment?.prescriptions?.flatMap(
-          p => p.prescriptionDetails // Lấy tất cả details từ các prescriptions của appointment này
-        ) || [];
-
         return (
           <div
             className="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4"
@@ -500,6 +539,21 @@ const InvoicesPage = () => {
 
               {/* Action Buttons */}
               <div className="mt-6 pt-4 border-t border-gray-200 flex flex-col sm:flex-row justify-end gap-3">
+                {!selectedInvoice.status && (
+                    <button
+                        onClick={(e) => handlePayment(e, selectedInvoice)}
+                        disabled={processingInvoiceId === selectedInvoice.id}
+                        className="flex items-center justify-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors shadow-md disabled:opacity-50 order-1 sm:order-1"
+                    >
+                        {processingInvoiceId === selectedInvoice.id ? (
+                            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                        ) : (
+                            <CreditCard className="w-5 h-5 mr-2" />
+                        )}
+                        Thanh toán Online
+                    </button>
+                )}
+
                 <button
                   onClick={handleOpenPdfPreview}
                   className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 shadow-md order-1 sm:order-2"

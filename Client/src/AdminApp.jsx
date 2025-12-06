@@ -27,6 +27,7 @@ import LabTechnicianPage from './components/admins-layout/lab/LabTechnicianPage'
 import AppointmentsForPatientPage from './components/admins-layout/patient/AppointmentsForPatientPage';
 import MyAccountPage from './components/admins-layout/patient/MyAccountPage';
 import InvoicesPage from './components/admins-layout/patient/InvoicesPage';
+import VnPayReturnPage from './components/admins-layout/patient/VnPayReturnPage';
 import DrugAnalyzerPage from './components/admins-layout/patient/DrugAnalyzerPage';
 import PredictDiasease from './components/admins-layout/doctor/PredictDiasease';
 import StaffAssignmentPage from './components/admins-layout/admin/StaffAssignmentPage';
@@ -72,6 +73,7 @@ function AppContent() {
                 <Route path="invoices" element={ <InvoicesPage /> } />
                 <Route path="drug-analyzer" element={ <DrugAnalyzerPage /> } />
                 <Route path="my-account" element={ <MyAccountPage /> } />
+                <Route path="vnpay-return" element={<VnPayReturnPage />} />
               </Route>
 
               {/* Staff Routes */}

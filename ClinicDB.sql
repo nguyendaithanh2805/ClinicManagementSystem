@@ -184,6 +184,17 @@ CREATE TABLE [Notification] (
 );
 GO
 
+CREATE TABLE PaymentTransaction (
+	Id				INT				IDENTITY(1,1),
+	InvoiceId		INT				NOT NULL,
+	TransactionNo	NVARCHAR(255)	NOT NULL,
+	Amount			DECIMAL(15,0)	NOT NULL,
+	Status			NVARCHAR(100)	NOT NULL,
+	CreatedAt		DATETIME		NOT NULL,
+	CONSTRAINT PK_PaymentTransaction PRIMARY KEY (Id)
+);
+GO
+
 -- 3. CREATE RELATIONSHIP
 ALTER TABLE MedicalService
 ADD CONSTRAINT FK_MedicalService_Specialty FOREIGN KEY (specialtyId) REFERENCES Specialty(Id);
@@ -193,6 +204,9 @@ ALTER TABLE [Notification]
 ADD CONSTRAINT FK_Notification_Account FOREIGN KEY (AccountId) REFERENCES Account(Id);
 GO
 
+ALTER TABLE PaymentTransaction
+ADD CONSTRAINT FK_PaymentTransaction_Invoice FOREIGN KEY (InvoiceId) REFERENCES Invoice(Id);
+GO
 
 ALTER TABLE Staff
 ADD CONSTRAINT FK_Staff_Account FOREIGN KEY (AccountId) REFERENCES Account(Id);
