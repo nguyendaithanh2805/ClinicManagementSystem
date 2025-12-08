@@ -1,13 +1,18 @@
 from google import genai
 from google.genai import types
-import json
+import json, os
+
+API_KEY = os.getenv("GEMINI_API_KEY")
+
+if not API_KEY:
+    print("❌ LỖI: Không tìm thấy biến môi trường 'GEMINI_API_KEY'. Chatbot sẽ không hoạt động.")
 
 
 def analyze_medicine_image(image_bytes: bytes, user_prompt: str):
     """
     Phân tích hình ảnh thuốc và trả về kết quả dạng JSON.
     """
-    client = genai.Client(api_key="AIzaSyAb-Ks6aWiUUaHRvDMxTt8KnAKGfKm03ak")
+    client = genai.Client(api_key=API_KEY)
 
     try:
         prompt = f"""

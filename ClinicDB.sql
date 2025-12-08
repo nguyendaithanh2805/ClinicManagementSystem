@@ -49,7 +49,7 @@ CREATE TABLE Patient (
 	FullName		NVARCHAR(200)	NOT NULL,
 	DateOfBirth		DATE			NULL,
 	Address			NVARCHAR(300)	NULL,
-	CONSTRAINT PK_Patient PRIMARY KEY (Id),
+	CONSTRAINT PK_Patient PRIMARY KEY (Id)
 );
 GO
 

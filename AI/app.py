@@ -6,24 +6,31 @@ from flask_cors import CORS
 import joblib 
 import warnings
 
-warnings.filterwarnings('ignore') # Tắt cảnh báo khi tải mô hình
+warnings.filterwarnings('ignore')
 
-# --- Cấu hình PYTHONPATH ---
 import sys
 current_dir = os.path.dirname(os.path.abspath(__file__))
 
-# Thêm đường dẫn để import các module từ DL/ và ML/
 sys.path.append(os.path.join(current_dir, 'DL'))
 sys.path.append(os.path.join(current_dir, 'ML'))
+
+analyze_medicine_image = None
+chat_health_consultation = None
+CHATBOT_ENABLED = False
 
 # Import hàm phân tích ảnh từ module DL
 try:
     from medicine_analyzer import analyze_medicine_image
 except ImportError:
-    # Nếu module không tồn tại, tính năng /analyze sẽ bị vô hiệu hóa
     print("Cảnh báo: Không tìm thấy module 'medicine_analyzer'. Endpoint /analyze sẽ không hoạt động.")
-    analyze_medicine_image = None
 
+try:
+    # 2. Import hàm chatbot
+    from chatbot import chat_health_consultation
+    CHATBOT_ENABLED = True
+except ImportError:
+    print("Cảnh báo: Không tìm thấy module 'chatbot'. Endpoint /consult sẽ không hoạt động.")
+    
 app = Flask(__name__)
 CORS(app)
 
@@ -184,7 +191,34 @@ def analyze_medicine_image_endpoint():
         print(f"Lỗi khi phân tích ảnh: {e}")
         return jsonify({"error": f"Lỗi khi phân tích ảnh thuốc: {str(e)}"}), 500
 
-# --- CHẠY ỨNG DỤNG ---
+@app.route("/consult", methods=["POST"])
+def health_consult_endpoint():
+    """Nhận tin nhắn người dùng (JSON) và trả về lời khuyên y tế chung từ chatbot."""
+    
+    if not CHATBOT_ENABLED or chat_health_consultation is None:
+        return jsonify({"error": "Chức năng chatbot tư vấn y tế không khả dụng. Vui lòng kiểm tra file DL/chatbot.py và biến môi trường GEMINI_API_KEY."}), 501
+
+    try:
+        data = request.get_json(force=True)
+        user_message = data.get("message")
+
+        if not user_message or not isinstance(user_message, str):
+            return jsonify({"error": "Thiếu hoặc sai định dạng trường 'message'."}), 400
+        
+        # Gọi hàm chatbot đã được tách riêng
+        result = chat_health_consultation(user_message)
+        
+        # Kiểm tra lỗi từ hàm
+        if result.get("status") == "error":
+            # Trả về lỗi đã được xử lý trong hàm chatbot
+            return jsonify({"error": result.get("response")}), 500
+            
+        return jsonify(result)
+
+    except Exception as e:
+        print(f"Lỗi khi xử lý request chatbot: {e}")
+        return jsonify({"error": f"Lỗi nội bộ server: {str(e)}. Không thể kết nối đến dịch vụ tư vấn."}), 500
+    
 if __name__ == '__main__':
     """Khởi động ứng dụng Flask."""
     print(f"Starting Flask app from: {current_dir}") 
