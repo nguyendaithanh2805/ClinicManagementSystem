@@ -170,7 +170,7 @@ const MedicalRecordDetailModal = ({
           <TabButton icon={<ListTodo className="w-5 h-5" />} label="Triệu chứng" isActive={activeTab === 'symptoms'} onClick={() => onTabChange('symptoms')} />
           <TabButton icon={<Microscope className="w-5 h-5" />} label="Kết quả XN" isActive={activeTab === 'testResults'} onClick={() => onTabChange('testResults')} />
           <TabButton icon={<Stethoscope className="w-5 h-5" />} label="Thông tin BS" isActive={activeTab === 'staff'} onClick={() => onTabChange('staff')} />
-          <TabButton icon={<CalendarDays className="w-4 h-4" />} label="Lịch hẹn" isActive={activeTab === 'appointments'} onClick={() => onTabChange('appointments')} />
+          {/* <TabButton icon={<CalendarDays className="w-4 h-4" />} label="Lịch hẹn" isActive={activeTab === 'appointments'} onClick={() => onTabChange('appointments')} /> */}
         </div>
 
         {/* Tab Content */}
