@@ -92,7 +92,7 @@ const HeroSection = ({ clinicStatus }) => {
             <div className="relative animate-slide-up">
               <div className="relative rounded-2xl overflow-hidden shadow-2xl">
                 <img
-                  src="../../../../public/images/avt_nguyendaithanh.png"
+                  src="/images/avt_nguyendaithanh.png"
                   alt="Modern medical facility"
                   className="w-full h-[700px] object-cover"
                 />

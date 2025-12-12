@@ -1,20 +1,15 @@
-﻿using System.Reflection.Metadata;
-using Application.Common.Settings;
+﻿using Application.Common.Settings;
 using System.Text;
 using Application.Interfaces;
 using Application.Mappings;
-using AutoMapper;
 using Infrastructure.Persistence;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using Application.Services;
 using Infrastructure.Authentication;
-using System.Reflection;
 using Microsoft.AspNetCore.Identity;
 using Application.DTOs;
-using Microsoft.Extensions.Options;
 using Application.Common;
 using Microsoft.AspNetCore.Mvc;
 using Domain.Entities;
@@ -28,16 +23,27 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("MyAllowSpecificOrigins", policy =>
     {
-        policy.WithOrigins("http://localhost:5173", "https://localhost:5173")
-              .AllowAnyHeader()
-              .AllowAnyMethod()
-              .AllowCredentials();
+        policy.WithOrigins(
+                "http://localhost",
+                "https://localhost"
+            )
+            .AllowAnyHeader()
+            .AllowAnyMethod()
+            .AllowCredentials();
     });
 });
 
 
 builder.Services.AddDbContext<ClinicContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DbConnection")));
+    options.UseSqlServer(
+        builder.Configuration.GetConnectionString("DbConnection"),
+        sql => sql.EnableRetryOnFailure(
+            maxRetryCount: 5,
+            maxRetryDelay: TimeSpan.FromSeconds(10),
+            errorNumbersToAdd: null
+        )
+    )
+);
 
 // Add Infrastureture
 builder.Services.AddInfrastructure(builder.Configuration);
@@ -167,6 +173,7 @@ if (app.Environment.IsDevelopment())
 app.UseRouting();
 
 app.UseCors(MyAllowSpecificOrigins);
+
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();

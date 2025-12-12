@@ -10,7 +10,7 @@ const PrintableMedicalRecord = ({ record }) => {
   }
 
   // Placeholder cho ảnh bìa nếu không có từ record.image
-  const coverImageUrl = "../../../../public/images/avt_nguyendaithanh.png"
+  const coverImageUrl = "/images/avt_nguyendaithanh.png";
 
    return (
     <div className="printable-medical-record-container" style={{ fontFamily: 'Arial, sans-serif' }}>

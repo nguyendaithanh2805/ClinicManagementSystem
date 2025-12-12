@@ -1,0 +1,111 @@
+version: '3.8'
+
+services:
+  # 1. SQL Server Container
+  mssql_server:
+    build:
+      context: .
+      dockerfile: Server/MssqlDockerfile
+    container_name: mssql_db
+    environment:
+      SA_PASSWORD: "Thanhdai1212@" 
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433" 
+    volumes:
+      - db_data:/var/opt/mssql
+    restart: always
+
+    healthcheck:
+      test: [
+        "CMD",
+        "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost",
+        "-U", "sa", "-P", "Thanhdai1212@",
+        "-Q", "SELECT 1"
+      ]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 20s
+
+  # 2. Backend API (.NET) Container
+  backend_api:
+    build:
+      context: .
+      dockerfile: Server/Api/Dockerfile 
+    container_name: backend_api
+    ports:
+      - "8080:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
+
+    depends_on:
+      mssql_server:
+        condition: service_healthy
+    restart: always
+
+  # 3. AI App (Python/Flask) Container
+  ai_service:
+    build:
+      context: .
+      dockerfile: AI/Dockerfile
+    container_name: ai_service
+    ports:
+      - "5000:5000" 
+    env_file:
+      - ./AI/.env
+    restart: always
+
+  # 4. Frontend Client (React/Nginx) Container
+  frontend_client:
+    build:
+      context: .
+      dockerfile: Client/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL}
+        VITE_IMAGE_URL: ${VITE_IMAGE_URL}
+        VITE_API_URL_AI: ${VITE_API_URL_AI}
+        
+    container_name: frontend_client
+    # ports:
+    #   - "80:80"
+      
+    depends_on:
+      - backend_api
+      - ai_service
+    restart: always
+
+  nginx_proxy:
+    image: nginx:latest
+    container_name: nginx_proxy
+    volumes:
+      - ./nginx-proxy/nginx.conf:/etc/nginx/conf.d/default.conf
+      # VOLUME CHIA SẺ 1: Để Certbot ghi chứng chỉ vào đây
+      - certbot_conf:/etc/letsencrypt
+      # VOLUME CHIA SẺ 2: Thư mục xác minh Certbot
+      - certbot_www:/var/www/certbot
+    ports:
+      - "80:80"
+      - "443:443" # ⬅️ BẬT PORT HTTPS
+    depends_on:
+      - frontend_client
+      - backend_api
+    restart: always
+
+  # 6. Certbot Container
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      # Mount cùng volume với Nginx
+      - certbot_conf:/etc/letsencrypt
+      - certbot_www:/var/www/certbot
+    entrypoint: ["tail", "-f", "/dev/null"] 
+
+
+# Định nghĩa Volume chia sẻ mới
+volumes:
+  db_data:
+  certbot_conf:
+  certbot_www:

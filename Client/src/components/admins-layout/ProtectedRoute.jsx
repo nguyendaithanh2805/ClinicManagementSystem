@@ -15,8 +15,7 @@ const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   }
 
    if (!user) {
-    // Chưa login → redirect về login
-    return <Navigate to="/login" state={{ from: location }} replace />;
+    window.location.href = `/login`;
   }
 
   if (!allowedRoles.includes(user.role)) {

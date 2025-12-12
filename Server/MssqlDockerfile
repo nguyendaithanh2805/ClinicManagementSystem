@@ -1,0 +1,23 @@
+# Server/MssqlDockerfile
+FROM mcr.microsoft.com/mssql/server:2019-latest
+
+# Cài đặt SQL CMD tools (mssql-tools)
+USER root
+
+# THÊM BIẾN MÔI TRƯỜNG ĐỂ CHẤP NHẬN EULA TRƯỚC KHI CÀI ĐẶT
+ENV ACCEPT_EULA=Y
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        curl \
+        gnupg2 \
+        apt-transport-https \
+    && curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add - \
+    && curl https://packages.microsoft.com/config/ubuntu/20.04/prod.list > /etc/apt/sources.list.d/msprod.list \
+    && apt-get update \
+    && apt-get install -y mssql-tools \
+    && rm -rf /var/lib/apt/lists/* \
+    && /opt/mssql/bin/mssql-conf set sqlagent.enabled true
+
+# Thêm mssql-tools vào PATH
+ENV PATH="/opt/mssql-tools/bin/:${PATH}"
