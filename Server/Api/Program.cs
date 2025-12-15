@@ -36,12 +36,7 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddDbContext<ClinicContext>(options =>
     options.UseSqlServer(
-        builder.Configuration.GetConnectionString("DbConnection"),
-        sql => sql.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
-            errorNumbersToAdd: null
-        )
+        builder.Configuration.GetConnectionString("DbConnection")
     )
 );
 
