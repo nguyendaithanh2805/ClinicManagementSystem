@@ -8,19 +8,18 @@ services:
       dockerfile: Server/MssqlDockerfile
     container_name: mssql_db
     environment:
-      SA_PASSWORD: "Thanhdai1212@" 
+      SA_PASSWORD: "Thanh12345@" 
       ACCEPT_EULA: "Y"
     ports:
       - "1433:1433" 
     volumes:
       - db_data:/var/opt/mssql
     restart: always
-
     healthcheck:
       test: [
         "CMD",
         "/opt/mssql-tools/bin/sqlcmd", "-S", "localhost",
-        "-U", "sa", "-P", "Thanhdai1212@",
+        "-U", "sa", "-P", "Thanh12345@",
         "-Q", "SELECT 1"
       ]
       interval: 5s
@@ -34,12 +33,9 @@ services:
       context: .
       dockerfile: Server/Api/Dockerfile 
     container_name: backend_api
-    ports:
-      - "8080:8080"
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_FORWARDEDHEADERS_ENABLED: "true"
-
     depends_on:
       mssql_server:
         condition: service_healthy
@@ -51,8 +47,6 @@ services:
       context: .
       dockerfile: AI/Dockerfile
     container_name: ai_service
-    ports:
-      - "5000:5000" 
     env_file:
       - ./AI/.env
     restart: always
@@ -66,46 +60,37 @@ services:
         VITE_API_URL: ${VITE_API_URL}
         VITE_IMAGE_URL: ${VITE_IMAGE_URL}
         VITE_API_URL_AI: ${VITE_API_URL_AI}
-        
     container_name: frontend_client
-    # ports:
-    #   - "80:80"
-      
     depends_on:
       - backend_api
       - ai_service
     restart: always
 
+  # 5. Nginx Reverse Proxy Container
   nginx_proxy:
     image: nginx:latest
     container_name: nginx_proxy
     volumes:
       - ./nginx-proxy/nginx.conf:/etc/nginx/conf.d/default.conf
-      # VOLUME CHIA SẺ 1: Để Certbot ghi chứng chỉ vào đây
-      - certbot_conf:/etc/letsencrypt
-      # VOLUME CHIA SẺ 2: Thư mục xác minh Certbot
-      - certbot_www:/var/www/certbot
-    ports:
-      - "80:80"
-      - "443:443" # ⬅️ BẬT PORT HTTPS
+      - ./nginx-proxy/ssl/nginx.crt:/etc/ssl/certs/nginx.crt
+      - ./nginx-proxy/ssl/nginx.key:/etc/ssl/private/nginx.key
+    # ports:
+    #   - "80:80"
+    #   - "443:443"
     depends_on:
       - frontend_client
       - backend_api
     restart: always
 
-  # 6. Certbot Container
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    volumes:
-      # Mount cùng volume với Nginx
-      - certbot_conf:/etc/letsencrypt
-      - certbot_www:/var/www/certbot
-    entrypoint: ["tail", "-f", "/dev/null"] 
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared_tunnel
+    restart: unless-stopped
+    environment:
+      TUNNEL_TOKEN: "eyJhIjoiM2Q0MGRmMjc3ZDkxOGM3NmMyMTU1ZWZmNzM3NmM5ZjEiLCJ0IjoiNTRiYmY1OWEtNDhkMC00MjdiLWE0ODctYmY2NzBmNDMyMWRjIiwicyI6IlpUVmhPV1kzTlRZdFlUYzRPUzAwTTJJekxXSTJaVGd0TkRCbE9HUTROV1ptT0RCaCJ9" 
+    command: tunnel --no-autoupdate run
+    depends_on:
+      - nginx_proxy
 
-
-# Định nghĩa Volume chia sẻ mới
 volumes:
   db_data:
-  certbot_conf:
-  certbot_www:
