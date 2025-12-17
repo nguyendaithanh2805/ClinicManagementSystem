@@ -25,17 +25,28 @@ namespace Application.Services
 
         public string CreateVnPayPaymentUrl(int invoiceId, decimal amount, string ipAddress)
         {
+            const string vnTimeZoneId = "SE Asia Standard Time";
+
+            DateTime vnTimeNow;
+            try
+            {
+                var vnTimeZone = TimeZoneInfo.FindSystemTimeZoneById(vnTimeZoneId);
+                vnTimeNow = TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, vnTimeZone);
+            }
+            catch (TimeZoneNotFoundException)
+            {
+                vnTimeNow = DateTime.UtcNow.AddHours(7);
+            }
+
             var vnpAmount = (long)(amount * 100);
-
             var txnRef = $"{invoiceId}_{DateTime.Now.Ticks}";
-
             var vnpay = new VnPayLibrary();
 
             vnpay.AddRequestData("vnp_Version", "2.1.0");
             vnpay.AddRequestData("vnp_Command", "pay");
             vnpay.AddRequestData("vnp_TmnCode", _config.TmnCode);
             vnpay.AddRequestData("vnp_Amount", vnpAmount.ToString());
-            vnpay.AddRequestData("vnp_CreateDate", DateTime.Now.ToString("yyyyMMddHHmmss"));
+            vnpay.AddRequestData("vnp_CreateDate", vnTimeNow.ToString("yyyyMMddHHmmss"));
             vnpay.AddRequestData("vnp_CurrCode", "VND");
             vnpay.AddRequestData("vnp_IpAddr", ipAddress);
             vnpay.AddRequestData("vnp_Locale", "vn");
@@ -43,7 +54,7 @@ namespace Application.Services
             vnpay.AddRequestData("vnp_OrderType", "other");
             vnpay.AddRequestData("vnp_ReturnUrl", _config.ReturnUrl);
             vnpay.AddRequestData("vnp_TxnRef", txnRef);
-            vnpay.AddRequestData("vnp_ExpireDate", DateTime.Now.AddMinutes(15).ToString("yyyyMMddHHmmss"));
+            vnpay.AddRequestData("vnp_ExpireDate", vnTimeNow.AddMinutes(15).ToString("yyyyMMddHHmmss"));
 
             string paymentUrl = vnpay.CreateRequestUrl(_config.VnpUrl, _config.HashSecret);
             return paymentUrl;
